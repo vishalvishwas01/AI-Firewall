@@ -1,0 +1,42 @@
+{
+  "name": "ai-permission-firewall",
+  "displayName": "AI Permission Firewall",
+  "version": "0.1.0",
+  "description": "Local-first browser extension that warns before risky AI prompts, uploads, and scam-like content.",
+  "author": "AI Permission Firewall",
+  "private": true,
+  "scripts": {
+    "dev": "plasmo dev",
+    "build": "plasmo build",
+    "package": "plasmo package",
+    "test": "vitest run --environment node",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plasmohq/storage": "^1.15.0",
+    "lucide-react": "^0.468.0",
+    "plasmo": "^0.90.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "@types/node": "^20.14.10",
+    "@types/react": "^18.2.79",
+    "@types/react-dom": "^18.2.25",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.5.3",
+    "vitest": "^1.6.0"
+  },
+  "manifest": {
+    "host_permissions": [
+      "https://chatgpt.com/*",
+      "https://claude.ai/*",
+      "https://gemini.google.com/*"
+    ],
+    "permissions": [
+      "tabs",
+      "storage"
+    ]
+  }
+}
