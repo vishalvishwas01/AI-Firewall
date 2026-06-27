@@ -1,3 +1,4 @@
+import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -6,6 +7,7 @@ import {
   EyeOff,
   Github,
   Lock,
+  LogOut,
   ShieldCheck
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -16,6 +18,16 @@ import {
   supportedTools,
   workflowSteps
 } from "./data/siteContent";
+import {
+  getLogs,
+  getSession,
+  login,
+  logout,
+  signup,
+  type ReportLog,
+  type ReportTool,
+  type SessionUser
+} from "./lib/api";
 
 const fadeIn = {
   initial: { opacity: 0, y: 18 },
@@ -25,8 +37,80 @@ const fadeIn = {
 } as const;
 
 function App() {
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [path, setPath] = useState(window.location.pathname);
+  const authMode = path === "/signup" ? "signup" : path === "/login" ? "login" : null;
+  const isReports = path === "/reports";
+
+  useEffect(() => {
+    let active = true;
+
+    getSession()
+      .then(({ user: sessionUser }) => {
+        if (active) setUser(sessionUser);
+      })
+      .catch(() => {
+        if (active) setUser(null);
+      })
+      .finally(() => {
+        if (active) setSessionLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleLocationChange = () => setPath(window.location.pathname);
+    window.addEventListener("popstate", handleLocationChange);
+
+    return () => {
+      window.removeEventListener("popstate", handleLocationChange);
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await logout();
+    setUser(null);
+    window.history.pushState({}, "", "/");
+    setPath("/");
+  };
+
+  if (authMode) {
+    return (
+      <main className="min-h-screen bg-slate-50 text-slate-950">
+        <SiteHeader
+          user={user}
+          sessionLoading={sessionLoading}
+          onLogout={handleLogout}
+        />
+        <AuthPage mode={authMode} onAuthenticated={setUser} />
+      </main>
+    );
+  }
+
+  if (isReports) {
+    return (
+      <main className="min-h-screen bg-slate-50 text-slate-950">
+        <SiteHeader
+          user={user}
+          sessionLoading={sessionLoading}
+          onLogout={handleLogout}
+        />
+        <ReportsPage user={user} sessionLoading={sessionLoading} />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
+      <SiteHeader
+        user={user}
+        sessionLoading={sessionLoading}
+        onLogout={handleLogout}
+      />
       <HeroSection />
       <ProblemSection />
       <WorkflowSection />
@@ -36,6 +120,361 @@ function App() {
       <InstallSection />
       <FaqSection />
     </main>
+  );
+}
+
+function SiteHeader({
+  user,
+  sessionLoading,
+  onLogout
+}: {
+  user: SessionUser | null;
+  sessionLoading: boolean;
+  onLogout: () => Promise<void>;
+}) {
+  return (
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-6 sm:px-8 lg:px-10">
+        <a href="/" className="flex items-center gap-3 font-semibold text-slate-950">
+          <img
+            src="/ai-firewall-icon.png"
+            alt=""
+            className="h-7 w-7 rounded"
+            width="28"
+            height="28"
+          />
+          <span>AI Permission Firewall</span>
+        </a>
+        <nav className="flex items-center gap-2 text-sm font-semibold">
+          {sessionLoading ? (
+            <span className="text-slate-500">Checking session</span>
+          ) : user ? (
+            <>
+              <span className="hidden max-w-48 truncate text-slate-600 sm:inline">
+                {user.email}
+              </span>
+              <a className="button-secondary" href="/reports">
+                Reports
+              </a>
+              <button className="button-secondary" type="button" onClick={onLogout}>
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <a className="button-secondary" href="/login">
+                Login
+              </a>
+              <a className="button-primary" href="/signup">
+                Sign up
+              </a>
+            </>
+          )}
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+function AuthPage({
+  mode,
+  onAuthenticated
+}: {
+  mode: "login" | "signup";
+  onAuthenticated: (user: SessionUser) => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const isSignup = mode === "signup";
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    setSubmitting(true);
+
+    try {
+      const response = isSignup
+        ? await signup(email, password)
+        : await login(email, password);
+      onAuthenticated(response.user);
+      window.history.pushState({}, "", "/");
+      window.dispatchEvent(new Event("popstate"));
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : "Authentication failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <section className="flex min-h-[calc(100vh-4rem)] items-center bg-slate-50 px-6 py-16 sm:px-8 lg:px-10">
+      <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[0.9fr_1fr] lg:items-center">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-wider text-teal-700">
+            Account-backed reports
+          </p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-normal text-slate-950 sm:text-5xl">
+            {isSignup ? "Create your report account." : "Welcome back."}
+          </h1>
+          <p className="mt-5 max-w-xl text-base leading-7 text-slate-600">
+            Sign in to prepare the web dashboard for synced warning history. The
+            extension still detects risky AI chat activity locally, and synced
+            report records must stay redacted.
+          </p>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
+        >
+          <div>
+            <label
+              htmlFor="email"
+              className="text-sm font-semibold text-slate-950"
+            >
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-950 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10"
+            />
+          </div>
+
+          <div className="mt-5">
+            <label
+              htmlFor="password"
+              className="text-sm font-semibold text-slate-950"
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete={isSignup ? "new-password" : "current-password"}
+              minLength={8}
+              required
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-950 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10"
+            />
+          </div>
+
+          {error ? (
+            <div className="mt-5 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
+              {error}
+            </div>
+          ) : null}
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="button-primary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? "Please wait" : isSignup ? "Create account" : "Login"}
+          </button>
+
+          <p className="mt-5 text-center text-sm text-slate-600">
+            {isSignup ? "Already have an account?" : "Need an account?"}{" "}
+            <a
+              className="font-semibold text-slate-950 underline underline-offset-4"
+              href={isSignup ? "/login" : "/signup"}
+            >
+              {isSignup ? "Login" : "Sign up"}
+            </a>
+          </p>
+        </form>
+      </div>
+    </section>
+  );
+}
+
+function ReportsPage({
+  user,
+  sessionLoading
+}: {
+  user: SessionUser | null;
+  sessionLoading: boolean;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [logs, setLogs] = useState<ReportLog[]>([]);
+  const [tool, setTool] = useState<ReportTool | "All">("All");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+    setLoading(true);
+    setError("");
+
+    getLogs({
+      tool,
+      from: from || undefined,
+      to: to || undefined
+    })
+      .then(({ logs: nextLogs }) => {
+        if (active) setLogs(nextLogs);
+      })
+      .catch((reportError) => {
+        if (active) setError(reportError instanceof Error ? reportError.message : "Failed to load reports");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user, tool, from, to]);
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!user && window.location.pathname !== "/login") {
+      window.history.pushState({}, "", "/login");
+      window.dispatchEvent(new Event("popstate"));
+    }
+  }, [sessionLoading, user]);
+
+  return (
+    <section className="bg-slate-50 px-6 py-10 sm:px-8 lg:px-10">
+      <div className="mx-auto max-w-7xl">
+        <div className="flex flex-col gap-4 border-b border-slate-200 pb-6">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wider text-teal-700">
+              Account-backed reports
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-normal text-slate-950 sm:text-4xl">
+              Synced warning history
+            </h1>
+            <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
+              View redacted logs that were synced for {user?.email ?? "your account"}. Detection stays local; report storage only keeps masked snippets.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            {(["All", "ChatGPT", "Claude", "Gemini", "Other"] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setTool(item)}
+                className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${
+                  tool === item
+                    ? "border-slate-950 bg-slate-950 text-white"
+                    : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:max-w-2xl">
+            <label className="text-sm font-semibold text-slate-950">
+              From
+              <input
+                type="date"
+                value={from}
+                max={to || today}
+                onChange={(event) => setFrom(event.target.value)}
+                className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10"
+              />
+            </label>
+            <label className="text-sm font-semibold text-slate-950">
+              To
+              <input
+                type="date"
+                value={to}
+                min={from || undefined}
+                max={today}
+                onChange={(event) => setTo(event.target.value)}
+                className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10"
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="py-6">
+          {sessionLoading || loading ? (
+            <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
+              Loading reports...
+            </div>
+          ) : error ? (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 p-6 text-sm font-medium text-rose-800">
+              {error}
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="rounded-lg border border-slate-200 bg-white p-8 text-sm leading-6 text-slate-600">
+              No synced logs yet. When the extension starts uploading redacted
+              records, they will appear here.
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                  <thead className="bg-slate-50 text-slate-600">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Date</th>
+                      <th className="px-4 py-3 font-semibold">Tool</th>
+                      <th className="px-4 py-3 font-semibold">Severity</th>
+                      <th className="px-4 py-3 font-semibold">Decision</th>
+                      <th className="px-4 py-3 font-semibold">Title</th>
+                      <th className="px-4 py-3 font-semibold">Snippet</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {logs.map((log) => (
+                      <tr key={log.extensionLogId} className="align-top">
+                        <td className="px-4 py-4 whitespace-nowrap text-slate-600">
+                          {new Date(log.timestamp).toLocaleString()}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap font-medium text-slate-950">
+                          {log.tool}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          {log.severity}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          {log.decision}
+                        </td>
+                        <td className="px-4 py-4 font-medium text-slate-950">
+                          {log.title}
+                        </td>
+                        <td className="px-4 py-4 text-slate-600">
+                          <p className="max-w-2xl whitespace-pre-wrap break-words">
+                            {log.redactedSnippet}
+                          </p>
+                          {log.evidence.length > 0 ? (
+                            <p className="mt-2 text-xs text-slate-500">
+                              Why flagged: {log.evidence.join(", ")}
+                            </p>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -78,9 +517,9 @@ function HeroSection() {
           </div>
           <dl className="mt-10 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
             {[
-              ["No backend", "MVP checks stay browser-local"],
+              ["Local detection", "Checks stay browser-local"],
               ["3 AI tools", "ChatGPT, Claude, Gemini"],
-              ["Redacted logs", "Recent warnings stay local"]
+              ["Redacted reports", "Account sync stores masked records"]
             ].map(([value, label]) => (
               <div
                 key={value}
@@ -187,8 +626,8 @@ function WorkflowSection() {
       <div className="mx-auto max-w-7xl">
         <SectionIntro
           eyebrow="How it works"
-          title="Detect, warn, and keep the trail local."
-          body="The MVP uses rule-based checks in the browser. It focuses on the moments that matter most: paste, send, and upload."
+          title="Detect locally, warn in context, sync only redacted reports."
+          body="The extension uses rule-based checks in the browser for the moments that matter most: paste, send, and upload. Account-backed reporting stores masked warning records only."
         />
         <div className="mt-10 grid gap-5 lg:grid-cols-3">
           {workflowSteps.map((step, index) => (
@@ -297,7 +736,7 @@ function DemoSection() {
             {[
               ["Input checked", "Prompt includes API key-like text"],
               ["Decision", "User reviews warning before continuing"],
-              ["History", "Only redacted snippet is stored locally"]
+              ["History", "Only redacted snippets are eligible for synced reports"]
             ].map(([label, value]) => (
               <div key={label} className="flex items-start gap-3">
                 <Lock className="mt-0.5 h-5 w-5 text-teal-600" aria-hidden="true" />

@@ -18,8 +18,9 @@ Build an individual-focused browser extension for AI chat safety. It should prot
 - Browser-local settings and activity history live in `src/firewall/storage.ts`.
 - Extension popup is `popup.tsx` with styles in `src/styles/popup.css`.
 - Content script guard is `contents/ai-firewall.ts`.
-- Planned backend/API will live under `website/` unless a later decision creates a separate server package.
-- Planned MongoDB connection string will come from environment variables; never commit real secrets.
+- Backend/API now lives under the separate `server/` package.
+- Client website now lives under `client/`.
+- MongoDB connection string and auth/session secrets come from environment variables; never commit real secrets.
 
 ## Phase Plan
 
@@ -169,21 +170,31 @@ Important privacy/security decisions for this plan:
 
 Proposed implementation phases:
 
-1. Backend foundation in `website/` - Status: Pending
-   - Decide whether to keep Vite plus a small Node/Express API or migrate website to a full-stack framework.
-   - Add environment variable contract: `MONGODB_URI`, auth/session secret, and website/API base URL.
-   - Add MongoDB connection helper.
-   - Add user and log schema definitions.
-2. Website auth UI and API - Status: Pending
-   - Add signup and login pages.
-   - Add logout/session check.
-   - Store users securely with hashed passwords or an approved auth provider.
-   - Keep UI quiet, trustworthy, and security-product appropriate.
-3. Report page and filters - Status: Pending
-   - Add authenticated report page.
+1. Backend foundation in `server/` - Status: Done
+   - Chosen architecture is `client/` Vite React frontend plus separate `server/` TypeScript Express API.
+   - Added server TypeScript config, scripts, and dependencies for Express, MongoDB, CORS, cookies, JWTs, and password hashing.
+   - Added environment variable contract in `server/src/config/env.ts`: `MONGODB_URI`, `MONGODB_DB_NAME`, `JWT_SECRET`, `CLIENT_ORIGIN`, `EXTENSION_ORIGIN`, `PORT`, and `NODE_ENV`.
+   - Added MongoDB connection helper in `server/src/db/mongo.ts`.
+   - Added user schema and unique email index in `server/src/models/user.ts`.
+   - Added synced redacted log schema and user/log indexes in `server/src/models/syncedLog.ts`.
+   - Added Express bootstrap and `/health` route in `server/src/index.ts`.
+   - Added `server/.env.example`; real `.env` values must stay uncommitted.
+2. Website auth UI and API - Status: Done
+   - Added server auth routes for signup, login, logout, and session check.
+   - Added secure password hashing with `bcryptjs`.
+   - Added signed HTTP-only JWT session cookie handling.
+   - Added client signup and login pages at `/signup` and `/login`.
+   - Added logout/session check and auth-aware navigation.
+   - Updated website copy to describe local detection plus redacted account-backed reporting.
+   - Build verification passed for both `server/` and `client/`.
+3. Report page and filters - Status: Done
+   - Added authenticated client report page at `/reports`.
+   - Added server `/logs` list endpoint scoped by authenticated `userId`.
+   - Added server `/logs` create endpoint for future extension sync.
    - Show synced logs with dates, site/tool, severity, decision, title, redacted snippet, and evidence.
-   - Add date filters and tool filters: ChatGPT, Claude, Gemini, Other.
-   - Add empty/loading/error states.
+   - Added date filters and tool filters: ChatGPT, Claude, Gemini, Other.
+   - Added empty/loading/error states.
+   - Build verification passed for both `server/` and `client/`.
 4. Extension auth gate - Status: Pending
    - Popup checks auth/session/token state.
    - If not authenticated, show sign up/login call-to-action and open website login.
@@ -263,11 +274,12 @@ Status: Done
 
 ## Next Immediate Steps
 
-1. Wait for user approval to start Phase 9.1: backend foundation in `website/`.
-2. Before implementation, confirm backend approach if needed: Vite plus small Node/Express API vs migration to full-stack framework.
-3. Continue keeping existing extension local warnings/logs working while account-backed reporting is added.
-4. When implementation begins, do not send raw prompt text or raw secrets to MongoDB; sync only redacted log records.
+1. Start Phase 9.4: extension auth gate.
+2. Keep the extension local warning/log behavior unchanged while auth gate UI is added.
+3. Popup should check auth/session state, show login/signup CTA when needed, and open the client login flow.
+4. When log sync begins, do not send raw prompt text or raw secrets to MongoDB; sync only redacted log records.
 
 ## Related Handoffs
 
-- `../website/WEBSITE_HANDOFF.md` tracks the planned Vite + React + Tailwind + Framer Motion landing website, Vercel deployment approach, SEO requirements, and website next steps.
+- `../client/WEBSITE_HANDOFF.md` tracks the Vite + React + Tailwind + Framer Motion client website, deployment approach, SEO requirements, and client next steps.
+- `../server/HANDOFF.md` tracks the TypeScript Express API, MongoDB foundation, auth API, and redacted log storage work.

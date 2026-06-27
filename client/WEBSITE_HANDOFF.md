@@ -20,23 +20,29 @@ AI-Firewall/
 ```
 
 - `extension/` contains the Chrome extension implementation, Plasmo configuration, extension assets, tests, and extension build output.
-- `website/` contains the Vite + React + Tailwind + Framer Motion landing website.
+- `client/` contains the Vite + React + Tailwind + Framer Motion landing website.
+- `server/` contains the TypeScript Express API for auth, MongoDB-backed redacted log storage, and report data access.
 - Shared brand assets can be copied intentionally between folders or later moved into a small shared folder if needed.
 
-Current state as of 2026-06-20:
+Current state as of 2026-06-27:
 
 - The extension now lives in `extension/`.
-- The website now lives in `website/`.
+- The website/client now lives in `client/`.
+- The backend/API now lives in `server/`.
 - Phase 1 scaffold is complete with Vite, React, TypeScript, Tailwind CSS, Framer Motion, and lucide-react.
 - Phase 2 landing page content and UX is complete with real product sections and a faithful warning-flow mock.
 - Phase 3 SEO foundation is complete for the pre-domain static site: metadata, social tags, favicon/touch icon references, JSON-LD, and robots are in place. Canonical URL and sitemap still require the production domain.
-- New account-backed reporting plan is pending: signup/login, MongoDB-backed log API, authenticated report page, and extension auth/log-sync integration.
+- Phase 9.1 backend foundation is complete in `server/`: TypeScript config, env contract, MongoDB helper, user schema, synced-log schema, indexes, health endpoint, and `.env.example`.
+- Phase 9.2 auth UI/API is implemented and build-verified: signup, login, logout, session check, secure password hashing, HTTP-only JWT cookie sessions, and auth-aware client navigation.
+- Phase 9.3 report dashboard/API is implemented and build-verified: authenticated report route/page, redacted log list/create endpoints, date filters, tool filters, and empty/loading/error states.
+- Phase 9.4 extension auth gate is next: popup checks auth state, shows login/signup CTA when needed, and opens the client login flow.
 
 Recommended path:
 
-1. Keep Vercel deployment scoped to `website/`.
+1. Keep static client deployment scoped to `client/`.
 2. Keep extension build/package commands scoped to `extension/`.
-3. Share assets intentionally only when needed; avoid coupling website build output to extension files.
+3. Keep backend/API commands scoped to `server/`.
+4. Share assets intentionally only when needed; avoid coupling client build output to extension or server files.
 
 ## Product Positioning
 
@@ -67,12 +73,12 @@ Avoid overclaiming:
 
 Status: Done
 
-- Created `website/` with Vite, React, TypeScript, Tailwind CSS, Framer Motion, and lucide-react.
+- Created `website/`, later renamed to `client/`, with Vite, React, TypeScript, Tailwind CSS, Framer Motion, and lucide-react.
 - Added scripts for `dev`, `build`, `preview`, and `typecheck`.
 - Added a clean folder layout:
 
 ```text
-website/
+client/
   node_modules/
   public/
   src/
@@ -93,7 +99,7 @@ website/
 - Added baseline static metadata in `index.html`.
 - Added placeholder first-screen app shell so the scaffold can be built and previewed.
 - Vercel should use:
-  - Root Directory: `website`
+  - Root Directory: `client`
   - Build Command: `npm run build`
   - Output Directory: `dist`
 
@@ -170,8 +176,8 @@ Status: Pending
 Status: Pending
 
 - Connect the repository to Vercel.
-- Set Vercel Root Directory to `website`.
-- Verify production build output from `website/dist`.
+- Set Vercel Root Directory to `client`.
+- Verify production build output from `client/dist`.
 - Add production domain to metadata, canonical URL, sitemap, and robots.
 - Confirm deployed page loads correctly and all CTAs point to valid destinations.
 - Document the deployed URL here after first successful deployment.
@@ -260,19 +266,33 @@ Security/privacy requirements:
 
 Proposed implementation phases:
 
-1. Backend foundation - Status: Pending
-   - Choose backend approach: Vite plus Node/Express API or migration to a full-stack framework.
-   - Add MongoDB connection helper and env contract.
-   - Add user/log schema definitions.
-2. Auth UI/API - Status: Pending
-   - Add signup, login, logout, and session check.
-   - Add secure user persistence.
-   - Add auth-aware navigation.
-3. Report dashboard - Status: Pending
-   - Add authenticated report route/page.
-   - Add log table/list with severity, site, decision, date, title, redacted snippet, and evidence.
-   - Add date and tool filters.
-   - Add empty/loading/error states.
+1. Backend foundation - Status: Done
+   - Backend approach is now `client/` Vite React frontend plus separate `server/` TypeScript Express API.
+   - Added server TypeScript config, scripts, and auth/API dependencies.
+   - Added env contract in `server/src/config/env.ts`: `MONGODB_URI`, `MONGODB_DB_NAME`, `JWT_SECRET`, `CLIENT_ORIGIN`, `EXTENSION_ORIGIN`, `PORT`, and `NODE_ENV`.
+   - Added MongoDB connection helper in `server/src/db/mongo.ts`.
+   - Added user schema/index definition in `server/src/models/user.ts`.
+   - Added synced redacted log schema/index definitions in `server/src/models/syncedLog.ts`.
+   - Added Express bootstrap and `/health` route in `server/src/index.ts`.
+   - Added `server/.env.example`; real `.env` values must stay uncommitted.
+2. Auth UI/API - Status: Done
+   - Added server auth middleware in `server/src/middleware/auth.ts`.
+   - Added server auth routes in `server/src/routes/auth.ts`: `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, and `GET /auth/session`.
+   - Added password hashing with `bcryptjs`.
+   - Added signed JWT session cookies using HTTP-only cookies.
+   - Added public user responses that do not expose password hashes.
+   - Added client API helper in `client/src/lib/api.ts`.
+   - Added `client/src/vite-env.d.ts` for Vite env typing.
+   - Added client signup/login UI at `/signup` and `/login`.
+   - Added auth-aware top navigation with session check and logout.
+   - Updated landing/privacy copy so it reflects local detection plus redacted account-backed reporting instead of the older no-backend MVP wording.
+3. Report dashboard - Status: Done
+   - Added authenticated report route/page at `/reports`.
+   - Added log table/list with severity, site/tool, decision, date, title, redacted snippet, and evidence.
+   - Added date and tool filters.
+   - Added empty/loading/error states.
+   - Added authenticated server `/logs` list endpoint scoped by `userId`.
+   - Added authenticated server `/logs` create endpoint for future extension sync.
 4. Extension auth integration - Status: Pending
    - Extension popup detects whether the user is authenticated.
    - If unauthenticated, show login/signup CTA and open website login.
@@ -319,7 +339,7 @@ Recommended Vercel project settings:
 
 ```text
 Framework Preset: Vite
-Root Directory: website
+Root Directory: client
 Build Command: npm run build
 Output Directory: dist
 Install Command: npm install
@@ -327,7 +347,8 @@ Install Command: npm install
 
 Environment variables:
 
-- Planned account-backed reporting will require environment variables such as `MONGODB_URI`, auth/session secret, and API/website URLs.
+- Account-backed reporting server env variables are documented in `server/.env.example`.
+- Required backend variables include `MONGODB_URI`, `JWT_SECRET`, `CLIENT_ORIGIN`, and eventually production API/client URLs.
 - Do not commit real environment values.
 
 ## Verification
@@ -342,10 +363,20 @@ Environment variables:
 - Phase 3 `npm.cmd run build`: passed on 2026-06-20 after SEO metadata updates and generated `dist/`.
 - Browser verification at `http://127.0.0.1:5173`: all primary sections and CTAs rendered, no console errors, no horizontal overflow at 1280px desktop width.
 - Mobile browser verification at 390px width: H1 rendered, no console errors, no horizontal overflow.
+- Phase 9.1 server `npm run typecheck`: passed on 2026-06-27 after backend foundation files were added. The first sandboxed attempt failed because Node could not read a user-directory path; rerunning with approved permissions succeeded.
+- Phase 9.2 server `npm run typecheck`: passed on 2026-06-27.
+- Phase 9.2 client `npm run typecheck`: passed on 2026-06-27 after adding `src/vite-env.d.ts`.
+- Phase 9.2 server `npm run build`: passed on 2026-06-27.
+- Phase 9.2 client `npm run build`: passed on 2026-06-27 and generated `dist/`.
+- Phase 9.3 server `npm run typecheck`: passed on 2026-06-27.
+- Phase 9.3 client `npm run typecheck`: passed on 2026-06-27.
+- Phase 9.3 server `npm run build`: passed on 2026-06-27.
+- Phase 9.3 client `npm run build`: passed on 2026-06-27 and generated `dist/`.
+- Live signup/login against MongoDB still needs a local/prod env run with `MONGODB_URI` and `JWT_SECRET` configured.
 
 ## Important Defaults
 
-- Keep website and extension builds separate.
+- Keep client, server, and extension builds separate.
 - Keep website claims aligned with the actual extension behavior.
 - Keep CTA wording accurate for the current release state.
 - Keep SEO and accessibility as first-class requirements from the scaffold onward.
@@ -353,8 +384,8 @@ Environment variables:
 
 ## Next Immediate Steps
 
-1. Wait for user approval to start Phase 9.1: backend foundation.
-2. Before implementation, confirm backend approach if needed: Vite plus Node/Express API vs migration to a full-stack framework.
-3. Keep current landing page intact while adding account/reporting routes.
-4. When the production domain is known, add canonical URL, absolute Open Graph URL/image tags, `sitemap.xml`, and any domain-specific `robots.txt` sitemap reference.
-5. After dashboard/auth implementation, update website copy so it accurately describes redacted report sync and avoids claiming raw prompt upload.
+1. Start Phase 9.4: extension auth gate.
+2. In the extension popup, check auth/session state and show login/signup CTAs when unauthenticated.
+3. Open the client login flow from the extension auth prompt.
+4. Keep local warning history visible while auth gating is introduced.
+5. When the production domain is known, add canonical URL, absolute Open Graph URL/image tags, `sitemap.xml`, and any domain-specific `robots.txt` sitemap reference.

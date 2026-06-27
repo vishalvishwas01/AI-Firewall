@@ -61,7 +61,7 @@ export const workflowSteps: IconItem[] = [
   {
     title: "Keep a redacted trail",
     description:
-      "Recent warning history stays in local browser storage with sensitive snippets masked.",
+      "Recent warning history stays local first, and account-backed reports use masked snippets only.",
     icon: FileWarning
   }
 ];
@@ -70,15 +70,15 @@ export const supportedTools = ["ChatGPT", "Claude", "Gemini"];
 
 export const privacyPoints: IconItem[] = [
   {
-    title: "No account for the MVP",
+    title: "Local protection first",
     description:
-      "The extension is designed for individual use without sign-in, dashboards, or team admin.",
+      "Detection runs in the browser even as account-backed report viewing is added.",
     icon: CheckCircle2
   },
   {
-    title: "No backend logging",
+    title: "Redacted report sync",
     description:
-      "Protection runs in the browser and the MVP does not send warning history to a server.",
+      "Synced report records must store masked snippets, never raw prompts or secrets.",
     icon: ShieldCheck
   },
   {
@@ -98,7 +98,7 @@ export const faqItems = [
   {
     question: "Does AI Permission Firewall read my AI account?",
     answer:
-      "The MVP watches supported AI chat pages for risky text and upload moments. It does not add a backend account, dashboard, or remote activity log."
+      "The extension watches supported AI chat pages for risky text and upload moments. Detection stays local, and account-backed reporting is designed to sync redacted warning records only."
   },
   {
     question: "Is detection perfect?",
