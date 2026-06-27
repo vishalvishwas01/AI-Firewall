@@ -15,7 +15,8 @@ Target structure:
 ```text
 AI-Firewall/
   extension/
-  website/
+  client/
+  server/
 ```
 
 - `extension/` contains the Chrome extension implementation, Plasmo configuration, extension assets, tests, and extension build output.

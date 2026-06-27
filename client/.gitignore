@@ -1,0 +1,14 @@
+node_modules
+dist
+.vercel
+*.local
+
+build
+.parcel-cache
+.plasmo
+coverage
+.env
+.env.*
+*.local
+.vscode/*
+!.vscode/settings.json
