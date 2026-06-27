@@ -195,10 +195,12 @@ Proposed implementation phases:
    - Added date filters and tool filters: ChatGPT, Claude, Gemini, Other.
    - Added empty/loading/error states.
    - Build verification passed for both `server/` and `client/`.
-4. Extension auth gate - Status: Pending
-   - Popup checks auth/session/token state.
-   - If not authenticated, show sign up/login call-to-action and open website login.
-   - Keep current local recent-warning display available or clearly labeled as local-only until logged in.
+4. Extension auth gate - Status: Implemented, Pending User Verification
+   - Added extension auth helper in `src/firewall/auth.ts`.
+   - Popup checks website/server auth session state.
+   - If unauthenticated, popup shows login and signup call-to-action buttons and opens the client login/signup flow.
+   - If authenticated, popup shows signed-in account email and an `Open reports` action.
+   - Current local recent-warning display remains visible regardless of auth state.
 5. Extension log sync - Status: Pending
    - When authenticated, send redacted activity logs to the website API/MongoDB.
    - Queue/retry failed syncs locally without blocking protection.
@@ -274,10 +276,11 @@ Status: Done
 
 ## Next Immediate Steps
 
-1. Start Phase 9.4: extension auth gate.
-2. Keep the extension local warning/log behavior unchanged while auth gate UI is added.
-3. Popup should check auth/session state, show login/signup CTA when needed, and open the client login flow.
-4. When log sync begins, do not send raw prompt text or raw secrets to MongoDB; sync only redacted log records.
+1. User should run extension typecheck/build and manually verify popup auth gate behavior.
+2. Start Phase 9.5: extension redacted log sync.
+3. Sync only redacted activity logs when authenticated.
+4. Queue/retry failed syncs locally without blocking protection.
+5. Avoid duplicate synced logs using stable IDs.
 
 ## Related Handoffs
 

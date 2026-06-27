@@ -3,6 +3,13 @@ import { useEffect, useMemo, useState } from "react"
 
 import "./styles/popup.css"
 
+import {
+  getAuthStatus,
+  openLoginPage,
+  openReportsPage,
+  openSignupPage,
+  type AuthStatus
+} from "./firewall/auth"
 import { clearActivityLogs, getActivityLogs, getSettings, setSetting } from "./firewall/storage"
 import type { ActivityLog, ProtectionSettings } from "./firewall/types"
 
@@ -99,13 +106,15 @@ const Popup = () => {
   const [settings, setSettings] = useState<ProtectionSettings | null>(null)
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [siteStatus, setSiteStatus] = useState<CurrentSiteStatus | null>(null)
+  const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    void Promise.all([getSettings(), getActivityLogs(), getCurrentSiteStatus()]).then(([nextSettings, nextLogs, nextSiteStatus]) => {
+    void Promise.all([getSettings(), getActivityLogs(), getCurrentSiteStatus(), getAuthStatus()]).then(([nextSettings, nextLogs, nextSiteStatus, nextAuthStatus]) => {
       setSettings(nextSettings)
       setLogs(nextLogs)
       setSiteStatus(nextSiteStatus)
+      setAuthStatus(nextAuthStatus)
       setIsLoading(false)
     })
   }, [])
@@ -188,6 +197,55 @@ const Popup = () => {
             </label>
           ))}
         </div>
+      </section>
+
+      <section className="panel account-panel">
+        <div className="section-heading">
+          <h2>Report account</h2>
+          {authStatus?.isAuthenticated ? (
+            <button
+              className="text-button"
+              onClick={() => void openReportsPage()}
+              type="button">
+              Open reports
+            </button>
+          ) : null}
+        </div>
+
+        {authStatus?.isAuthenticated ? (
+          <div className="account-state is-signed-in">
+            <CheckCircle2 size={18} aria-hidden="true" />
+            <div>
+              <strong>Signed in</strong>
+              <small>{authStatus.email}</small>
+            </div>
+          </div>
+        ) : (
+          <div className="account-state is-signed-out">
+            <CircleSlash size={18} aria-hidden="true" />
+            <div>
+              <strong>Reports need sign in</strong>
+              <small>
+                Local warnings stay visible here. Sign in to prepare synced report history.
+              </small>
+            </div>
+          </div>
+        )}
+
+        {!authStatus?.isAuthenticated ? (
+          <div className="account-actions">
+            <button className="account-button primary" onClick={() => void openLoginPage()} type="button">
+              Login
+            </button>
+            <button className="account-button" onClick={() => void openSignupPage()} type="button">
+              Sign up
+            </button>
+          </div>
+        ) : null}
+
+        {!authStatus?.isAuthenticated && authStatus?.error ? (
+          <p className="account-note">{authStatus.error}</p>
+        ) : null}
       </section>
 
       <section className="panel">

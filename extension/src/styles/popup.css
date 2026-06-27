@@ -223,6 +223,88 @@ h2 {
   opacity: 0.6;
 }
 
+.text-button {
+  background: transparent;
+  border: 0;
+  color: #1f6f4a;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 750;
+  padding: 0;
+}
+
+.account-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.account-state {
+  align-items: center;
+  border: 1px solid #e5dfd2;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 22px 1fr;
+  min-height: 58px;
+  padding: 10px;
+}
+
+.account-state.is-signed-in {
+  background: #eef8f0;
+  border-color: #b8dcc2;
+  color: #17633f;
+}
+
+.account-state.is-signed-out {
+  background: #fbf7ef;
+  border-color: #eadfcb;
+  color: #7c5a16;
+}
+
+.account-state strong {
+  color: #171717;
+  display: block;
+  font-size: 13px;
+}
+
+.account-state small {
+  color: #6b665d;
+  display: block;
+  font-size: 12px;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.account-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.account-button {
+  background: #fff;
+  border: 1px solid #ddd7cc;
+  border-radius: 7px;
+  color: #332f28;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 750;
+  min-height: 36px;
+}
+
+.account-button.primary {
+  background: #12211f;
+  border-color: #12211f;
+  color: #f8f5ed;
+}
+
+.account-note {
+  color: #7c5a16;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .empty-state {
   color: #6b665d;
   font-size: 13px;

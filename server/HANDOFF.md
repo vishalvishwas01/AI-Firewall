@@ -184,13 +184,16 @@ Verification:
 
 ## Phase 9.4: Extension Auth Gate
 
-Status: Next
+Status: Implemented, Pending User Verification
 
 - Extension popup checks auth state.
-- If unauthenticated, show login/signup CTA and open the client login flow.
-- Keep existing local recent warnings visible or clearly labeled as local-only.
+- If unauthenticated, shows login/signup CTA and opens the client login/signup flow.
+- If authenticated, shows account email and an `Open reports` action.
+- Keeps existing local recent warnings visible.
 
-Phase 9.5 extension log sync:
+## Phase 9.5: Extension Log Sync
+
+Status: Next
 
 - Send redacted activity records to the server only when authenticated.
 - Queue/retry failed syncs locally without blocking protection.

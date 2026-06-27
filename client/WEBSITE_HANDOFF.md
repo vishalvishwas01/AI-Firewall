@@ -35,7 +35,8 @@ Current state as of 2026-06-27:
 - Phase 9.1 backend foundation is complete in `server/`: TypeScript config, env contract, MongoDB helper, user schema, synced-log schema, indexes, health endpoint, and `.env.example`.
 - Phase 9.2 auth UI/API is implemented and build-verified: signup, login, logout, session check, secure password hashing, HTTP-only JWT cookie sessions, and auth-aware client navigation.
 - Phase 9.3 report dashboard/API is implemented and build-verified: authenticated report route/page, redacted log list/create endpoints, date filters, tool filters, and empty/loading/error states.
-- Phase 9.4 extension auth gate is next: popup checks auth state, shows login/signup CTA when needed, and opens the client login flow.
+- Phase 9.4 extension auth gate is implemented, pending user verification: popup checks auth state, shows login/signup CTA when needed, and opens the client login/signup/report flow.
+- Phase 9.5 extension redacted log sync is next.
 
 Recommended path:
 
@@ -293,10 +294,11 @@ Proposed implementation phases:
    - Added empty/loading/error states.
    - Added authenticated server `/logs` list endpoint scoped by `userId`.
    - Added authenticated server `/logs` create endpoint for future extension sync.
-4. Extension auth integration - Status: Pending
+4. Extension auth integration - Status: Implemented, Pending User Verification
    - Extension popup detects whether the user is authenticated.
-   - If unauthenticated, show login/signup CTA and open website login.
-   - Keep local recent warnings visible or clearly label them as local-only.
+   - If unauthenticated, shows login/signup CTA and opens website login/signup.
+   - If authenticated, shows account email and an `Open reports` action.
+   - Keeps local recent warnings visible.
 5. Extension log sync - Status: Pending
    - Send redacted log records to website API when authenticated.
    - Queue/retry failed syncs locally.
@@ -384,8 +386,8 @@ Environment variables:
 
 ## Next Immediate Steps
 
-1. Start Phase 9.4: extension auth gate.
-2. In the extension popup, check auth/session state and show login/signup CTAs when unauthenticated.
-3. Open the client login flow from the extension auth prompt.
-4. Keep local warning history visible while auth gating is introduced.
+1. User should run extension typecheck/build and manually verify popup auth gate behavior.
+2. Start Phase 9.5: extension redacted log sync.
+3. Sync only redacted activity logs when authenticated.
+4. Queue/retry failed syncs locally without blocking protection.
 5. When the production domain is known, add canonical URL, absolute Open Graph URL/image tags, `sitemap.xml`, and any domain-specific `robots.txt` sitemap reference.
