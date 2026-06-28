@@ -145,7 +145,7 @@ Build these one at a time. The user will explicitly instruct when to move to the
 
 ### Phase 9: Account-Backed Reporting Plan
 
-Status: Planned
+Status: In Progress
 
 Scope shift requested by user on 2026-06-20:
 
@@ -195,21 +195,37 @@ Proposed implementation phases:
    - Added date filters and tool filters: ChatGPT, Claude, Gemini, Other.
    - Added empty/loading/error states.
    - Build verification passed for both `server/` and `client/`.
-4. Extension auth gate - Status: Implemented, Pending User Verification
+4. Extension auth gate - Status: Done
    - Added extension auth helper in `src/firewall/auth.ts`.
    - Popup checks website/server auth session state.
    - If unauthenticated, popup shows login and signup call-to-action buttons and opens the client login/signup flow.
    - If authenticated, popup shows signed-in account email and an `Open reports` action.
    - Current local recent-warning display remains visible regardless of auth state.
-5. Extension log sync - Status: Pending
-   - When authenticated, send redacted activity logs to the website API/MongoDB.
-   - Queue/retry failed syncs locally without blocking protection.
-   - Avoid duplicate synced logs with stable IDs.
-6. Cross-origin and deployment configuration - Status: Pending
+   - Added bearer-token auth bridge because extension popup requests cannot reliably share the website's localhost session cookie.
+   - Added `src/background.ts` external message listener to store the website-issued auth token.
+   - Added local client origins to `externally_connectable` and localhost API host permissions.
+   - Client must be configured with `VITE_EXTENSION_ID` so it can send the token back to the loaded extension after login/signup.
+   - User verified extension login/signup and signed-in popup state on 2026-06-28.
+5. Extension log sync - Status: Done
+   - Added redacted log sync helper in `src/firewall/sync.ts`.
+   - `addActivityLog` now saves local history, queues the redacted log, and asks the background context to sync.
+   - Sync runs only when the website/server auth session is authenticated through cookie or stored bearer token.
+   - Failed or unauthenticated sync attempts are queued locally under `ai-firewall-sync-queue`.
+   - Popup shows queued redacted log count and a manual retry action.
+   - Duplicate synced logs are avoided server-side through stable `extensionLogId` plus user ID.
+   - Background sync now flushes queued logs automatically without requiring the popup retry button.
+   - Queued logs also flush on extension background startup/reload and after auth token receipt.
+   - User verified MongoDB storage and frontend `/reports` display on 2026-06-28.
+6. Env-style secret detection and redaction - Status: Done
+   - Sensitive-data detection now catches env-style assignments such as `JWT_SECRET=...`.
+   - Connection detection now catches URI assignments such as `MONGODB_URI=...`.
+   - Redaction masks matching values before local history and synced reporting.
+   - Added tests covering env-style detection and redaction.
+7. Cross-origin and deployment configuration - Status: Pending
    - Configure CORS for extension origin and website domain.
    - Decide production API URL and extension config strategy.
    - Document local dev and production env setup.
-7. Verification and QA - Status: Pending
+8. Verification and QA - Status: Pending
    - Test signup/login/logout.
    - Test extension unauthenticated redirect.
    - Test log sync from ChatGPT/Claude/Gemini.
@@ -276,11 +292,11 @@ Status: Done
 
 ## Next Immediate Steps
 
-1. User should run extension typecheck/build and manually verify popup auth gate behavior.
-2. Start Phase 9.5: extension redacted log sync.
-3. Sync only redacted activity logs when authenticated.
-4. Queue/retry failed syncs locally without blocking protection.
-5. Avoid duplicate synced logs using stable IDs.
+1. Finalize production extension/client/server origins and API URL strategy.
+2. Document local and production env setup without committing real secrets.
+3. Run broader end-to-end QA across ChatGPT, Claude, and Gemini.
+4. Verify report filters by date and tool using real synced records.
+5. Update README/QA/release materials after deployment and packaging decisions are known.
 
 ## Related Handoffs
 

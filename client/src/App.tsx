@@ -36,6 +36,37 @@ const fadeIn = {
   transition: { duration: 0.45, ease: "easeOut" as const }
 } as const;
 
+const extensionId = import.meta.env.VITE_EXTENSION_ID as string;
+
+const isExtensionAuthFlow = () =>
+  new URLSearchParams(window.location.search).get("source") === "extension";
+
+// const sendSessionToExtension = async (token: string) => {
+//   if (!extensionId || !window.chrome?.runtime?.sendMessage) return;
+
+//   await new Promise<void>((resolve) => {
+//     window.chrome.runtime.sendMessage(
+//       extensionId,
+//       { type: "AI_FIREWALL_AUTH_TOKEN", token },
+//       () => resolve()
+//     );
+//   });
+// };
+
+const sendSessionToExtension = async (token: string) => {
+  const sendMessage = window.chrome?.runtime?.sendMessage;
+
+  if (!extensionId || !sendMessage) return;
+
+  await new Promise<void>((resolve) => {
+    sendMessage(
+      extensionId,
+      { type: "AI_FIREWALL_AUTH_TOKEN", token },
+      () => resolve()
+    );
+  });
+};
+
 function App() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [sessionLoading, setSessionLoading] = useState(true);
@@ -200,6 +231,9 @@ function AuthPage({
         ? await signup(email, password)
         : await login(email, password);
       onAuthenticated(response.user);
+      if (isExtensionAuthFlow()) {
+        await sendSessionToExtension(response.token);
+      }
       window.history.pushState({}, "", "/");
       window.dispatchEvent(new Event("popstate"));
     } catch (authError) {
@@ -373,11 +407,10 @@ function ReportsPage({
                 key={item}
                 type="button"
                 onClick={() => setTool(item)}
-                className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${
-                  tool === item
+                className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${tool === item
                     ? "border-slate-950 bg-slate-950 text-white"
                     : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
-                }`}
+                  }`}
               >
                 {item}
               </button>
@@ -832,23 +865,20 @@ function SectionIntro({
   return (
     <motion.div {...fadeIn} className="max-w-3xl">
       <p
-        className={`text-sm font-semibold uppercase tracking-wider ${
-          inverted ? "text-teal-200" : "text-teal-700"
-        }`}
+        className={`text-sm font-semibold uppercase tracking-wider ${inverted ? "text-teal-200" : "text-teal-700"
+          }`}
       >
         {eyebrow}
       </p>
       <h2
-        className={`mt-3 text-3xl font-semibold tracking-normal sm:text-4xl ${
-          inverted ? "text-white" : "text-slate-950"
-        }`}
+        className={`mt-3 text-3xl font-semibold tracking-normal sm:text-4xl ${inverted ? "text-white" : "text-slate-950"
+          }`}
       >
         {title}
       </h2>
       <p
-        className={`mt-4 text-base leading-7 ${
-          inverted ? "text-slate-300" : "text-slate-600"
-        }`}
+        className={`mt-4 text-base leading-7 ${inverted ? "text-slate-300" : "text-slate-600"
+          }`}
       >
         {body}
       </p>

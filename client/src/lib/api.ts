@@ -5,6 +5,7 @@ export type SessionUser = {
 
 export type AuthResponse = {
   user: SessionUser
+  token: string
 }
 
 export type ReportTool = "ChatGPT" | "Claude" | "Gemini" | "Other"
@@ -62,8 +63,17 @@ export const apiRequest = async <T>(
   return parseResponse<T>(response)
 }
 
-export const getSession = () =>
-  apiRequest<{ user: SessionUser | null }>("/auth/session")
+export const getSession = async () => {
+  const response = await fetch(`${apiBaseUrl}/auth/session`, {
+    credentials: "include"
+  })
+
+  if (response.status === 401) {
+    return { user: null }
+  }
+
+  return parseResponse<{ user: SessionUser | null }>(response)
+}
 
 export const signup = (email: string, password: string) =>
   apiRequest<AuthResponse>("/auth/signup", {

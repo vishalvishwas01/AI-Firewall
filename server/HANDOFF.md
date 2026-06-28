@@ -139,6 +139,13 @@ Completed on 2026-06-27:
 - Returns public user data only: no password hashes.
 - Uses a generic login failure message for invalid credentials.
 
+Follow-up completed on 2026-06-28:
+
+- Auth middleware now accepts both the `ai_firewall_session` HTTP-only cookie and `Authorization: Bearer <token>`.
+- Signup/login responses return `{ user, token }` so the client can bridge auth into the loaded extension.
+- Added `authenticatedUserFromRequest(req)` for non-throwing session checks.
+- `GET /auth/session` now returns `{ user: null }` instead of `401` when no valid session/token exists, which avoids noisy expected 401s during logged-out client checks.
+
 Client work lives in `../client/WEBSITE_HANDOFF.md`:
 
 - Added client API helper in `../client/src/lib/api.ts`.
@@ -151,7 +158,7 @@ Verification:
 
 - `npm run typecheck`: passed on 2026-06-27.
 - `npm run build`: passed on 2026-06-27.
-- Live signup/login against MongoDB still needs a local/prod env run with `MONGODB_URI` and `JWT_SECRET` configured.
+- Local signup/login and extension auth bridge were user-verified on 2026-06-28 with env configured outside the repo.
 
 ## Later Phases
 
@@ -170,6 +177,12 @@ Completed on 2026-06-27:
 - Kept every query scoped to `req.user.id`.
 - Validates incoming log records and rejects secret-like unredacted snippets.
 
+Follow-up completed on 2026-06-28:
+
+- Log validation now allows safe redaction placeholders such as `[REDACTED]`, `[REDACTED_URL]`, and `[REDACTED_TOKEN]`.
+- Server still rejects unredacted assigned secrets, connection URLs/URIs, and known token formats.
+- This fixed extension sync for snippets like `JWT_SECRET=[REDACTED]` and `MONGODB_URI=[REDACTED_URL]`.
+
 Client work lives in `../client/WEBSITE_HANDOFF.md`:
 
 - Added authenticated report page at `/reports`.
@@ -184,20 +197,52 @@ Verification:
 
 ## Phase 9.4: Extension Auth Gate
 
-Status: Implemented, Pending User Verification
+Status: Done
 
 - Extension popup checks auth state.
 - If unauthenticated, shows login/signup CTA and opens the client login/signup flow.
 - If authenticated, shows account email and an `Open reports` action.
 - Keeps existing local recent warnings visible.
+- Server auth middleware accepts both HTTP-only cookie sessions and `Authorization: Bearer` tokens.
+- Signup/login responses return a token for the extension auth bridge.
+- User verified extension login/signup bridge and signed-in popup state on 2026-06-28.
 
 ## Phase 9.5: Extension Log Sync
 
-Status: Next
+Status: Done
 
-- Send redacted activity records to the server only when authenticated.
-- Queue/retry failed syncs locally without blocking protection.
-- Avoid duplicates using stable IDs.
+- Extension sends redacted activity records to `POST /logs` only when authenticated.
+- Failed or unauthenticated sync attempts are queued locally without blocking protection.
+- Popup shows queued redacted log count and retry action.
+- Server avoids duplicates using stable `extensionLogId` plus authenticated user ID.
+- Automatic background queue flush now syncs records without requiring the popup retry button.
+- Existing queued records flush on extension background startup/reload and after auth token receipt.
+- User verified redacted logs save into MongoDB and appear on the client report dashboard on 2026-06-28.
+
+## Phase 9.6: Deployment, Env, And Production Hardening
+
+Status: Planned
+
+Next backend-focused work:
+
+- Finalize production CORS policy for deployed client domain and packaged extension ID.
+- Document local and production env values without committing real secrets.
+- Decide production cookie settings (`secure`, same-site behavior, proxy/trust settings if hosted behind a platform).
+- Add API deployment notes for the separate `server/` package.
+- Add a small operational checklist for MongoDB indexes, health checks, and log retention.
+
+## Phase 9.7: End-To-End QA And Release Docs
+
+Status: Planned
+
+Next verification/doc work:
+
+- Verify signup/login/logout/session across fresh browsers.
+- Verify extension auth bridge after extension reload and ID changes.
+- Verify ChatGPT, Claude, and Gemini redacted sync.
+- Verify report filters by tool and date.
+- Verify unredacted snippets are rejected by the server while redacted placeholders are accepted.
+- Update README/QA/release docs after deployment decisions are known.
 
 ## Important Defaults
 

@@ -17,8 +17,13 @@ const tools = ["ChatGPT", "Claude", "Gemini", "Other"] as const
 const eventTypes = ["sensitive-data", "prompt-injection", "risky-upload", "scam-fraud"] as const
 const severities = ["low", "medium", "high"] as const
 const decisions = ["warned", "blocked", "ignored", "allowed", "redacted-copied"] as const
-const secretLikePattern =
-  /\b(api[_-]?key|access[_-]?token|secret|password|passwd|pwd|token)\b\s*[:=]|(?:sk-|pk_|ghp_|xox[baprs]-|AKIA[0-9A-Z]{8})/i
+const assignedSecretPattern =
+  /\b(?:[a-z0-9]+[_-])*(api[_-]?key|access[_-]?token|secret|password|passwd|pwd|token)\b\s*[:=]\s*["']?([^\s"',;]{6,})/gi
+const assignedConnectionPattern =
+  /\b(?:[a-z0-9]+[_-])?(database|db|mongodb|mongo|postgres|mysql|redis|supabase|firebase|webhook|callback|redirect|site|service|api)[_-]?(url|uri)\b\s*[:=]\s*["']?([^\s"',;]{4,})/gi
+const genericTokenPattern =
+  /\b(?:sk-[A-Za-z0-9_-]{16,}|pk_[A-Za-z0-9_-]{16,}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16})\b/
+const redactedValuePattern = /^\[(?:REDACTED|REDACTED_URL|REDACTED_TOKEN)\]$/i
 
 const isOneOf = <T extends readonly string[]>(value: unknown, allowed: T): value is T[number] =>
   typeof value === "string" && allowed.includes(value)
@@ -28,6 +33,26 @@ const parseDate = (value: unknown) => {
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? undefined : date
 }
+
+const hasUnredactedAssignment = (pattern: RegExp, snippet: string, valueGroup: number) => {
+  pattern.lastIndex = 0
+  let match = pattern.exec(snippet)
+
+  while (match) {
+    const value = match[valueGroup] ?? ""
+    if (!redactedValuePattern.test(value)) {
+      return true
+    }
+    match = pattern.exec(snippet)
+  }
+
+  return false
+}
+
+const hasUnredactedSecretLikeText = (snippet: string) =>
+  hasUnredactedAssignment(assignedSecretPattern, snippet, 2) ||
+  hasUnredactedAssignment(assignedConnectionPattern, snippet, 3) ||
+  genericTokenPattern.test(snippet)
 
 const publicLog = (log: SyncedLogDocument) => ({
   id: log._id?.toHexString(),
@@ -132,7 +157,7 @@ router.post("/", async (req: AuthenticatedRequest, res, next) => {
       return
     }
 
-    if (secretLikePattern.test(redactedSnippet)) {
+    if (hasUnredactedSecretLikeText(redactedSnippet)) {
       res.status(400).json({ error: "Log snippet must be redacted before sync" })
       return
     }

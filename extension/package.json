@@ -32,8 +32,16 @@
     "host_permissions": [
       "https://chatgpt.com/*",
       "https://claude.ai/*",
-      "https://gemini.google.com/*"
+      "https://gemini.google.com/*",
+      "http://localhost:4000/*",
+      "http://127.0.0.1:4000/*"
     ],
+    "externally_connectable": {
+      "matches": [
+        "http://localhost:5173/*",
+        "http://127.0.0.1:5173/*"
+      ]
+    },
     "permissions": [
       "tabs",
       "storage"

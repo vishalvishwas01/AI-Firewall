@@ -10,7 +10,14 @@ import {
   openSignupPage,
   type AuthStatus
 } from "./firewall/auth"
-import { clearActivityLogs, getActivityLogs, getSettings, setSetting } from "./firewall/storage"
+import {
+  clearActivityLogs,
+  getActivityLogs,
+  getQueuedSyncLogs,
+  getSettings,
+  retryQueuedSyncLogs,
+  setSetting
+} from "./firewall/storage"
 import type { ActivityLog, ProtectionSettings } from "./firewall/types"
 
 const settingLabels: Array<{
@@ -105,14 +112,22 @@ const getCurrentSiteStatus = async (): Promise<CurrentSiteStatus> => {
 const Popup = () => {
   const [settings, setSettings] = useState<ProtectionSettings | null>(null)
   const [logs, setLogs] = useState<ActivityLog[]>([])
+  const [queuedSyncCount, setQueuedSyncCount] = useState(0)
   const [siteStatus, setSiteStatus] = useState<CurrentSiteStatus | null>(null)
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    void Promise.all([getSettings(), getActivityLogs(), getCurrentSiteStatus(), getAuthStatus()]).then(([nextSettings, nextLogs, nextSiteStatus, nextAuthStatus]) => {
+    void Promise.all([
+      getSettings(),
+      getActivityLogs(),
+      getQueuedSyncLogs(),
+      getCurrentSiteStatus(),
+      getAuthStatus()
+    ]).then(([nextSettings, nextLogs, nextQueuedSyncLogs, nextSiteStatus, nextAuthStatus]) => {
       setSettings(nextSettings)
       setLogs(nextLogs)
+      setQueuedSyncCount(nextQueuedSyncLogs.length)
       setSiteStatus(nextSiteStatus)
       setAuthStatus(nextAuthStatus)
       setIsLoading(false)
@@ -136,6 +151,12 @@ const Popup = () => {
   const clearLogs = async () => {
     await clearActivityLogs()
     setLogs([])
+  }
+
+  const retrySync = async () => {
+    await retryQueuedSyncLogs()
+    const queued = await getQueuedSyncLogs()
+    setQueuedSyncCount(queued.length)
   }
 
   return (
@@ -245,6 +266,15 @@ const Popup = () => {
 
         {!authStatus?.isAuthenticated && authStatus?.error ? (
           <p className="account-note">{authStatus.error}</p>
+        ) : null}
+
+        {queuedSyncCount > 0 ? (
+          <div className="sync-state">
+            <small>{queuedSyncCount} redacted log{queuedSyncCount === 1 ? "" : "s"} queued for sync.</small>
+            <button className="text-button" onClick={() => void retrySync()} type="button">
+              Retry
+            </button>
+          </div>
         ) : null}
       </section>
 

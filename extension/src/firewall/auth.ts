@@ -10,6 +10,7 @@ export type AuthStatus =
 
 const apiBaseUrl = process.env.PLASMO_PUBLIC_API_BASE_URL ?? "http://localhost:4000"
 const clientBaseUrl = process.env.PLASMO_PUBLIC_CLIENT_BASE_URL ?? "http://localhost:5173"
+const authTokenKey = "ai-firewall-auth-token"
 
 const pageUrl = (path: string) => `${clientBaseUrl}${path}?source=extension`
 
@@ -24,8 +25,10 @@ const openPage = async (url: string) => {
 
 export const getAuthStatus = async (): Promise<AuthStatus> => {
   try {
+    const token = await getAuthToken()
     const response = await fetch(`${apiBaseUrl}/auth/session`, {
-      credentials: "include"
+      credentials: "include",
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
     })
 
     if (response.status === 401) {
@@ -57,3 +60,23 @@ export const openLoginPage = () => openPage(pageUrl("/login"))
 export const openSignupPage = () => openPage(pageUrl("/signup"))
 
 export const openReportsPage = () => openPage(pageUrl("/reports"))
+
+export const apiUrl = (path: string) => `${apiBaseUrl}${path}`
+
+export const getAuthToken = async (): Promise<string | undefined> => {
+  if (typeof chrome === "undefined" || !chrome.storage?.local) {
+    return undefined
+  }
+
+  const result = await chrome.storage.local.get(authTokenKey)
+  const token = result[authTokenKey]
+  return typeof token === "string" ? token : undefined
+}
+
+export const saveAuthToken = async (token: string): Promise<void> => {
+  if (typeof chrome === "undefined" || !chrome.storage?.local) {
+    return
+  }
+
+  await chrome.storage.local.set({ [authTokenKey]: token })
+}

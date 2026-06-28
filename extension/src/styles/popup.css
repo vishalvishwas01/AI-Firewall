@@ -305,6 +305,23 @@ h2 {
   line-height: 1.35;
 }
 
+.sync-state {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e5dfd2;
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 8px 10px;
+}
+
+.sync-state small {
+  color: #6b665d;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .empty-state {
   color: #6b665d;
   font-size: 13px;

@@ -25,6 +25,20 @@ describe("sensitive data detection", () => {
     expect(detections[0].evidence).toContain("sensitive service URL assignment")
   })
 
+  it("detects env-style secret and connection URI assignments as high severity", () => {
+    const detections = detectSensitiveData(
+      [
+        "MONGODB_URI=mongodb://localhost:27018/ai-firewall",
+        "JWT_SECRET=replace-with-a-long-random-secret"
+      ].join("\n")
+    )
+
+    expect(detections).toHaveLength(1)
+    expect(detections[0].severity).toBe("high")
+    expect(detections[0].evidence).toContain("secret assignment")
+    expect(detections[0].evidence).toContain("sensitive service URL assignment")
+  })
+
   it("detects personal and confidential data", () => {
     const detections = detectSensitiveData(
       "This confidential note belongs to alex@example.com and +1 415 555 0199"
@@ -110,6 +124,20 @@ describe("combined analysis and redaction", () => {
     expect(redacted).toContain("[REDACTED_CARD]")
     expect(redacted).not.toContain("hunter2token")
     expect(redacted).not.toContain("alex@example.com")
+  })
+
+  it("redacts env-style secret and connection URI assignments", () => {
+    const redacted = redactSensitiveText(
+      [
+        "MONGODB_URI=mongodb://localhost:27018/ai-firewall",
+        "JWT_SECRET=replace-with-a-long-random-secret"
+      ].join("\n")
+    )
+
+    expect(redacted).toContain("MONGODB_URI=[REDACTED_URL]")
+    expect(redacted).toContain("JWT_SECRET=[REDACTED]")
+    expect(redacted).not.toContain("mongodb://localhost")
+    expect(redacted).not.toContain("replace-with-a-long-random-secret")
   })
 
   it("keeps safe-copy redaction full length while snippets stay short", () => {

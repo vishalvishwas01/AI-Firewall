@@ -1,9 +1,12 @@
 import { defaultSettings } from "./detectors"
+import { syncActivityLog } from "./sync"
 import type { ActivityLog, ProtectionSettings } from "./types"
 
 const settingsKey = "ai-firewall-settings"
 const logsKey = "ai-firewall-activity"
+const syncQueueKey = "ai-firewall-sync-queue"
 const maxLogs = 50
+const maxQueuedLogs = 100
 
 const localFallback = new Map<string, unknown>()
 
@@ -60,10 +63,58 @@ export const getActivityLogs = async (): Promise<ActivityLog[]> => {
   return getValue<ActivityLog[]>(logsKey, [])
 }
 
+export const getQueuedSyncLogs = async (): Promise<ActivityLog[]> => {
+  return getValue<ActivityLog[]>(syncQueueKey, [])
+}
+
+const saveQueuedSyncLogs = async (logs: ActivityLog[]): Promise<void> => {
+  await setValue(syncQueueKey, logs.slice(0, maxQueuedLogs))
+}
+
+const queueSyncLog = async (log: ActivityLog): Promise<void> => {
+  const queued = await getQueuedSyncLogs()
+  if (queued.some((item) => item.id === log.id)) return
+  await saveQueuedSyncLogs([log, ...queued])
+}
+
+const requestBackgroundSync = () => {
+  if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) {
+    return
+  }
+
+  chrome.runtime.sendMessage({ type: "AI_FIREWALL_SYNC_QUEUED_LOGS" }, () => {
+    void chrome.runtime.lastError
+  })
+}
+
+export const retryQueuedSyncLogs = async (): Promise<void> => {
+  const queued = await getQueuedSyncLogs()
+  if (queued.length === 0) return
+
+  const remaining: ActivityLog[] = []
+
+  for (const log of queued) {
+    try {
+      const synced = await syncActivityLog(log)
+      if (!synced) {
+        remaining.push(log)
+      }
+    } catch {
+      remaining.push(log)
+    }
+  }
+
+  await saveQueuedSyncLogs(remaining)
+}
+
 export const addActivityLog = async (log: ActivityLog): Promise<ActivityLog[]> => {
   const logs = await getActivityLogs()
   const next = [log, ...logs].slice(0, maxLogs)
   await setValue(logsKey, next)
+  await queueSyncLog(log)
+
+  requestBackgroundSync()
+
   return next
 }
 

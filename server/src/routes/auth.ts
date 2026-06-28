@@ -4,11 +4,10 @@ import { Router } from "express"
 
 import { getDb } from "../db/mongo.js"
 import {
+  authenticatedUserFromRequest,
   authCookieName,
   authCookieOptions,
-  requireAuth,
   signAuthToken,
-  type AuthenticatedRequest
 } from "../middleware/auth.js"
 import { usersCollection, type UserDocument } from "../models/user.js"
 
@@ -32,6 +31,7 @@ const setSessionCookie = (res: Response, user: UserDocument) => {
 
   const token = signAuthToken({ id: user._id, email: user.email })
   res.cookie(authCookieName, token, authCookieOptions)
+  return token
 }
 
 router.post("/signup", async (req, res, next) => {
@@ -71,8 +71,8 @@ router.post("/signup", async (req, res, next) => {
       throw new Error("Created user could not be loaded")
     }
 
-    setSessionCookie(res, user)
-    res.status(201).json({ user: publicUser(user) })
+    const token = setSessionCookie(res, user)
+    res.status(201).json({ user: publicUser(user), token })
   } catch (error) {
     next(error)
   }
@@ -92,8 +92,8 @@ router.post("/login", async (req, res, next) => {
       return
     }
 
-    setSessionCookie(res, user)
-    res.json({ user: publicUser(user) })
+    const token = setSessionCookie(res, user)
+    res.json({ user: publicUser(user), token })
   } catch (error) {
     next(error)
   }
@@ -107,12 +107,14 @@ router.post("/logout", (_req, res) => {
   res.status(204).end()
 })
 
-router.get("/session", requireAuth, (req: AuthenticatedRequest, res) => {
+router.get("/session", (req, res) => {
+  const user = authenticatedUserFromRequest(req)
+
   res.json({
-    user: req.user
+    user: user
       ? {
-          id: req.user.id.toHexString(),
-          email: req.user.email
+          id: user.id.toHexString(),
+          email: user.email
         }
       : null
   })

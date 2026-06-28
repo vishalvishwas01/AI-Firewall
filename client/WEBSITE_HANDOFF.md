@@ -24,7 +24,7 @@ AI-Firewall/
 - `server/` contains the TypeScript Express API for auth, MongoDB-backed redacted log storage, and report data access.
 - Shared brand assets can be copied intentionally between folders or later moved into a small shared folder if needed.
 
-Current state as of 2026-06-27:
+Current state as of 2026-06-28:
 
 - The extension now lives in `extension/`.
 - The website/client now lives in `client/`.
@@ -35,8 +35,10 @@ Current state as of 2026-06-27:
 - Phase 9.1 backend foundation is complete in `server/`: TypeScript config, env contract, MongoDB helper, user schema, synced-log schema, indexes, health endpoint, and `.env.example`.
 - Phase 9.2 auth UI/API is implemented and build-verified: signup, login, logout, session check, secure password hashing, HTTP-only JWT cookie sessions, and auth-aware client navigation.
 - Phase 9.3 report dashboard/API is implemented and build-verified: authenticated report route/page, redacted log list/create endpoints, date filters, tool filters, and empty/loading/error states.
-- Phase 9.4 extension auth gate is implemented, pending user verification: popup checks auth state, shows login/signup CTA when needed, and opens the client login/signup/report flow.
-- Phase 9.5 extension redacted log sync is next.
+- Phase 9.4 extension auth gate is done and user-verified: popup checks auth state, shows login/signup CTA when needed, receives the website-issued token, shows the signed-in email, and opens reports.
+- Phase 9.5 extension redacted log sync is done and user-verified: warnings sync as redacted records into MongoDB and appear on `/reports`.
+- Detection now covers env-style secrets and connection strings such as `JWT_SECRET=...` and `MONGODB_URI=...`; synced snippets store redacted placeholders only.
+- Deployment/cross-origin configuration, release docs, and broader end-to-end QA are next.
 
 Recommended path:
 
@@ -221,7 +223,7 @@ The extension handoff contains the source-of-truth implementation roadmap. Websi
 
 ### Phase 9: Account-Backed Reporting Plan
 
-Status: Planned
+Status: In Progress
 
 Scope requested by user on 2026-06-20:
 
@@ -294,20 +296,32 @@ Proposed implementation phases:
    - Added empty/loading/error states.
    - Added authenticated server `/logs` list endpoint scoped by `userId`.
    - Added authenticated server `/logs` create endpoint for future extension sync.
-4. Extension auth integration - Status: Implemented, Pending User Verification
+4. Extension auth integration - Status: Done
    - Extension popup detects whether the user is authenticated.
    - If unauthenticated, shows login/signup CTA and opens website login/signup.
    - If authenticated, shows account email and an `Open reports` action.
    - Keeps local recent warnings visible.
-5. Extension log sync - Status: Pending
-   - Send redacted log records to website API when authenticated.
-   - Queue/retry failed syncs locally.
-   - Avoid duplicate synced logs using stable IDs.
-6. Deployment and env docs - Status: Pending
+   - Website login/signup responses include a token and, when opened with `source=extension`, send it to the loaded extension using `chrome.runtime.sendMessage`.
+   - Client needs `VITE_EXTENSION_ID` set to the loaded extension ID for the auth bridge.
+   - User verified extension login/signup and signed-in popup state on 2026-06-28.
+5. Extension log sync - Status: Done
+   - Sends redacted log records to website API when authenticated.
+   - Queues/retries failed syncs locally.
+   - Avoids duplicate synced logs using stable extension log IDs with server-side user scoping.
+   - Popup shows queued sync count and retry action.
+   - Automatic background queue flushing syncs new records without requiring manual retry.
+   - Queued records also flush when the background starts/reloads and when the extension receives an auth token.
+   - User verified redacted logs save in MongoDB and appear on `/reports` on 2026-06-28.
+6. Detection/redaction follow-up - Status: Done
+   - Extension detects env-style secret assignments such as `JWT_SECRET=...`.
+   - Extension detects connection URI assignments such as `MONGODB_URI=...`.
+   - Redaction masks those values before local storage or synced reporting.
+   - Server accepts redacted placeholders and still rejects unredacted secret-like snippets.
+7. Deployment and env docs - Status: Pending
    - Document local env variables and production env setup.
    - Document API URL configuration for extension builds.
    - Update Vercel/deployment notes depending on backend architecture.
-7. Verification - Status: Pending
+8. Verification and release QA - Status: Pending
    - Test signup/login/logout.
    - Test unauthenticated extension redirect.
    - Test MongoDB log writes.
@@ -374,7 +388,7 @@ Environment variables:
 - Phase 9.3 client `npm run typecheck`: passed on 2026-06-27.
 - Phase 9.3 server `npm run build`: passed on 2026-06-27.
 - Phase 9.3 client `npm run build`: passed on 2026-06-27 and generated `dist/`.
-- Live signup/login against MongoDB still needs a local/prod env run with `MONGODB_URI` and `JWT_SECRET` configured.
+- Local signup/login, extension auth bridge, redacted MongoDB log sync, and `/reports` display were user-verified on 2026-06-28 with env configured outside the repo.
 
 ## Important Defaults
 
@@ -386,8 +400,8 @@ Environment variables:
 
 ## Next Immediate Steps
 
-1. User should run extension typecheck/build and manually verify popup auth gate behavior.
-2. Start Phase 9.5: extension redacted log sync.
-3. Sync only redacted activity logs when authenticated.
-4. Queue/retry failed syncs locally without blocking protection.
-5. When the production domain is known, add canonical URL, absolute Open Graph URL/image tags, `sitemap.xml`, and any domain-specific `robots.txt` sitemap reference.
+1. Finalize deployment/cross-origin configuration for production client, server, and extension origins.
+2. Document local and production env setup without committing real secrets.
+3. Run broader end-to-end QA across ChatGPT, Claude, and Gemini.
+4. Verify report filters by date and tool using real synced records.
+5. Update README/QA/release materials once deployment URLs and extension packaging strategy are decided.

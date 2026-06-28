@@ -11,7 +11,32 @@ import { logsRouter } from "./routes/logs.js"
 
 const app = express()
 
-app.use(cors({ origin: env.clientOrigin, credentials: true }))
+// app.use(cors({ origin: env.clientOrigin, credentials: true }))
+const allowedOrigins = [
+  env.clientOrigin,
+  env.extensionOrigin,
+].filter(Boolean)
+
+console.log({
+  clientOrigin: env.clientOrigin,
+  extensionOrigin: env.extensionOrigin,
+})
+
+app.use(
+  cors({
+    credentials: true,
+    origin(origin, callback) {
+      // Allow requests with no Origin (curl, Postman, etc.)
+      if (!origin) return callback(null, true)
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true)
+      }
+
+      return callback(new Error(`Origin not allowed: ${origin}`))
+    },
+  })
+)
 app.use(express.json({ limit: "128kb" }))
 app.use(cookieParser())
 

@@ -47,26 +47,42 @@ export const authCookieOptions = {
   maxAge: 7 * 24 * 60 * 60 * 1000
 }
 
+const authTokenFromRequest = (req: Request) => {
+  const cookieToken = req.cookies?.[authCookieName]
+  if (typeof cookieToken === "string") return cookieToken
+
+  const authorization = req.header("authorization")
+  if (authorization?.startsWith("Bearer ")) {
+    return authorization.slice("Bearer ".length)
+  }
+
+  return undefined
+}
+
+export const authenticatedUserFromRequest = (req: Request) => {
+  const token = authTokenFromRequest(req)
+  if (!token) return undefined
+
+  const payload = verifyAuthToken(token)
+  if (!payload || !ObjectId.isValid(payload.sub)) return undefined
+
+  return {
+    id: new ObjectId(payload.sub),
+    email: payload.email
+  }
+}
+
 export const requireAuth = (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ) => {
-  const token = req.cookies?.[authCookieName]
-  if (!token || typeof token !== "string") {
+  const user = authenticatedUserFromRequest(req)
+  if (!user) {
     res.status(401).json({ error: "Authentication required" })
     return
   }
 
-  const payload = verifyAuthToken(token)
-  if (!payload || !ObjectId.isValid(payload.sub)) {
-    res.status(401).json({ error: "Authentication required" })
-    return
-  }
-
-  req.user = {
-    id: new ObjectId(payload.sub),
-    email: payload.email
-  }
+  req.user = user
   next()
 }

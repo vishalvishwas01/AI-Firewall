@@ -4,9 +4,9 @@ const emailPattern = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i
 const phonePattern = /(?:\+?\d[\s.-]?){9,15}/
 const creditCardPattern = /\b(?:\d[ -]*?){13,19}\b/
 const assignmentSecretPattern =
-  /\b(api[_-]?key|access[_-]?token|secret|password|passwd|pwd|token)\b\s*[:=]\s*["']?[^\s"',;]{6,}/i
+  /\b(?:[a-z0-9]+[_-])*(api[_-]?key|access[_-]?token|secret|password|passwd|pwd|token)\b\s*[:=]\s*["']?[^\s"',;]{6,}/i
 const sensitiveUrlAssignmentPattern =
-  /\b(?:[a-z0-9]+[_-])?(database|db|supabase|firebase|webhook|callback|redirect|site|service|api)[_-]?url\b\s*[:=]\s*["']?[^\s"',;]{4,}/i
+  /\b(?:[a-z0-9]+[_-])?(database|db|mongodb|mongo|postgres|mysql|redis|supabase|firebase|webhook|callback|redirect|site|service|api)[_-]?(url|uri)\b\s*[:=]\s*["']?[^\s"',;]{4,}/i
 const genericTokenPattern =
   /\b(?:sk-[A-Za-z0-9_-]{16,}|pk_[A-Za-z0-9_-]{16,}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16})\b/
 const privatePhrasePattern =
