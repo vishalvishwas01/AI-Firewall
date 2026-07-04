@@ -34,11 +34,13 @@ Current state as of 2026-06-28:
 - Phase 3 SEO foundation is complete for the pre-domain static site: metadata, social tags, favicon/touch icon references, JSON-LD, and robots are in place. Canonical URL and sitemap still require the production domain.
 - Phase 9.1 backend foundation is complete in `server/`: TypeScript config, env contract, MongoDB helper, user schema, synced-log schema, indexes, health endpoint, and `.env.example`.
 - Phase 9.2 auth UI/API is implemented and build-verified: signup, login, logout, session check, secure password hashing, HTTP-only JWT cookie sessions, and auth-aware client navigation.
-- Phase 9.3 report dashboard/API is implemented and build-verified: authenticated report route/page, redacted log list/create endpoints, date filters, tool filters, and empty/loading/error states.
+- Phase 9.3 report dashboard/API is implemented and build-verified: authenticated report route/page, redacted log list/create endpoints, date filters, initial tool filters, and empty/loading/error states.
 - Phase 9.4 extension auth gate is done and user-verified: popup checks auth state, shows login/signup CTA when needed, receives the website-issued token, shows the signed-in email, and opens reports.
 - Phase 9.5 extension redacted log sync is done and user-verified: warnings sync as redacted records into MongoDB and appear on `/reports`.
 - Detection now covers env-style secrets and connection strings such as `JWT_SECRET=...` and `MONGODB_URI=...`; synced snippets store redacted placeholders only.
-- Deployment/cross-origin configuration, release docs, and broader end-to-end QA are next.
+- Phase 9.6 report website/domain management is implemented: `/reports` uses dynamic website filters, supports adding/removing domains, opens an add-domain modal from extension redirects, and pushes the protected-site list to the loaded extension when `VITE_EXTENSION_ID` is configured.
+- Phase 9.7 dynamic extension coverage is implemented for the local build: custom report domains now become protected extension targets through extension local storage, broad HTTPS content-script matching, and exact-or-subdomain hostname matching.
+- Deployment is intentionally deferred; dynamic-domain QA, extension reload testing, docs, and broader release checks are next.
 
 Recommended path:
 
@@ -231,7 +233,7 @@ Scope requested by user on 2026-06-20:
 - Website should connect to MongoDB using a URL from environment variables.
 - Website should expose or support APIs for authenticated redacted extension log storage.
 - Website should include a report page where the logged-in user can view all synced logs.
-- Report page should include date search/filter and tool filters such as ChatGPT, Claude, Gemini, and Other.
+- Report page should include date search/filter and dynamic website/domain filters.
 - Website should make it clear that users can view reports/logs on the website domain.
 - Extension should ask users to sign up or log in first if unauthenticated and redirect/open the website login flow.
 - Existing temporary/local extension log display should remain as-is.
@@ -292,7 +294,7 @@ Proposed implementation phases:
 3. Report dashboard - Status: Done
    - Added authenticated report route/page at `/reports`.
    - Added log table/list with severity, site/tool, decision, date, title, redacted snippet, and evidence.
-   - Added date and tool filters.
+   - Added date and initial tool filters, later superseded by dynamic website/domain filters.
    - Added empty/loading/error states.
    - Added authenticated server `/logs` list endpoint scoped by `userId`.
    - Added authenticated server `/logs` create endpoint for future extension sync.
@@ -317,15 +319,25 @@ Proposed implementation phases:
    - Extension detects connection URI assignments such as `MONGODB_URI=...`.
    - Redaction masks those values before local storage or synced reporting.
    - Server accepts redacted placeholders and still rejects unredacted secret-like snippets.
-7. Deployment and env docs - Status: Pending
-   - Document local env variables and production env setup.
-   - Document API URL configuration for extension builds.
-   - Update Vercel/deployment notes depending on backend architecture.
-8. Verification and release QA - Status: Pending
+7. Report website/domain management - Status: Done
+   - Added dynamic website filter row on `/reports`.
+   - Default sites are ChatGPT, Claude, and Gemini.
+   - Added a highlighted `Add domain` action above the website filter panel.
+   - Add-domain modal uses a blurred backdrop, prefilled domain when opened from the extension, and a required user-entered website name.
+   - Default and custom sites can be selected for hostname filtering and removed when selected.
+   - Direct `/reports?addSite=1&domain=example.com` opens the modal; if unauthenticated, login preserves the intended redirect.
+   - Severity values in the report table now render as colored risk badges.
+8. Dynamic extension coverage - Status: Done
+   - Website sends the authenticated user's active report sites to the loaded extension after report-site load, add, and delete.
+   - Extension popup shows only the active protected site, or `Add this domain` on unsupported pages.
+   - Protected-site matching supports exact domains and subdomains, so `whatsapp.com` also covers `web.whatsapp.com`.
+   - The extension content script is gated by saved protected sites and runs on HTTPS pages only when the current hostname is protected.
+9. Verification and release QA - Status: Pending
    - Test signup/login/logout.
    - Test unauthenticated extension redirect.
    - Test MongoDB log writes.
-   - Test report filters by date and tool.
+   - Test report filters by date and website/domain.
+   - Test add-domain modal from report page and extension redirect.
    - Confirm only redacted snippets reach MongoDB.
 
 ## SEO Requirements
@@ -400,8 +412,8 @@ Environment variables:
 
 ## Next Immediate Steps
 
-1. Finalize deployment/cross-origin configuration for production client, server, and extension origins.
-2. Document local and production env setup without committing real secrets.
-3. Run broader end-to-end QA across ChatGPT, Claude, and Gemini.
-4. Verify report filters by date and tool using real synced records.
-5. Update README/QA/release materials once deployment URLs and extension packaging strategy are decided.
+1. Reload the rebuilt unpacked extension and accept the broader HTTPS host permission if Chrome prompts.
+2. Manually verify report website filters, add-domain modal, default/custom removal, and colored severity badges.
+3. Manually verify unsupported-site Add domain redirect into `/reports`, then reopen the extension on that domain and confirm it shows protected.
+4. Smoke test warnings and redacted sync on a custom domain such as `web.whatsapp.com`.
+5. Update README/QA/release materials after dynamic-domain behavior is stable.

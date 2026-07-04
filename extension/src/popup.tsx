@@ -6,6 +6,7 @@ import "./styles/popup.css"
 import {
   getAuthStatus,
   openLoginPage,
+  openReportAddSitePage,
   openReportsPage,
   openSignupPage,
   type AuthStatus
@@ -13,12 +14,13 @@ import {
 import {
   clearActivityLogs,
   getActivityLogs,
+  getProtectedSites,
   getQueuedSyncLogs,
   getSettings,
   retryQueuedSyncLogs,
   setSetting
 } from "./firewall/storage"
-import type { ActivityLog, ProtectionSettings } from "./firewall/types"
+import type { ActivityLog, ProtectedSite, ProtectionSettings } from "./firewall/types"
 
 const settingLabels: Array<{
   key: keyof ProtectionSettings
@@ -52,21 +54,6 @@ const settingLabels: Array<{
   }
 ]
 
-const supportedSites = [
-  {
-    host: "chatgpt.com",
-    label: "ChatGPT"
-  },
-  {
-    host: "claude.ai",
-    label: "Claude"
-  },
-  {
-    host: "gemini.google.com",
-    label: "Gemini"
-  }
-]
-
 const formatTime = (timestamp: number) =>
   new Intl.DateTimeFormat(undefined, {
     hour: "2-digit",
@@ -81,7 +68,10 @@ type CurrentSiteStatus = {
   isProtected: boolean
 }
 
-const getCurrentSiteStatus = async (): Promise<CurrentSiteStatus> => {
+const hostnameMatchesSite = (hostname: string, siteHostname: string) =>
+  hostname === siteHostname || hostname.endsWith(`.${siteHostname}`)
+
+const getCurrentSiteStatus = async (protectedSites: ProtectedSite[]): Promise<CurrentSiteStatus> => {
   const fallback = {
     hostname: "Current page unavailable",
     label: "Unsupported page",
@@ -97,7 +87,7 @@ const getCurrentSiteStatus = async (): Promise<CurrentSiteStatus> => {
 
   try {
     const hostname = new URL(tab.url).hostname.replace(/^www\./, "")
-    const match = supportedSites.find((site) => hostname === site.host)
+    const match = protectedSites.find((site) => hostnameMatchesSite(hostname, site.hostname))
 
     return {
       hostname,
@@ -122,7 +112,7 @@ const Popup = () => {
       getSettings(),
       getActivityLogs(),
       getQueuedSyncLogs(),
-      getCurrentSiteStatus(),
+      getProtectedSites().then((sites) => getCurrentSiteStatus(sites)),
       getAuthStatus()
     ]).then(([nextSettings, nextLogs, nextQueuedSyncLogs, nextSiteStatus, nextAuthStatus]) => {
       setSettings(nextSettings)
@@ -149,6 +139,9 @@ const Popup = () => {
   }
 
   const clearLogs = async () => {
+    const confirmed = window.confirm("Clear local warning history from this browser?")
+    if (!confirmed) return
+
     await clearActivityLogs()
     setLogs([])
   }
@@ -189,15 +182,20 @@ const Popup = () => {
           </div>
         </div>
 
-        <div className="supported-sites" aria-label="Supported AI tools">
-          {supportedSites.map((site) => (
-            <span
-              className={siteStatus?.hostname === site.host ? "active" : ""}
-              key={site.host}>
-              {site.label}
-            </span>
-          ))}
-        </div>
+        {siteStatus?.isProtected ? (
+          <div className="active-site-chip" aria-label="Current protected website">
+            <span>{siteStatus.label}</span>
+            <small>{siteStatus.hostname}</small>
+          </div>
+        ) : (
+          <button
+            className="add-domain-button"
+            disabled={isLoading || !siteStatus?.hostname || siteStatus.hostname === "Current page unavailable"}
+            onClick={() => void openReportAddSitePage(siteStatus?.hostname ?? "")}
+            type="button">
+            Add this domain
+          </button>
+        )}
       </section>
 
       <section className="panel">
@@ -282,7 +280,7 @@ const Popup = () => {
         <div className="section-heading">
           <h2>Recent warnings</h2>
           <button
-            className="icon-button"
+            className="icon-button danger"
             disabled={logs.length === 0}
             onClick={() => void clearLogs()}
             title="Clear history"

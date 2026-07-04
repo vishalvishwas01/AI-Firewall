@@ -9,15 +9,16 @@ Build an individual-focused browser extension for AI chat safety. It should prot
 ## Current Architecture
 
 - Plasmo + React + TypeScript Chrome-compatible extension.
-- Content script runs on:
-  - `https://chatgpt.com/*`
-  - `https://claude.ai/*`
-  - `https://gemini.google.com/*`
+- Content script is declared for HTTPS pages and self-gates by the saved protected-site list.
+- Default protected sites are ChatGPT, Claude, and Gemini, but users can remove them from the report dashboard.
+- Custom report domains become protected extension targets after the website pushes the active site list to extension storage.
 - Local rule-based detection lives in `src/firewall/detectors.ts`.
 - Redaction lives in `src/firewall/redact.ts`.
 - Browser-local settings and activity history live in `src/firewall/storage.ts`.
 - Extension popup is `popup.tsx` with styles in `src/styles/popup.css`.
 - Content script guard is `contents/ai-firewall.ts`.
+- Popup current-page status now shows only the active protected site instead of listing all default sites.
+- On unsupported pages, the popup offers `Add this domain`, which opens the website report page add-domain modal with the current hostname prefilled.
 - Backend/API now lives under the separate `server/` package.
 - Client website now lives under `client/`.
 - MongoDB connection string and auth/session secrets come from environment variables; never commit real secrets.
@@ -156,7 +157,7 @@ Scope shift requested by user on 2026-06-20:
 - Extension should ask the user to sign up or log in first when they are not authenticated.
 - If not logged in, extension should redirect/open the website login flow.
 - Website should clearly tell users where the report page is and that logs can be viewed there.
-- Website report page should support date search/filter and AI-tool filters such as ChatGPT, Gemini, Claude, and other/unsupported.
+- Website report page should support date search/filter and dynamic website/domain filters.
 - Proceed step by step. Mark each item Done only after implementation and verification, then wait for user instruction before starting the next item.
 
 Important privacy/security decisions for this plan:
@@ -192,7 +193,7 @@ Proposed implementation phases:
    - Added server `/logs` list endpoint scoped by authenticated `userId`.
    - Added server `/logs` create endpoint for future extension sync.
    - Show synced logs with dates, site/tool, severity, decision, title, redacted snippet, and evidence.
-   - Added date filters and tool filters: ChatGPT, Claude, Gemini, Other.
+   - Added date filters and initial tool filters: ChatGPT, Claude, Gemini, Other.
    - Added empty/loading/error states.
    - Build verification passed for both `server/` and `client/`.
 4. Extension auth gate - Status: Done
@@ -221,15 +222,26 @@ Proposed implementation phases:
    - Connection detection now catches URI assignments such as `MONGODB_URI=...`.
    - Redaction masks matching values before local history and synced reporting.
    - Added tests covering env-style detection and redaction.
-7. Cross-origin and deployment configuration - Status: Pending
-   - Configure CORS for extension origin and website domain.
-   - Decide production API URL and extension config strategy.
-   - Document local dev and production env setup.
-8. Verification and QA - Status: Pending
+7. Report website/domain management - Status: Done
+   - Popup no longer lists ChatGPT, Claude, and Gemini together; it shows only the current protected site when applicable.
+   - Unsupported pages show an `Add this domain` action.
+   - `Add this domain` opens `/reports?source=extension&addSite=1&domain=<hostname>`.
+   - Website `/reports` handles that redirect with an add-domain modal and prefilled domain.
+   - Added report-site persistence on the server for dynamic website filters.
+8. Dynamic extension coverage - Status: Done
+   - Content script now matches HTTPS pages and self-gates by saved protected sites.
+   - Website sends the authenticated active site list to the extension through external messaging.
+   - Popup checks saved protected sites instead of a hardcoded three-site list.
+   - Popup shows only the current protected site, or `Add this domain` on unsupported pages.
+   - Matching supports exact hostnames and subdomains, so a saved parent domain protects matching subdomains.
+   - Protected pages show the composer badge at the bottom-left edge.
+   - Popup clear-history action is styled as destructive and asks for confirmation.
+9. Verification and QA - Status: Pending
    - Test signup/login/logout.
    - Test extension unauthenticated redirect.
    - Test log sync from ChatGPT/Claude/Gemini.
-   - Test report filters by date and tool.
+   - Test report filters by date and website/domain.
+   - Test unsupported-page Add domain redirect.
    - Test that only redacted snippets are stored.
    - Update README/QA/release materials and both handoffs.
 
@@ -266,7 +278,7 @@ Status: Done
 
 - Popup now checks the active tab and shows whether the current page is protected or unsupported.
 - Supported protected targets are ChatGPT (`chatgpt.com`), Claude (`claude.ai`), and Gemini (`gemini.google.com`).
-- Popup includes a compact supported-sites list and highlights the active supported site.
+- Popup now shows only the active protected site instead of listing every default site.
 - Added `tabs` permission so the popup can read the active tab URL reliably.
 
 ### Phase 8.5: Real-Time Composer Badge
@@ -292,11 +304,11 @@ Status: Done
 
 ## Next Immediate Steps
 
-1. Finalize production extension/client/server origins and API URL strategy.
-2. Document local and production env setup without committing real secrets.
-3. Run broader end-to-end QA across ChatGPT, Claude, and Gemini.
-4. Verify report filters by date and tool using real synced records.
-5. Update README/QA/release materials after deployment and packaging decisions are known.
+1. Rebuild and reload the unpacked extension in Chrome, then accept the broader HTTPS host permission if prompted.
+2. Manually verify popup current-site display on ChatGPT, Claude, Gemini, and a custom protected site.
+3. Manually verify unsupported-site Add domain opens `/reports` with the hostname prefilled.
+4. Smoke test warning modal, local history, queued sync, and `/reports` display on a custom domain.
+5. Update README/QA/release materials after dynamic-domain behavior is stable.
 
 ## Related Handoffs
 

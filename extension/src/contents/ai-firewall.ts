@@ -9,11 +9,11 @@ import {
   highestSeverity
 } from "../firewall/detectors"
 import { redactSensitiveText, redactSnippet } from "../firewall/redact"
-import { addActivityLog, getSettings } from "../firewall/storage"
+import { addActivityLog, getProtectedSites, getSettings } from "../firewall/storage"
 import type { Detection, ProtectionSettings, UserDecision } from "../firewall/types"
 
 export const config: PlasmoCSConfig = {
-  matches: ["https://chatgpt.com/*", "https://claude.ai/*", "https://gemini.google.com/*"],
+  matches: ["https://*/*"],
   all_frames: false,
   run_at: "document_idle"
 }
@@ -37,6 +37,7 @@ const observedOutput = new Set<string>()
 let cachedSettings: ProtectionSettings = defaultSettings
 let composerBadge: HTMLDivElement | undefined
 let badgeTarget: Element | null = null
+let siteEnabled = false
 let lastDecision:
   | {
       actionLabel: string
@@ -46,8 +47,20 @@ let lastDecision:
     }
   | undefined
 
+const siteName = () => new URL(location.href).hostname.replace(/^www\./, "")
+
+const hostnameMatchesSite = (hostname: string, siteHostname: string) =>
+  hostname === siteHostname || hostname.endsWith(`.${siteHostname}`)
+
 const refreshSettings = async () => {
   cachedSettings = await getSettings()
+  queueBadgeUpdate()
+}
+
+const refreshProtectedSites = async () => {
+  const hostname = siteName()
+  const sites = await getProtectedSites()
+  siteEnabled = sites.some((site) => hostnameMatchesSite(hostname, site.hostname))
   queueBadgeUpdate()
 }
 
@@ -55,6 +68,9 @@ if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === "local" && changes["ai-firewall-settings"]) {
       void refreshSettings()
+    }
+    if (areaName === "local" && changes["ai-firewall-protected-sites"]) {
+      void refreshProtectedSites()
     }
   })
 }
@@ -291,8 +307,6 @@ const ensureStyles = () => {
   document.documentElement.appendChild(styles)
 }
 
-const siteName = () => new URL(location.href).hostname.replace(/^www\./, "")
-
 const hashText = (text: string) => {
   let hash = 0
   for (let index = 0; index < text.length; index += 1) {
@@ -412,19 +426,22 @@ const badgeTextForDetections = (detections: Detection[]) => {
 }
 
 const positionComposerBadge = (composer: Element, badge: HTMLDivElement) => {
-  const rect = composer.getBoundingClientRect()
-  const badgeWidth = badge.offsetWidth || 180
-  const top = Math.max(10, rect.top - 34)
-  const left = Math.min(
-    Math.max(10, rect.right - badgeWidth),
-    window.innerWidth - badgeWidth - 10
-  )
-
-  badge.style.top = `${top}px`
-  badge.style.left = `${left}px`
+  void composer
+  badge.style.top = "auto"
+  badge.style.right = "auto"
+  badge.style.bottom = "2px"
+  badge.style.left = "12px"
 }
 
 const updateComposerBadge = () => {
+  if (!siteEnabled) {
+    if (composerBadge?.isConnected) {
+      composerBadge.dataset.hidden = "true"
+    }
+    badgeTarget = null
+    return
+  }
+
   const composer = activeComposer()
   const badge = getComposerBadge()
 
@@ -449,6 +466,7 @@ const queueBadgeUpdate = () => {
 }
 
 void refreshSettings()
+void refreshProtectedSites()
 
 const showToast = (
   detection: Detection,
@@ -727,6 +745,7 @@ const handleComposerReview = (
 document.addEventListener(
   "paste",
   (event) => {
+    if (!siteEnabled) return
     const text = event.clipboardData?.getData("text") ?? ""
     const detections = analyzeText(text, cachedSettings)
     const top = detections.length > 0 ? topDetection(detections) : undefined
@@ -756,6 +775,7 @@ document.addEventListener(
 document.addEventListener(
   "submit",
   (event) => {
+    if (!siteEnabled) return
     const form = event.target instanceof HTMLFormElement ? event.target : null
     const allowed = handleComposerReview("message", () => {
       form?.requestSubmit()
@@ -771,6 +791,7 @@ document.addEventListener(
 document.addEventListener(
   "keydown",
   (event) => {
+    if (!siteEnabled) return
     if (event.key !== "Enter" || !event.isTrusted || event.shiftKey) return
     if (!document.activeElement?.matches(inputSelectors.join(","))) return
 
@@ -791,6 +812,7 @@ document.addEventListener(
 document.addEventListener(
   "click",
   (event) => {
+    if (!siteEnabled) return
     const target = event.target instanceof Element ? event.target.closest("button") : null
     if (!target || !sendButtonSelectors.some((selector) => target.matches(selector))) return
 
@@ -810,6 +832,7 @@ document.addEventListener(
 document.addEventListener(
   "change",
   (event) => {
+    if (!siteEnabled) return
     const input = event.target
     if (!(input instanceof HTMLInputElement) || input.type !== "file" || !input.files?.length) return
 
@@ -851,6 +874,7 @@ window.setInterval(() => {
 
 const observeAssistantContent = () => {
   const scanNode = (node: Node) => {
+    if (!siteEnabled) return
     const settings = cachedSettings
     if (!settings.promptInjection && !settings.scamDetection) return
 

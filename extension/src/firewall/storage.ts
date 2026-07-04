@@ -1,12 +1,31 @@
 import { defaultSettings } from "./detectors"
 import { syncActivityLog } from "./sync"
-import type { ActivityLog, ProtectionSettings } from "./types"
+import type { ActivityLog, ProtectedSite, ProtectionSettings } from "./types"
 
 const settingsKey = "ai-firewall-settings"
 const logsKey = "ai-firewall-activity"
 const syncQueueKey = "ai-firewall-sync-queue"
+const protectedSitesKey = "ai-firewall-protected-sites"
 const maxLogs = 50
 const maxQueuedLogs = 100
+
+export const defaultProtectedSites: ProtectedSite[] = [
+  {
+    hostname: "chatgpt.com",
+    label: "ChatGPT",
+    isDefault: true
+  },
+  {
+    hostname: "claude.ai",
+    label: "Claude",
+    isDefault: true
+  },
+  {
+    hostname: "gemini.google.com",
+    label: "Gemini",
+    isDefault: true
+  }
+]
 
 const localFallback = new Map<string, unknown>()
 
@@ -47,6 +66,22 @@ export const getSettings = async (): Promise<ProtectionSettings> => {
 
 export const saveSettings = async (settings: ProtectionSettings): Promise<void> => {
   await setValue(settingsKey, settings)
+}
+
+export const getProtectedSites = async (): Promise<ProtectedSite[]> => {
+  return getValue<ProtectedSite[]>(protectedSitesKey, defaultProtectedSites)
+}
+
+export const saveProtectedSites = async (sites: ProtectedSite[]): Promise<void> => {
+  const normalized = sites
+    .map((site) => ({
+      hostname: site.hostname.trim().toLowerCase().replace(/^www\./, ""),
+      label: site.label.trim(),
+      isDefault: Boolean(site.isDefault)
+    }))
+    .filter((site) => site.hostname && site.label)
+
+  await setValue(protectedSitesKey, normalized)
 }
 
 export const setSetting = async (

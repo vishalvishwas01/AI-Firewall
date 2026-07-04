@@ -134,26 +134,47 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-.supported-sites {
-  display: grid;
-  gap: 6px;
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.supported-sites span {
-  border: 1px solid #e5dfd2;
-  border-radius: 999px;
-  color: #5c564d;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 6px 8px;
-  text-align: center;
-}
-
-.supported-sites span.active {
+.active-site-chip {
+  align-items: center;
   background: #12211f;
   border-color: #12211f;
+  border-radius: 999px;
   color: #f8f5ed;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 7px 10px;
+}
+
+.active-site-chip span {
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.active-site-chip small {
+  color: #d9ded8;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add-domain-button {
+  background: #1f6f4a;
+  border: 1px solid #1f6f4a;
+  border-radius: 7px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 750;
+  min-height: 38px;
+  width: 100%;
+}
+
+.add-domain-button:disabled {
+  cursor: default;
+  opacity: 0.55;
 }
 
 .toggle-list {
@@ -221,6 +242,15 @@ h2 {
   color: #9c968b;
   cursor: default;
   opacity: 0.6;
+}
+
+.icon-button.danger {
+  border-color: #e6a19a;
+  color: #991b1b;
+}
+
+.icon-button.danger:not(:disabled):hover {
+  background: #fff1f0;
 }
 
 .text-button {

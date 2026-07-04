@@ -14,6 +14,15 @@ const authTokenKey = "ai-firewall-auth-token"
 
 const pageUrl = (path: string) => `${clientBaseUrl}${path}?source=extension`
 
+const reportAddSiteUrl = (hostname: string) => {
+  const params = new URLSearchParams({
+    source: "extension",
+    addSite: "1"
+  })
+  if (hostname) params.set("domain", hostname)
+  return `${clientBaseUrl}/reports?${params.toString()}`
+}
+
 const openPage = async (url: string) => {
   if (typeof chrome !== "undefined" && chrome.tabs?.create) {
     await chrome.tabs.create({ url })
@@ -60,6 +69,8 @@ export const openLoginPage = () => openPage(pageUrl("/login"))
 export const openSignupPage = () => openPage(pageUrl("/signup"))
 
 export const openReportsPage = () => openPage(pageUrl("/reports"))
+
+export const openReportAddSitePage = (hostname: string) => openPage(reportAddSiteUrl(hostname))
 
 export const apiUrl = (path: string) => `${apiBaseUrl}${path}`
 

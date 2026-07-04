@@ -30,6 +30,7 @@
   },
   "manifest": {
     "host_permissions": [
+      "https://*/*",
       "https://chatgpt.com/*",
       "https://claude.ai/*",
       "https://gemini.google.com/*",

@@ -34,6 +34,11 @@ const parseDate = (value: unknown) => {
   return Number.isNaN(date.getTime()) ? undefined : date
 }
 
+const normalizeHostname = (value: unknown) =>
+  typeof value === "string" ? value.trim().toLowerCase().replace(/^www\./, "").slice(0, 180) : ""
+
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
 const hasUnredactedAssignment = (pattern: RegExp, snippet: string, valueGroup: number) => {
   pattern.lastIndex = 0
   let match = pattern.exec(snippet)
@@ -79,6 +84,7 @@ router.get("/", async (req: AuthenticatedRequest, res, next) => {
     }
 
     const tool = req.query.tool
+    const hostname = normalizeHostname(req.query.hostname)
     const from = parseDate(req.query.from)
     const to = parseDate(req.query.to)
     const limit = Math.min(Number(req.query.limit ?? 100) || 100, 200)
@@ -86,6 +92,10 @@ router.get("/", async (req: AuthenticatedRequest, res, next) => {
 
     if (isOneOf(tool, tools)) {
       query.tool = tool
+    }
+
+    if (hostname) {
+      query.hostname = { $regex: `(^|\\.)${escapeRegex(hostname)}$` }
     }
 
     if (from || to) {

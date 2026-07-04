@@ -10,9 +10,9 @@ const toolFromSite = (site: string) => {
 
 const hostnameFromSite = (site: string) => {
   try {
-    return new URL(site.startsWith("http") ? site : `https://${site}`).hostname
+    return new URL(site.startsWith("http") ? site : `https://${site}`).hostname.replace(/^www\./, "")
   } catch {
-    return site || "unknown"
+    return site.replace(/^www\./, "") || "unknown"
   }
 }
 

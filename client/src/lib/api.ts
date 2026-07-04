@@ -10,6 +10,15 @@ export type AuthResponse = {
 
 export type ReportTool = "ChatGPT" | "Claude" | "Gemini" | "Other"
 
+export type ReportSite = {
+  id?: string
+  hostname: string
+  label: string
+  isDefault: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export type ReportLog = {
   id?: string
   extensionLogId: string
@@ -27,6 +36,7 @@ export type ReportLog = {
 
 export type ReportFilters = {
   tool?: ReportTool | "All"
+  hostname?: string
   from?: string
   to?: string
 }
@@ -95,9 +105,23 @@ export const logout = () =>
 export const getLogs = (filters: ReportFilters = {}) => {
   const params = new URLSearchParams()
   if (filters.tool && filters.tool !== "All") params.set("tool", filters.tool)
+  if (filters.hostname) params.set("hostname", filters.hostname)
   if (filters.from) params.set("from", filters.from)
   if (filters.to) params.set("to", filters.to)
 
   const query = params.toString()
   return apiRequest<{ logs: ReportLog[] }>(`/logs${query ? `?${query}` : ""}`)
 }
+
+export const getReportSites = () => apiRequest<{ sites: ReportSite[] }>("/sites")
+
+export const createReportSite = (hostname: string, label: string) =>
+  apiRequest<{ site: ReportSite }>("/sites", {
+    method: "POST",
+    body: JSON.stringify({ hostname, label })
+  })
+
+export const deleteReportSite = (id: string) =>
+  apiRequest<void>(`/sites/${id}`, {
+    method: "DELETE"
+  })

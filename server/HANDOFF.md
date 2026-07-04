@@ -37,11 +37,13 @@ server/
     middleware/
       auth.ts
     models/
+      reportSite.ts
       syncedLog.ts
       user.ts
     routes/
       auth.ts
       logs.ts
+      sites.ts
     index.ts
   .env.example
   package.json
@@ -112,6 +114,17 @@ Synced log:
 - `redactedSnippet`
 - `evidence`
 - `createdAt`
+
+Report site:
+
+- `_id`
+- `userId`
+- `hostname`
+- `label`
+- `isDefault`
+- `createdAt`
+- `updatedAt`
+- `deletedAt` for soft-deleted/default-hidden sites
 
 Privacy requirements:
 
@@ -219,19 +232,28 @@ Status: Done
 - Existing queued records flush on extension background startup/reload and after auth token receipt.
 - User verified redacted logs save into MongoDB and appear on the client report dashboard on 2026-06-28.
 
-## Phase 9.6: Deployment, Env, And Production Hardening
+## Phase 9.6: Report Website/Domain Management
 
-Status: Planned
+Status: Done
 
-Next backend-focused work:
+- Added `report_sites` collection model and indexes in `src/models/reportSite.ts`.
+- Added authenticated `/sites` routes in `src/routes/sites.ts`.
+- Default per-user report sites are ChatGPT, Claude, and Gemini.
+- Users can add or restore report domains through `POST /sites`.
+- Users can remove default and custom report domains through `DELETE /sites/:id`; removal is soft-delete so a later add can restore the site.
+- `GET /sites` hides soft-deleted sites.
+- `GET /logs` accepts a `hostname` filter for dynamic report-site filtering.
+- Hostname log filtering supports exact domains and subdomains, so `whatsapp.com` includes `web.whatsapp.com`.
 
-- Finalize production CORS policy for deployed client domain and packaged extension ID.
-- Document local and production env values without committing real secrets.
-- Decide production cookie settings (`secure`, same-site behavior, proxy/trust settings if hosted behind a platform).
-- Add API deployment notes for the separate `server/` package.
-- Add a small operational checklist for MongoDB indexes, health checks, and log retention.
+## Phase 9.7: Dynamic Extension Coverage
 
-## Phase 9.7: End-To-End QA And Release Docs
+Status: Done
+
+- The server provides authenticated report-site configuration through `/sites`.
+- The client sends active report sites to the loaded extension after load/add/delete.
+- Backend support is complete for custom domains becoming protected extension targets.
+
+## Phase 9.8: End-To-End QA And Release Docs
 
 Status: Planned
 
@@ -240,9 +262,10 @@ Next verification/doc work:
 - Verify signup/login/logout/session across fresh browsers.
 - Verify extension auth bridge after extension reload and ID changes.
 - Verify ChatGPT, Claude, and Gemini redacted sync.
-- Verify report filters by tool and date.
+- Verify report filters by website/domain and date.
+- Verify add-domain modal works from direct report-page usage and extension redirect.
 - Verify unredacted snippets are rejected by the server while redacted placeholders are accepted.
-- Update README/QA/release docs after deployment decisions are known.
+- Update README/QA/release docs after the dynamic-domain behavior is stable.
 
 ## Important Defaults
 

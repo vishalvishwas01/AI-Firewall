@@ -15,6 +15,12 @@ export type ProtectionSettings = {
   scamDetection: boolean
 }
 
+export type ProtectedSite = {
+  hostname: string
+  label: string
+  isDefault: boolean
+}
+
 export type Detection = {
   category: DetectionCategory
   severity: Severity
