@@ -380,6 +380,7 @@ function ReportsPage({
   const [error, setError] = useState("");
   const [siteError, setSiteError] = useState("");
   const [isAddSiteOpen, setIsAddSiteOpen] = useState(false);
+  const [sitePendingRemoval, setSitePendingRemoval] = useState<ReportSite | null>(null);
   const [domainInput, setDomainInput] = useState("");
   const [siteNameInput, setSiteNameInput] = useState("");
   const [siteSaving, setSiteSaving] = useState(false);
@@ -523,19 +524,22 @@ function ReportsPage({
     }
   };
 
-  const removeSelectedSite = async () => {
-    if (!selectedSite?.id) {
+  const confirmRemoveSelectedSite = () => {
+    if (selectedSite) {
+      setSitePendingRemoval(selectedSite);
+    }
+  };
+
+  const removePendingSite = async () => {
+    if (!sitePendingRemoval?.id) {
+      setSitePendingRemoval(null);
       setSelectedHostname("");
       return;
     }
 
-    const confirmed = window.confirm(
-      `Remove ${selectedSite.label} (${selectedSite.hostname}) from protected report websites?`
-    );
-    if (!confirmed) return;
-
     setSiteError("");
-    await deleteReportSite(selectedSite.id);
+    await deleteReportSite(sitePendingRemoval.id);
+    setSitePendingRemoval(null);
     setSelectedHostname("");
     const { sites: nextSites } = await getReportSites();
     setSites(nextSites);
@@ -563,13 +567,6 @@ function ReportsPage({
               <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-700">
                 Websites
               </h2>
-              <button
-                type="button"
-                onClick={() => openAddSiteModal()}
-                className="rounded-md border border-teal-700 bg-teal-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800"
-              >
-                Add domain
-              </button>
             </div>
 
             <div className="flex flex-wrap gap-3">
@@ -583,6 +580,13 @@ function ReportsPage({
                 }`}
               >
                 All
+              </button>
+              <button
+                type="button"
+                onClick={() => openAddSiteModal()}
+                className="rounded-md border border-teal-700 bg-teal-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800"
+              >
+                Add domain
               </button>
               {orderedSites.map((site) => (
                 <button
@@ -612,7 +616,7 @@ function ReportsPage({
                 </span>
                 <button
                   type="button"
-                  onClick={() => void removeSelectedSite()}
+                  onClick={confirmRemoveSelectedSite}
                   className="rounded-md border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:border-rose-400 hover:bg-rose-100"
                 >
                   Remove website
@@ -781,6 +785,40 @@ function ReportsPage({
               {siteSaving ? "Saving" : "Save website"}
             </button>
           </form>
+        </div>
+      ) : null}
+
+      {sitePendingRemoval ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="remove-site-title"
+            className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-2xl"
+          >
+            <h2 id="remove-site-title" className="text-xl font-semibold text-slate-950">
+              Remove website?
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Remove <strong className="text-slate-950">{sitePendingRemoval.label}</strong> ({sitePendingRemoval.hostname}) from protected report websites?
+            </p>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setSitePendingRemoval(null)}
+                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void removePendingSite()}
+                className="rounded-md border border-rose-700 bg-rose-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-800"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </section>

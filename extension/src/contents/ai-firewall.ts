@@ -428,9 +428,9 @@ const badgeTextForDetections = (detections: Detection[]) => {
 const positionComposerBadge = (composer: Element, badge: HTMLDivElement) => {
   void composer
   badge.style.top = "auto"
-  badge.style.right = "auto"
-  badge.style.bottom = "2px"
-  badge.style.left = "12px"
+  badge.style.left = "auto"
+  badge.style.right = "0"
+  badge.style.bottom = "0"
 }
 
 const updateComposerBadge = () => {

@@ -139,9 +139,6 @@ const Popup = () => {
   }
 
   const clearLogs = async () => {
-    const confirmed = window.confirm("Clear local warning history from this browser?")
-    if (!confirmed) return
-
     await clearActivityLogs()
     setLogs([])
   }
