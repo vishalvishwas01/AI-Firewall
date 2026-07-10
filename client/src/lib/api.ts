@@ -47,6 +47,31 @@ export type ReportSummary = {
   byHostname: Record<string, number>
 }
 
+export type OrganizationRole = "owner" | "admin" | "member"
+
+export type Organization = {
+  id: string
+  name: string
+  role: OrganizationRole
+  createdAt: string
+  updatedAt: string
+}
+
+export type OrganizationMember = {
+  id: string
+  userId?: string
+  email: string
+  role: OrganizationRole
+  status: "active" | "invited"
+  createdAt: string
+  updatedAt: string
+}
+
+export type OrganizationSummary = ReportSummary & {
+  activeMembers: number
+  invitedMembers: number
+}
+
 export type ReportFilters = {
   tool?: ReportTool | "All"
   hostname?: string
@@ -147,5 +172,46 @@ export const createReportSite = (hostname: string, label: string) =>
 
 export const deleteReportSite = (id: string) =>
   apiRequest<void>(`/sites/${id}`, {
+    method: "DELETE"
+  })
+
+export const getOrganizations = () =>
+  apiRequest<{ organizations: Organization[] }>("/orgs")
+
+export const createOrganization = (name: string) =>
+  apiRequest<{ organization: Organization }>("/orgs", {
+    method: "POST",
+    body: JSON.stringify({ name })
+  })
+
+export const getOrganization = (id: string) =>
+  apiRequest<{
+    organization: Organization
+    members: OrganizationMember[]
+    summary: OrganizationSummary
+  }>(`/orgs/${id}`)
+
+export const addOrganizationMember = (
+  organizationId: string,
+  email: string,
+  role: Exclude<OrganizationRole, "owner"> = "member"
+) =>
+  apiRequest<{ member: OrganizationMember }>(`/orgs/${organizationId}/members`, {
+    method: "POST",
+    body: JSON.stringify({ email, role })
+  })
+
+export const updateOrganizationMemberRole = (
+  organizationId: string,
+  memberId: string,
+  role: Exclude<OrganizationRole, "owner">
+) =>
+  apiRequest<{ member: OrganizationMember }>(`/orgs/${organizationId}/members/${memberId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ role })
+  })
+
+export const removeOrganizationMember = (organizationId: string, memberId: string) =>
+  apiRequest<void>(`/orgs/${organizationId}/members/${memberId}`, {
     method: "DELETE"
   })

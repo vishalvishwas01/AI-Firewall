@@ -43,6 +43,7 @@ Current state as of 2026-06-28:
 - Deployment is intentionally deferred.
 - Phase 10 VC-remediation work is now in progress at the product implementation level, not pitch-writing.
 - `/reports` now includes warning-quality summary metrics from the backend: synced warnings, marked-correct warnings, false alarms, missed risks, severity mix, warning type mix, and user decision mix.
+- `/team` now exists as an early organization/team dashboard for aggregate redacted-risk reporting.
 
 Recommended path:
 
@@ -375,6 +376,35 @@ Extension benchmark follow-up completed on 2026-07-10:
 - Benchmark fixtures now include confidential business examples, additional benign developer examples, more secret/token patterns, phone/card redaction examples, and raw-leak checks.
 - Website/client does not yet display benchmark results; that should wait until the product needs a public or admin-facing benchmark page.
 
+Team/org foundation completed on 2026-07-10:
+
+- Added authenticated `/team` route.
+- Added `Team` nav link for authenticated users.
+- Added client API support for:
+  - `GET /orgs`.
+  - `POST /orgs`.
+  - `GET /orgs/:id`.
+  - `POST /orgs/:id/members`.
+- `/team` supports:
+  - creating an organization.
+  - selecting an organization.
+  - adding members by email as admin/member.
+  - viewing active/invited member statuses.
+  - viewing aggregate metadata-only redacted risk metrics.
+- The team view intentionally avoids raw snippets and per-user prompt detail.
+
+Team hardening follow-up completed on 2026-07-10:
+
+- Added client API support for:
+  - `PATCH /orgs/:id/members/:memberId`.
+  - `DELETE /orgs/:id/members/:memberId`.
+- Updated `/team` members list:
+  - owners/admins can change manageable member roles.
+  - owners/admins can remove manageable members.
+  - owner rows stay non-removable/non-editable.
+  - admin users cannot change/remove other admins.
+  - member removal uses an in-app confirmation modal with backdrop blur.
+
 ## SEO Requirements
 
 - The React app should be single-page but still SEO-conscious through strong static HTML metadata and crawlable rendered content.
@@ -448,6 +478,6 @@ Environment variables:
 ## Next Immediate Steps
 
 1. Continue Phase 10 implementation work before any new investor document rewrite.
-2. Next major product slice is small team/org foundations.
-3. Keep `/reports` aligned with redacted-only storage and warning-fatigue metrics.
+2. Next team slice: team protected-site policy defaults or team summary trends.
+3. Keep `/reports` and `/team` aligned with redacted-only storage and warning-fatigue metrics.
 4. Deployment remains deferred until the user brings it back into scope.

@@ -37,12 +37,14 @@ server/
     middleware/
       auth.ts
     models/
+      organization.ts
       reportSite.ts
       syncedLog.ts
       user.ts
     routes/
       auth.ts
       logs.ts
+      orgs.ts
       sites.ts
     utils/
       redactionPolicy.ts
@@ -129,6 +131,25 @@ Report site:
 - `updatedAt`
 - `deletedAt` for soft-deleted/default-hidden sites
 
+Organization:
+
+- `_id`
+- `name`
+- `ownerUserId`
+- `createdAt`
+- `updatedAt`
+
+Organization member:
+
+- `_id`
+- `organizationId`
+- `userId` when the invited email belongs to an existing account
+- `email`
+- `role`: `owner`, `admin`, or `member`
+- `status`: `active` or `invited`
+- `createdAt`
+- `updatedAt`
+
 Privacy requirements:
 
 - Store redacted snippets only.
@@ -136,6 +157,7 @@ Privacy requirements:
 - Scope every report/log query by authenticated `userId`.
 - Use stable `extensionLogId` plus `userId` to avoid duplicate synced records.
 - Keep server-side redaction enforcement centralized in `src/utils/redactionPolicy.ts`.
+- Keep team/org reporting aggregate-only until user-level reporting is explicitly designed.
 
 ## Phase 9.2: Auth UI/API
 
@@ -287,6 +309,47 @@ Next verification/doc work:
 - Verify add-domain modal works from direct report-page usage and extension redirect.
 - Verify unredacted snippets are rejected by the server while redacted placeholders are accepted.
 - Update README/QA/release docs after the dynamic-domain behavior is stable.
+
+## Phase 10.7: Team/Organization Foundations
+
+Status: In Progress
+
+Completed on 2026-07-10:
+
+- Added `src/models/organization.ts`.
+- Added `organizations` and `organization_members` collections.
+- Added organization indexes during server startup.
+- Mounted authenticated organization routes under `/orgs`.
+- Added:
+  - `GET /orgs`
+  - `POST /orgs`
+  - `GET /orgs/:id`
+  - `POST /orgs/:id/members`
+- Creating an organization creates the current user as `owner`.
+- Owners/admins can add a member by email as `admin` or `member`.
+- If the email belongs to an existing user, the membership becomes `active`; otherwise it is stored as `invited`.
+- Organization summary aggregates synced redacted logs across active member accounts.
+- Team summary returns only metadata counts:
+  - total logs
+  - active/invited members
+  - feedback totals/rates
+  - severity counts
+  - event type counts
+  - decision counts
+  - hostname counts
+- Team summary does not return raw prompt text, raw snippets, or per-user prompt details.
+
+Follow-up completed on 2026-07-10:
+
+- Added member role-management endpoint:
+  - `PATCH /orgs/:id/members/:memberId`.
+- Added member removal endpoint:
+  - `DELETE /orgs/:id/members/:memberId`.
+- Guardrails:
+  - Owners/admins can manage members.
+  - Owners cannot be removed or role-changed through these endpoints.
+  - Admins cannot change or remove other admins.
+- These changes do not alter log storage; team reporting remains aggregate-only.
 
 ## Important Defaults
 

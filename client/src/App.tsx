@@ -19,15 +19,25 @@ import {
   workflowSteps
 } from "./data/siteContent";
 import {
+  addOrganizationMember,
+  createOrganization,
   createReportSite,
   deleteReportSite,
+  getOrganization,
+  getOrganizations,
   getLogSummary,
   getLogs,
   getReportSites,
   getSession,
   login,
   logout,
+  removeOrganizationMember,
   signup,
+  updateOrganizationMemberRole,
+  type Organization,
+  type OrganizationMember,
+  type OrganizationRole,
+  type OrganizationSummary,
   type ReportLog,
   type ReportSummary,
   type ReportSite,
@@ -103,6 +113,7 @@ function App() {
   const [path, setPath] = useState(window.location.pathname);
   const authMode = path === "/signup" ? "signup" : path === "/login" ? "login" : null;
   const isReports = path === "/reports";
+  const isTeam = path === "/team";
 
   useEffect(() => {
     let active = true;
@@ -165,6 +176,19 @@ function App() {
     );
   }
 
+  if (isTeam) {
+    return (
+      <main className="min-h-screen bg-slate-50 text-slate-950">
+        <SiteHeader
+          user={user}
+          sessionLoading={sessionLoading}
+          onLogout={handleLogout}
+        />
+        <TeamPage user={user} sessionLoading={sessionLoading} />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <SiteHeader
@@ -216,6 +240,9 @@ function SiteHeader({
               </span>
               <a className="button-secondary" href="/reports">
                 Reports
+              </a>
+              <a className="button-secondary" href="/team">
+                Team
               </a>
               <button className="button-secondary" type="button" onClick={onLogout}>
                 <LogOut className="h-4 w-4" aria-hidden="true" />
@@ -934,6 +961,497 @@ function ReportsPage({
                 className="rounded-md border border-rose-700 bg-rose-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-800"
               >
                 Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function TeamPage({
+  user,
+  sessionLoading
+}: {
+  user: SessionUser | null;
+  sessionLoading: boolean;
+}) {
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState("");
+  const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
+  const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [summary, setSummary] = useState<OrganizationSummary | null>(null);
+  const [organizationName, setOrganizationName] = useState("");
+  const [memberEmail, setMemberEmail] = useState("");
+  const [memberRole, setMemberRole] = useState<Exclude<OrganizationRole, "owner">>("member");
+  const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [savingOrganization, setSavingOrganization] = useState(false);
+  const [savingMember, setSavingMember] = useState(false);
+  const [updatingMemberId, setUpdatingMemberId] = useState("");
+  const [removingMemberId, setRemovingMemberId] = useState("");
+  const [memberPendingRemoval, setMemberPendingRemoval] = useState<OrganizationMember | null>(null);
+  const [error, setError] = useState("");
+
+  const canManageMembers =
+    selectedOrganization?.role === "owner" || selectedOrganization?.role === "admin";
+  const formatRate = (rate: number) => `${Math.round(rate * 100)}%`;
+
+  const loadOrganizations = async () => {
+    const { organizations: nextOrganizations } = await getOrganizations();
+    setOrganizations(nextOrganizations);
+    setSelectedOrganizationId((current) => current || nextOrganizations[0]?.id || "");
+  };
+
+  const loadOrganizationDetail = async (organizationId: string) => {
+    const response = await getOrganization(organizationId);
+    setSelectedOrganization(response.organization);
+    setMembers(response.members);
+    setSummary(response.summary);
+  };
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!user && window.location.pathname !== "/login") {
+      window.sessionStorage.setItem(
+        authRedirectKey,
+        `${window.location.pathname}${window.location.search}`
+      );
+      window.history.pushState({}, "", "/login");
+      window.dispatchEvent(new Event("popstate"));
+    }
+  }, [sessionLoading, user]);
+
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+    setLoading(true);
+    setError("");
+
+    getOrganizations()
+      .then(({ organizations: nextOrganizations }) => {
+        if (!active) return;
+        setOrganizations(nextOrganizations);
+        setSelectedOrganizationId((current) => current || nextOrganizations[0]?.id || "");
+      })
+      .catch((teamError) => {
+        if (active) setError(teamError instanceof Error ? teamError.message : "Failed to load teams");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || !selectedOrganizationId) {
+      setSelectedOrganization(null);
+      setMembers([]);
+      setSummary(null);
+      return;
+    }
+
+    let active = true;
+    setDetailLoading(true);
+    setError("");
+
+    loadOrganizationDetail(selectedOrganizationId)
+      .then(() => {
+        if (!active) return;
+      })
+      .catch((teamError) => {
+        if (active) setError(teamError instanceof Error ? teamError.message : "Failed to load team");
+      })
+      .finally(() => {
+        if (active) setDetailLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user, selectedOrganizationId]);
+
+  const submitOrganization = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSavingOrganization(true);
+    setError("");
+
+    try {
+      const { organization } = await createOrganization(organizationName);
+      setOrganizationName("");
+      await loadOrganizations();
+      setSelectedOrganizationId(organization.id);
+    } catch (teamError) {
+      setError(teamError instanceof Error ? teamError.message : "Failed to create team");
+    } finally {
+      setSavingOrganization(false);
+    }
+  };
+
+  const submitMember = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedOrganization) return;
+
+    setSavingMember(true);
+    setError("");
+
+    try {
+      await addOrganizationMember(selectedOrganization.id, memberEmail, memberRole);
+      setMemberEmail("");
+      setMemberRole("member");
+      await loadOrganizationDetail(selectedOrganization.id);
+    } catch (teamError) {
+      setError(teamError instanceof Error ? teamError.message : "Failed to add member");
+    } finally {
+      setSavingMember(false);
+    }
+  };
+
+  const changeMemberRole = async (
+    member: OrganizationMember,
+    role: Exclude<OrganizationRole, "owner">
+  ) => {
+    if (!selectedOrganization || member.role === role) return;
+
+    setUpdatingMemberId(member.id);
+    setError("");
+
+    try {
+      await updateOrganizationMemberRole(selectedOrganization.id, member.id, role);
+      await loadOrganizationDetail(selectedOrganization.id);
+    } catch (teamError) {
+      setError(teamError instanceof Error ? teamError.message : "Failed to update member role");
+    } finally {
+      setUpdatingMemberId("");
+    }
+  };
+
+  const removeMember = async (member: OrganizationMember) => {
+    if (!selectedOrganization) return;
+
+    setRemovingMemberId(member.id);
+    setError("");
+
+    try {
+      await removeOrganizationMember(selectedOrganization.id, member.id);
+      await loadOrganizationDetail(selectedOrganization.id);
+    } catch (teamError) {
+      setError(teamError instanceof Error ? teamError.message : "Failed to remove member");
+    } finally {
+      setRemovingMemberId("");
+      setMemberPendingRemoval(null);
+    }
+  };
+
+  return (
+    <section className="bg-slate-50 px-6 py-10 sm:px-8 lg:px-10">
+      <div className="mx-auto max-w-7xl">
+        <div className="border-b border-slate-200 pb-6">
+          <p className="text-sm font-semibold uppercase tracking-wider text-teal-700">
+            Team foundations
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-normal text-slate-950 sm:text-4xl">
+            Organization risk summary
+          </h1>
+          <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
+            Create a small workspace, add members, and review aggregate redacted warning metrics. This view is intentionally metadata-only.
+          </p>
+        </div>
+
+        <div className="grid gap-5 py-6 lg:grid-cols-[0.85fr_1.15fr]">
+          <div className="space-y-5">
+            <form
+              onSubmit={submitOrganization}
+              className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+            >
+              <h2 className="text-lg font-semibold text-slate-950">Create organization</h2>
+              <label className="mt-4 block text-sm font-semibold text-slate-950">
+                Organization name
+                <input
+                  type="text"
+                  required
+                  value={organizationName}
+                  onChange={(event) => setOrganizationName(event.target.value)}
+                  placeholder="Acme AI Safety"
+                  className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-950 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={savingOrganization}
+                className="button-primary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {savingOrganization ? "Creating" : "Create team"}
+              </button>
+            </form>
+
+            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="text-lg font-semibold text-slate-950">Your organizations</h2>
+              {loading ? (
+                <p className="mt-3 text-sm text-slate-600">Loading teams...</p>
+              ) : organizations.length === 0 ? (
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  No organizations yet. Create one to start team reporting.
+                </p>
+              ) : (
+                <div className="mt-4 space-y-2">
+                  {organizations.map((organization) => (
+                    <button
+                      key={organization.id}
+                      type="button"
+                      onClick={() => setSelectedOrganizationId(organization.id)}
+                      className={`w-full rounded-md border px-3 py-2 text-left text-sm font-semibold transition ${
+                        selectedOrganizationId === organization.id
+                          ? "border-slate-950 bg-slate-950 text-white"
+                          : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                      }`}
+                    >
+                      {organization.name}
+                      <span className="ml-2 text-xs font-medium opacity-75">{organization.role}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-5">
+            {error ? (
+              <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-800">
+                {error}
+              </div>
+            ) : null}
+
+            {!selectedOrganization ? (
+              <div className="rounded-lg border border-slate-200 bg-white p-8 text-sm leading-6 text-slate-600">
+                Select or create an organization to view team reporting.
+              </div>
+            ) : detailLoading ? (
+              <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
+                Loading organization...
+              </div>
+            ) : (
+              <>
+                <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-xl font-semibold text-slate-950">
+                        {selectedOrganization.name}
+                      </h2>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Your role: {selectedOrganization.role}
+                      </p>
+                    </div>
+                    <span className="rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-semibold uppercase text-teal-700">
+                      Aggregate only
+                    </span>
+                  </div>
+
+                  {summary ? (
+                    <>
+                      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        {[
+                          ["Synced warnings", summary.totalLogs.toLocaleString()],
+                          ["Active members", summary.activeMembers.toLocaleString()],
+                          ["Invited", summary.invitedMembers.toLocaleString()],
+                          ["False alarm rate", formatRate(summary.falseAlarmRate)]
+                        ].map(([label, value]) => (
+                          <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                              {label}
+                            </p>
+                            <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+                        <div className="rounded-lg border border-slate-200 bg-white p-4">
+                          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-700">
+                            Severity
+                          </h3>
+                          <div className="mt-3 space-y-2 text-sm text-slate-600">
+                            {Object.entries(summary.bySeverity).map(([severity, count]) => (
+                              <div key={severity} className="flex items-center justify-between gap-3">
+                                <span>{severity}</span>
+                                <strong className="text-slate-950">{count}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 bg-white p-4">
+                          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-700">
+                            Warning type
+                          </h3>
+                          <div className="mt-3 space-y-2 text-sm text-slate-600">
+                            {Object.entries(summary.byEventType).map(([eventType, count]) => (
+                              <div key={eventType} className="flex items-center justify-between gap-3">
+                                <span>{eventType}</span>
+                                <strong className="text-slate-950">{count}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 bg-white p-4">
+                          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-700">
+                            Feedback
+                          </h3>
+                          <div className="mt-3 space-y-2 text-sm text-slate-600">
+                            {Object.entries(summary.byFeedback).map(([feedback, count]) => (
+                              <div key={feedback} className="flex items-center justify-between gap-3">
+                                <span>{feedback}</span>
+                                <strong className="text-slate-950">{count}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+
+                <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+                  <form
+                    onSubmit={submitMember}
+                    className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+                  >
+                    <h2 className="text-lg font-semibold text-slate-950">Add member</h2>
+                    <label className="mt-4 block text-sm font-semibold text-slate-950">
+                      Email
+                      <input
+                        type="email"
+                        required
+                        disabled={!canManageMembers}
+                        value={memberEmail}
+                        onChange={(event) => setMemberEmail(event.target.value)}
+                        placeholder="teammate@example.com"
+                        className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-950 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 disabled:bg-slate-100"
+                      />
+                    </label>
+                    <label className="mt-4 block text-sm font-semibold text-slate-950">
+                      Role
+                      <select
+                        value={memberRole}
+                        disabled={!canManageMembers}
+                        onChange={(event) =>
+                          setMemberRole(event.target.value as Exclude<OrganizationRole, "owner">)
+                        }
+                        className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-950 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 disabled:bg-slate-100"
+                      >
+                        <option value="member">Member</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={!canManageMembers || savingMember}
+                      className="button-primary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {savingMember ? "Adding" : "Add member"}
+                    </button>
+                    {!canManageMembers ? (
+                      <p className="mt-3 text-sm text-slate-500">
+                        Only owners and admins can add members.
+                      </p>
+                    ) : null}
+                  </form>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                    <h2 className="text-lg font-semibold text-slate-950">Members</h2>
+                    <div className="mt-4 divide-y divide-slate-200">
+                      {members.map((member) => (
+                        <div key={member.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+                          <div>
+                            <p className="font-semibold text-slate-950">{member.email}</p>
+                            <p className="mt-1 text-xs text-slate-500">{member.status}</p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {canManageMembers && member.role !== "owner" ? (
+                              <>
+                                <select
+                                  value={member.role}
+                                  disabled={
+                                    updatingMemberId === member.id ||
+                                    removingMemberId === member.id ||
+                                    (selectedOrganization?.role === "admin" && member.role === "admin")
+                                  }
+                                  onChange={(event) =>
+                                    void changeMemberRole(
+                                      member,
+                                      event.target.value as Exclude<OrganizationRole, "owner">
+                                    )
+                                  }
+                                  className="h-9 rounded-md border border-slate-300 bg-white px-2 text-xs font-semibold uppercase text-slate-700 outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 disabled:bg-slate-100 disabled:text-slate-400"
+                                >
+                                  <option value="member">Member</option>
+                                  <option value="admin">Admin</option>
+                                </select>
+                                <button
+                                  type="button"
+                                  disabled={
+                                    removingMemberId === member.id ||
+                                    (selectedOrganization?.role === "admin" && member.role === "admin")
+                                  }
+                                  onClick={() => setMemberPendingRemoval(member)}
+                                  className="rounded-md border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {removingMemberId === member.id ? "Removing" : "Remove"}
+                                </button>
+                              </>
+                            ) : (
+                              <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold uppercase text-slate-600">
+                                {member.role}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {memberPendingRemoval ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="remove-member-title"
+            className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-2xl"
+          >
+            <h2 id="remove-member-title" className="text-xl font-semibold text-slate-950">
+              Remove member?
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Remove <strong className="text-slate-950">{memberPendingRemoval.email}</strong> from {selectedOrganization?.name ?? "this organization"}?
+            </p>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setMemberPendingRemoval(null)}
+                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void removeMember(memberPendingRemoval)}
+                disabled={removingMemberId === memberPendingRemoval.id}
+                className="rounded-md border border-rose-700 bg-rose-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {removingMemberId === memberPendingRemoval.id ? "Removing" : "Remove"}
               </button>
             </div>
           </div>

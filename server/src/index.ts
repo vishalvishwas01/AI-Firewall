@@ -7,9 +7,11 @@ import { getDb } from "./db/mongo.js"
 import { ensureUserIndexes } from "./models/user.js"
 import { ensureSyncedLogIndexes } from "./models/syncedLog.js"
 import { ensureReportSiteIndexes } from "./models/reportSite.js"
+import { ensureOrganizationIndexes } from "./models/organization.js"
 import { authRouter } from "./routes/auth.js"
 import { logsRouter } from "./routes/logs.js"
 import { sitesRouter } from "./routes/sites.js"
+import { orgsRouter } from "./routes/orgs.js"
 
 const app = express()
 
@@ -49,6 +51,7 @@ app.get("/health", (_req, res) => {
 app.use("/auth", authRouter)
 app.use("/logs", logsRouter)
 app.use("/sites", sitesRouter)
+app.use("/orgs", orgsRouter)
 
 app.use(
   (
@@ -66,6 +69,7 @@ const db = await getDb()
 await ensureUserIndexes(db)
 await ensureSyncedLogIndexes(db)
 await ensureReportSiteIndexes(db)
+await ensureOrganizationIndexes(db)
 
 app.listen(env.port, () => {
   console.log(`AI Firewall API listening on port ${env.port}`)

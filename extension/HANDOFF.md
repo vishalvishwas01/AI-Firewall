@@ -701,7 +701,56 @@ Acceptance criteria:
 
 #### Phase 10.7: Teams-First Business And Product Track
 
-Status: Pending
+Status: In Progress
+
+Completed on 2026-07-10:
+
+- Added backend organization foundations:
+  - `../server/src/models/organization.ts`.
+  - `organizations` collection.
+  - `organization_members` collection.
+  - roles: `owner`, `admin`, `member`.
+  - member statuses: `active`, `invited`.
+  - startup indexes through `ensureOrganizationIndexes()`.
+- Added authenticated organization API:
+  - `GET /orgs`.
+  - `POST /orgs`.
+  - `GET /orgs/:id`.
+  - `POST /orgs/:id/members`.
+- Added aggregate-only team reporting:
+  - total redacted logs across active member accounts.
+  - active/invited member counts.
+  - false-alarm and missed-risk rates.
+  - severity mix.
+  - warning type mix.
+  - decision mix.
+  - hostname mix.
+- Kept team reporting privacy-preserving:
+  - no raw snippets in team summary.
+  - no per-user prompt detail.
+  - team membership is required before reading org summary.
+  - only owners/admins can add members.
+- Added client `/team` dashboard:
+  - create organization.
+  - select organization.
+  - add member by email and role.
+  - see member statuses.
+  - see aggregate metadata-only risk summary.
+- Added a `Team` nav link for authenticated users.
+
+Follow-up completed on 2026-07-10:
+
+- Hardened team member management:
+  - Added `PATCH /orgs/:id/members/:memberId` for role updates.
+  - Added `DELETE /orgs/:id/members/:memberId` for member removal.
+  - Owners/admins can manage members.
+  - Owners cannot be removed or role-changed through these endpoints.
+  - Admins cannot change or remove other admins.
+- Updated client `/team` member list:
+  - role selector for manageable members.
+  - remove action for manageable members.
+  - in-app remove-member confirmation modal with blurred backdrop.
+- Team summary remains aggregate-only and redacted-risk metadata-only.
 
 Goal:
 
@@ -744,7 +793,30 @@ Acceptance criteria:
 
 #### Phase 10.8: Open-Source Core Evaluation
 
-Status: Pending
+Status: In Progress
+
+Completed on 2026-07-10:
+
+- Added an initial core export boundary:
+  - `src/firewall/core.ts`.
+  - Exports detector helpers, redaction helpers, settings defaults, and relevant types.
+- Added `../docs/OPEN_SOURCE_CORE_BOUNDARY.md`.
+- Documented what can become public:
+  - text detection.
+  - risky-upload detection.
+  - highest-severity helper.
+  - default settings.
+  - redaction helpers.
+  - detection/settings types.
+- Documented what stays private:
+  - extension UI.
+  - content-script DOM interception.
+  - popup auth/reporting UI.
+  - account auth.
+  - MongoDB-backed reporting.
+  - organization/team management.
+  - customer-specific policy data.
+- This is a code boundary and review artifact only; no license or publishing decision has been made.
 
 Goal:
 
@@ -962,8 +1034,9 @@ Status: Done
 ## Next Immediate Steps
 
 1. Continue implementation-driven Phase 10 work, not pitch-writing.
-2. Next implementation slice: add small team/org foundations only after individual trust/fatigue/benchmark basics are in place.
-3. Keep certification/compliance and mobile out of scope until the user explicitly brings them back.
+2. Next implementation slice: add team protected-site policy defaults or a team summary trend view.
+3. Then decide whether to expose benchmark results in-product or keep them developer-facing for now.
+4. Keep certification/compliance and mobile out of scope until the user explicitly brings them back.
 
 ## Related Handoffs
 
