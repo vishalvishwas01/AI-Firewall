@@ -44,6 +44,8 @@ server/
       auth.ts
       logs.ts
       sites.ts
+    utils/
+      redactionPolicy.ts
     index.ts
   .env.example
   package.json
@@ -110,6 +112,7 @@ Synced log:
 - `eventType`: `sensitive-data`, `prompt-injection`, `risky-upload`, or `scam-fraud`
 - `severity`: `low`, `medium`, or `high`
 - `decision`: `warned`, `blocked`, `ignored`, `allowed`, or `redacted-copied`
+- `feedback`: optional `correct-warning`, `false-alarm`, or `missed-risk`
 - `title`
 - `redactedSnippet`
 - `evidence`
@@ -132,6 +135,7 @@ Privacy requirements:
 - Do not store raw prompts, raw secrets, passwords, tokens, API keys, service URLs, or uploaded file contents.
 - Scope every report/log query by authenticated `userId`.
 - Use stable `extensionLogId` plus `userId` to avoid duplicate synced records.
+- Keep server-side redaction enforcement centralized in `src/utils/redactionPolicy.ts`.
 
 ## Phase 9.2: Auth UI/API
 
@@ -196,11 +200,28 @@ Follow-up completed on 2026-06-28:
 - Server still rejects unredacted assigned secrets, connection URLs/URIs, and known token formats.
 - This fixed extension sync for snippets like `JWT_SECRET=[REDACTED]` and `MONGODB_URI=[REDACTED_URL]`.
 
+Follow-up completed on 2026-07-10:
+
+- Added server redaction policy helper in `src/utils/redactionPolicy.ts`.
+- Synced log snippets are now capped at 240 characters server-side.
+- `POST /logs` rejects unredacted reportable text covered by the current redaction spec:
+  - assigned secrets/passwords/tokens
+  - service URLs/URIs
+  - generic tokens
+  - emails
+  - card-like values
+  - phone-like values
+- `POST /logs` accepts optional warning feedback and returns it in public log responses.
+- Added authenticated `GET /logs/summary`.
+- `GET /logs/summary` uses the same user scoping and filters as `GET /logs`.
+- Summary response includes total logs, feedback totals, false-alarm rate, missed-risk rate, severity mix, warning type mix, decision mix, and hostname mix.
+
 Client work lives in `../client/WEBSITE_HANDOFF.md`:
 
 - Added authenticated report page at `/reports`.
 - Added tool and date filters.
 - Added log table with severity, site/tool, decision, date, title, redacted snippet, and evidence.
+- Added feedback summary cards and breakdown panels to the report dashboard.
 - Added empty/loading/error states.
 
 Verification:

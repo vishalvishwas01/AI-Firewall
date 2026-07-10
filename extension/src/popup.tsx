@@ -12,18 +12,32 @@ import {
   type AuthStatus
 } from "./firewall/auth"
 import {
+  addWarningFeedbackRecord,
   clearActivityLogs,
   getActivityLogs,
   getProtectedSites,
   getQueuedSyncLogs,
   getSettings,
   retryQueuedSyncLogs,
-  setSetting
+  setSetting,
+  updateActivityLogFeedback
 } from "./firewall/storage"
-import type { ActivityLog, ProtectedSite, ProtectionSettings } from "./firewall/types"
+import type {
+  ActivityLog,
+  ProtectedSite,
+  ProtectionSettings,
+  SensitivityMode,
+  WarningFeedback
+} from "./firewall/types"
+
+type ToggleSettingKey =
+  | "sensitiveData"
+  | "promptInjection"
+  | "uploadWarnings"
+  | "scamDetection"
 
 const settingLabels: Array<{
-  key: keyof ProtectionSettings
+  key: ToggleSettingKey
   label: string
   description: string
   Icon: typeof Lock
@@ -51,6 +65,28 @@ const settingLabels: Array<{
     label: "Scam detection",
     description: "Urgency, fraud, impersonation",
     Icon: AlertTriangle
+  }
+]
+
+const sensitivityOptions: Array<{
+  value: SensitivityMode
+  label: string
+  description: string
+}> = [
+  {
+    value: "relaxed",
+    label: "Relaxed",
+    description: "Only interrupt on high-confidence risk."
+  },
+  {
+    value: "balanced",
+    label: "Balanced",
+    description: "Recommended protection for daily AI use."
+  },
+  {
+    value: "strict",
+    label: "Strict",
+    description: "Review more sensitive signals before sending."
   }
 ]
 
@@ -106,6 +142,7 @@ const Popup = () => {
   const [siteStatus, setSiteStatus] = useState<CurrentSiteStatus | null>(null)
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [missedRiskSaved, setMissedRiskSaved] = useState(false)
 
   useEffect(() => {
     void Promise.all([
@@ -125,16 +162,30 @@ const Popup = () => {
   }, [])
 
   const activeCount = useMemo(
-    () => (settings ? Object.values(settings).filter(Boolean).length : 0),
+    () =>
+      settings
+        ? settingLabels.filter(({ key }) => Boolean(settings[key])).length
+        : 0,
     [settings]
   )
   const statusText = isLoading
     ? "Loading local protections"
     : `${activeCount} of 4 protections active`
 
-  const toggleSetting = async (key: keyof ProtectionSettings) => {
+  const toggleSetting = async (key: ToggleSettingKey) => {
     if (!settings) return
     const next = await setSetting(key, !settings[key])
+    setSettings(next)
+  }
+
+  const chooseSensitivity = async (value: SensitivityMode) => {
+    const next = await setSetting("sensitivityMode", value)
+    setSettings(next)
+  }
+
+  const toggleRedactedSync = async () => {
+    if (!settings) return
+    const next = await setSetting("redactedSync", !settings.redactedSync)
     setSettings(next)
   }
 
@@ -147,6 +198,19 @@ const Popup = () => {
     await retryQueuedSyncLogs()
     const queued = await getQueuedSyncLogs()
     setQueuedSyncCount(queued.length)
+  }
+
+  const markLogFeedback = async (id: string, feedback: WarningFeedback) => {
+    const nextLogs = await updateActivityLogFeedback(id, feedback)
+    const queued = await getQueuedSyncLogs()
+    setLogs(nextLogs)
+    setQueuedSyncCount(queued.length)
+  }
+
+  const reportMissedRisk = async () => {
+    await addWarningFeedbackRecord("missed-risk", siteStatus?.hostname ?? "unknown")
+    setMissedRiskSaved(true)
+    window.setTimeout(() => setMissedRiskSaved(false), 2200)
   }
 
   return (
@@ -215,6 +279,36 @@ const Popup = () => {
         </div>
       </section>
 
+      <section className="panel trust-panel">
+        <h2>Trust controls</h2>
+        <div className="sensitivity-control" aria-label="Warning sensitivity">
+          {sensitivityOptions.map((option) => (
+            <button
+              className={settings?.sensitivityMode === option.value ? "active" : ""}
+              disabled={!settings}
+              key={option.value}
+              onClick={() => void chooseSensitivity(option.value)}
+              title={option.description}
+              type="button">
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <label className="toggle-row sync-toggle">
+          <ShieldCheck size={18} aria-hidden="true" />
+          <span>
+            <strong>Redacted report sync</strong>
+            <small>When off, new warnings stay local and are not queued for the dashboard.</small>
+          </span>
+          <input
+            checked={settings?.redactedSync ?? true}
+            disabled={!settings}
+            onChange={() => void toggleRedactedSync()}
+            type="checkbox"
+          />
+        </label>
+      </section>
+
       <section className="panel account-panel">
         <div className="section-heading">
           <h2>Report account</h2>
@@ -265,10 +359,15 @@ const Popup = () => {
 
         {queuedSyncCount > 0 ? (
           <div className="sync-state">
-            <small>{queuedSyncCount} redacted log{queuedSyncCount === 1 ? "" : "s"} queued for sync.</small>
-            <button className="text-button" onClick={() => void retrySync()} type="button">
-              Retry
-            </button>
+            <small>
+              {queuedSyncCount} redacted log{queuedSyncCount === 1 ? "" : "s"} queued
+              {settings?.redactedSync === false ? ", sync paused." : " for sync."}
+            </small>
+            {settings?.redactedSync === false ? null : (
+              <button className="text-button" onClick={() => void retrySync()} type="button">
+                Retry
+              </button>
+            )}
           </div>
         ) : null}
       </section>
@@ -276,14 +375,23 @@ const Popup = () => {
       <section className="panel">
         <div className="section-heading">
           <h2>Recent warnings</h2>
-          <button
-            className="icon-button danger"
-            disabled={logs.length === 0}
-            onClick={() => void clearLogs()}
-            title="Clear history"
-            type="button">
-            <Eraser size={16} />
-          </button>
+          <div className="warning-actions">
+            <button
+              className="text-button"
+              onClick={() => void reportMissedRisk()}
+              title="Report that AI Firewall missed a risky moment on this page"
+              type="button">
+              {missedRiskSaved ? "Saved" : "Missed risk"}
+            </button>
+            <button
+              className="icon-button danger"
+              disabled={logs.length === 0}
+              onClick={() => void clearLogs()}
+              title="Clear history"
+              type="button">
+              <Eraser size={16} />
+            </button>
+          </div>
         </div>
 
         {logs.length === 0 ? (
@@ -306,6 +414,21 @@ const Popup = () => {
                     ))}
                   </ul>
                 ) : null}
+                <div className="feedback-actions" aria-label="Warning feedback">
+                  <span>Feedback</span>
+                  <button
+                    className={log.feedback === "correct-warning" ? "active" : ""}
+                    onClick={() => void markLogFeedback(log.id, "correct-warning")}
+                    type="button">
+                    Correct
+                  </button>
+                  <button
+                    className={log.feedback === "false-alarm" ? "active" : ""}
+                    onClick={() => void markLogFeedback(log.id, "false-alarm")}
+                    type="button">
+                    False alarm
+                  </button>
+                </div>
               </li>
             ))}
           </ol>

@@ -9,8 +9,18 @@ import {
   highestSeverity
 } from "../firewall/detectors"
 import { redactSensitiveText, redactSnippet } from "../firewall/redact"
-import { addActivityLog, getProtectedSites, getSettings } from "../firewall/storage"
-import type { Detection, ProtectionSettings, UserDecision } from "../firewall/types"
+import {
+  addActivityLog,
+  getProtectedSites,
+  getSettings,
+  updateActivityLogFeedback
+} from "../firewall/storage"
+import type {
+  Detection,
+  ProtectionSettings,
+  UserDecision,
+  WarningFeedback
+} from "../firewall/types"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://*/*"],
@@ -132,6 +142,30 @@ const ensureStyles = () => {
     .ai-firewall-toast button[data-action="copy-redacted"] {
       background: #1f6f4a;
       border-color: #1f6f4a;
+      color: #fff;
+    }
+    .ai-firewall-feedback {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      border-top: 1px solid rgba(111, 93, 38, 0.22);
+      padding-top: 9px;
+    }
+    .ai-firewall-feedback span {
+      color: #5c564d;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .ai-firewall-feedback button {
+      border-color: #d8caa7;
+      padding: 5px 8px;
+      font-size: 11px;
+    }
+    .ai-firewall-feedback button[data-selected="true"] {
+      background: #12211f;
+      border-color: #12211f;
       color: #fff;
     }
     .ai-firewall-modal-backdrop {
@@ -471,7 +505,8 @@ void refreshProtectedSites()
 const showToast = (
   detection: Detection,
   decision: UserDecision = "warned",
-  sourceText = ""
+  sourceText = "",
+  logId?: string
 ) => {
   ensureStyles()
   document.querySelector(".ai-firewall-toast")?.remove()
@@ -501,6 +536,15 @@ const showToast = (
       }
       <button type="button" data-action="dismiss">Dismiss</button>
     </div>
+    ${
+      logId
+        ? `<div class="ai-firewall-feedback" aria-label="Warning feedback">
+            <span>Was this right?</span>
+            <button type="button" data-feedback="correct-warning">Correct</button>
+            <button type="button" data-feedback="false-alarm">False alarm</button>
+          </div>`
+        : ""
+    }
   `
   toast.querySelector('[data-action="dismiss"]')?.addEventListener("click", () => {
     toast.remove()
@@ -517,6 +561,23 @@ const showToast = (
       .catch(() => {
         button.textContent = "Copy failed"
       })
+  })
+  toast.querySelectorAll("[data-feedback]").forEach((item) => {
+    item.addEventListener("click", (event) => {
+      if (!logId) return
+      const button = event.currentTarget
+      if (!(button instanceof HTMLButtonElement)) return
+      const feedback = button.dataset.feedback as WarningFeedback | undefined
+      if (!feedback) return
+
+      void updateActivityLogFeedback(logId, feedback).then(() => {
+        toast.querySelectorAll("[data-feedback]").forEach((feedbackButton) => {
+          if (feedbackButton instanceof HTMLButtonElement) {
+            feedbackButton.dataset.selected = String(feedbackButton === button)
+          }
+        })
+      })
+    })
   })
   document.body.appendChild(toast)
 
@@ -547,6 +608,7 @@ const showReviewModal = ({
   )
   const evidence = formatEvidence(detection)
   const isHigh = detection.severity === "high"
+  let selectedFeedback: WarningFeedback | undefined
   const backdrop = document.createElement("div")
   backdrop.className = "ai-firewall-modal-backdrop"
   backdrop.setAttribute("role", "presentation")
@@ -577,6 +639,11 @@ const showReviewModal = ({
             ? `<div class="ai-firewall-modal-section"><strong>Redacted preview</strong><pre class="ai-firewall-modal-preview">${escapeHtml(redactedText)}</pre></div>`
             : ""
         }
+        <div class="ai-firewall-modal-section ai-firewall-feedback" aria-label="Warning feedback">
+          <span>Warning quality</span>
+          <button type="button" data-feedback="correct-warning">Correct</button>
+          <button type="button" data-feedback="false-alarm">False alarm</button>
+        </div>
       </div>
       <footer class="ai-firewall-modal-actions">
         <button type="button" data-action="cancel">Cancel ${escapeHtml(actionLabel)}</button>
@@ -599,16 +666,37 @@ const showReviewModal = ({
 
   const close = () => backdrop.remove()
 
+  backdrop.querySelectorAll("[data-feedback]").forEach((item) => {
+    item.addEventListener("click", (event) => {
+      const button = event.currentTarget
+      if (!(button instanceof HTMLButtonElement)) return
+      const feedback = button.dataset.feedback as WarningFeedback | undefined
+      if (!feedback) return
+
+      selectedFeedback = feedback
+      backdrop.querySelectorAll("[data-feedback]").forEach((feedbackButton) => {
+        if (feedbackButton instanceof HTMLButtonElement) {
+          feedbackButton.dataset.selected = String(feedbackButton === button)
+        }
+      })
+    })
+  })
+
   backdrop.querySelector('[data-action="cancel"]')?.addEventListener("click", () => {
-    queueDetectionLog(detection, sourceText, isHigh ? "blocked" : "ignored")
-    showToast(detection, isHigh ? "blocked" : "ignored", sourceText)
+    const logId = queueDetectionLog(
+      detection,
+      sourceText,
+      isHigh ? "blocked" : "ignored",
+      selectedFeedback
+    )
+    showToast(detection, isHigh ? "blocked" : "ignored", sourceText, logId)
     close()
     onCancel?.()
   })
 
   backdrop.querySelector('[data-action="send-anyway"]')?.addEventListener("click", () => {
-    queueDetectionLog(detection, sourceText, "allowed")
-    showToast(detection, "allowed", sourceText)
+    const logId = queueDetectionLog(detection, sourceText, "allowed", selectedFeedback)
+    showToast(detection, "allowed", sourceText, logId)
     close()
     onAllow?.()
   })
@@ -620,7 +708,7 @@ const showReviewModal = ({
     void copyToClipboard(redactedText)
       .then(() => {
         button.textContent = "Copied redacted"
-        queueDetectionLog(detection, sourceText, "redacted-copied")
+        queueDetectionLog(detection, sourceText, "redacted-copied", selectedFeedback)
       })
       .catch(() => {
         button.textContent = "Copy failed"
@@ -628,7 +716,7 @@ const showReviewModal = ({
   })
 
   backdrop.querySelector('[data-action="use-redacted"]')?.addEventListener("click", () => {
-    queueDetectionLog(detection, sourceText, "redacted-copied")
+    queueDetectionLog(detection, sourceText, "redacted-copied", selectedFeedback)
     close()
     onUseRedacted?.(redactedText)
   })
@@ -636,7 +724,7 @@ const showReviewModal = ({
   backdrop.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       event.preventDefault()
-      queueDetectionLog(detection, sourceText, isHigh ? "blocked" : "ignored")
+      queueDetectionLog(detection, sourceText, isHigh ? "blocked" : "ignored", selectedFeedback)
       close()
       onCancel?.()
     }
@@ -652,16 +740,19 @@ const showReviewModal = ({
 const logDetection = async (
   detection: Detection,
   sourceText: string,
-  decision: UserDecision
+  decision: UserDecision,
+  feedback: WarningFeedback | undefined,
+  id: string
 ) => {
   await addActivityLog({
-    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    id,
     timestamp: Date.now(),
     site: siteName(),
     eventType: detection.category,
     severity: detection.severity,
     redactedSnippet: redactSnippet(sourceText),
     decision,
+    feedback,
     title: detection.title,
     evidence: formatEvidence(detection)
   })
@@ -670,9 +761,12 @@ const logDetection = async (
 const queueDetectionLog = (
   detection: Detection,
   sourceText: string,
-  decision: UserDecision
+  decision: UserDecision,
+  feedback?: WarningFeedback
 ) => {
-  void logDetection(detection, sourceText, decision).catch(() => undefined)
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  void logDetection(detection, sourceText, decision, feedback, id).catch(() => undefined)
+  return id
 }
 
 const shouldSkipRepeatCheck = (actionLabel: string, text: string) => {
@@ -765,8 +859,8 @@ document.addEventListener(
         }
       })
     } else if (detections.length > 0) {
-      queueDetectionLog(detections[0], text, "warned")
-      showToast(detections[0], "warned", text)
+      const logId = queueDetectionLog(detections[0], text, "warned")
+      showToast(detections[0], "warned", text, logId)
     }
   },
   true
@@ -843,7 +937,10 @@ document.addEventListener(
       size: file.size,
       type: file.type
     }))
-    const detections = detectRiskyUploads(files)
+    const detections =
+      cachedSettings.sensitivityMode === "relaxed"
+        ? detectRiskyUploads(files).filter((detection) => detection.severity === "high")
+        : detectRiskyUploads(files)
     if (detections.length === 0) return
 
     const top = topDetection(detections)
@@ -888,13 +985,15 @@ const observeAssistantContent = () => {
     const detections = [
       ...(settings.promptInjection ? detectPromptInjection(text) : []),
       ...(settings.scamDetection ? detectScamFraud(text) : [])
-    ]
+    ].filter((detection) =>
+      settings.sensitivityMode === "relaxed" ? detection.severity === "high" : true
+    )
 
     if (detections.length === 0) return
 
     const top = detections[0]
-    queueDetectionLog(top, text, "warned")
-    showToast(top, "warned", text)
+    const logId = queueDetectionLog(top, text, "warned")
+    showToast(top, "warned", text, logId)
   }
 
   const observer = new MutationObserver((mutations) => {

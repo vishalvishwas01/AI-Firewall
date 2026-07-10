@@ -40,7 +40,9 @@ Current state as of 2026-06-28:
 - Detection now covers env-style secrets and connection strings such as `JWT_SECRET=...` and `MONGODB_URI=...`; synced snippets store redacted placeholders only.
 - Phase 9.6 report website/domain management is implemented: `/reports` uses dynamic website filters, supports adding/removing domains, opens an add-domain modal from extension redirects, and pushes the protected-site list to the loaded extension when `VITE_EXTENSION_ID` is configured.
 - Phase 9.7 dynamic extension coverage is implemented for the local build: custom report domains now become protected extension targets through extension local storage, broad HTTPS content-script matching, and exact-or-subdomain hostname matching.
-- Deployment is intentionally deferred; dynamic-domain QA, extension reload testing, docs, and broader release checks are next.
+- Deployment is intentionally deferred.
+- Phase 10 VC-remediation work is now in progress at the product implementation level, not pitch-writing.
+- `/reports` now includes warning-quality summary metrics from the backend: synced warnings, marked-correct warnings, false alarms, missed risks, severity mix, warning type mix, and user decision mix.
 
 Recommended path:
 
@@ -298,6 +300,7 @@ Proposed implementation phases:
    - Added empty/loading/error states.
    - Added authenticated server `/logs` list endpoint scoped by `userId`.
    - Added authenticated server `/logs` create endpoint for future extension sync.
+   - Added feedback/quality reporting summary cards and panels for false alarms, missed risks, severity mix, warning type mix, and user decision mix.
 4. Extension auth integration - Status: Done
    - Extension popup detects whether the user is authenticated.
    - If unauthenticated, shows login/signup CTA and opens website login/signup.
@@ -339,6 +342,38 @@ Proposed implementation phases:
    - Test report filters by date and website/domain.
    - Test add-domain modal from report page and extension redirect.
    - Confirm only redacted snippets reach MongoDB.
+
+### Phase 10: VC-Review Product Remediation
+
+Status: In Progress
+
+Website/client responsibilities in Phase 10:
+
+- Show trust and measurement features in the actual product before investor-facing copy is refreshed.
+- Keep report views privacy-preserving and redacted-only.
+- Make warning fatigue measurable through feedback summary metrics.
+- Keep individual reporting useful while the product prepares for a later team/org track.
+
+Completed on 2026-07-10:
+
+- Added client API type `ReportSummary`.
+- Added `getLogSummary()` for `GET /logs/summary`.
+- `/reports` now fetches logs and summary metrics together using the selected website/domain and date filters.
+- Added top-level summary cards:
+  - Synced warnings
+  - Marked correct
+  - False alarms
+  - Missed risks
+- Added secondary summary panels:
+  - Severity mix
+  - Warning type
+  - User decisions
+- Individual log rows continue to show optional feedback labels beside the decision.
+
+Extension benchmark follow-up completed on 2026-07-10:
+
+- Benchmark fixtures now include confidential business examples, additional benign developer examples, more secret/token patterns, phone/card redaction examples, and raw-leak checks.
+- Website/client does not yet display benchmark results; that should wait until the product needs a public or admin-facing benchmark page.
 
 ## SEO Requirements
 
@@ -412,8 +447,7 @@ Environment variables:
 
 ## Next Immediate Steps
 
-1. Reload the rebuilt unpacked extension and accept the broader HTTPS host permission if Chrome prompts.
-2. Manually verify report website filters, add-domain modal, default/custom removal, and colored severity badges.
-3. Manually verify unsupported-site Add domain redirect into `/reports`, then reopen the extension on that domain and confirm it shows protected.
-4. Smoke test warnings and redacted sync on a custom domain such as `web.whatsapp.com`.
-5. Update README/QA/release materials after dynamic-domain behavior is stable.
+1. Continue Phase 10 implementation work before any new investor document rewrite.
+2. Next major product slice is small team/org foundations.
+3. Keep `/reports` aligned with redacted-only storage and warning-fatigue metrics.
+4. Deployment remains deferred until the user brings it back into scope.

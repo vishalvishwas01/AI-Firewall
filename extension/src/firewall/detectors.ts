@@ -52,7 +52,34 @@ export const defaultSettings: ProtectionSettings = {
   sensitiveData: true,
   promptInjection: true,
   uploadWarnings: true,
-  scamDetection: true
+  scamDetection: true,
+  sensitivityMode: "balanced",
+  redactedSync: true
+}
+
+const applySensitivityMode = (
+  detections: Detection[],
+  settings: ProtectionSettings
+): Detection[] => {
+  if (settings.sensitivityMode === "relaxed") {
+    return detections.filter((detection) => detection.severity === "high")
+  }
+
+  if (settings.sensitivityMode === "strict") {
+    return detections.map((detection) => {
+      if (detection.category !== "sensitive-data" || detection.severity !== "low") {
+        return detection
+      }
+
+      return {
+        ...detection,
+        severity: "medium",
+        title: "Sensitive data needs review"
+      }
+    })
+  }
+
+  return detections
 }
 
 export const detectSensitiveData = (text: string): Detection[] => {
@@ -182,11 +209,11 @@ export const analyzeText = (text: string, settings = defaultSettings): Detection
     return []
   }
 
-  return [
+  return applySensitivityMode([
     ...(settings.sensitiveData ? detectSensitiveData(normalized) : []),
     ...(settings.promptInjection ? detectPromptInjection(normalized) : []),
     ...(settings.scamDetection ? detectScamFraud(normalized) : [])
-  ]
+  ], settings)
 }
 
 export const highestSeverity = (detections: Detection[]): Detection["severity"] => {

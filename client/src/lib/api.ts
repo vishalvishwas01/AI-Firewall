@@ -28,10 +28,23 @@ export type ReportLog = {
   eventType: "sensitive-data" | "prompt-injection" | "risky-upload" | "scam-fraud"
   severity: "low" | "medium" | "high"
   decision: "warned" | "blocked" | "ignored" | "allowed" | "redacted-copied"
+  feedback?: "correct-warning" | "false-alarm" | "missed-risk"
   title: string
   redactedSnippet: string
   evidence: string[]
   createdAt: string
+}
+
+export type ReportSummary = {
+  totalLogs: number
+  feedbackTotal: number
+  falseAlarmRate: number
+  missedRiskRate: number
+  byFeedback: Record<NonNullable<ReportLog["feedback"]>, number>
+  bySeverity: Record<ReportLog["severity"], number>
+  byEventType: Record<ReportLog["eventType"], number>
+  byDecision: Record<ReportLog["decision"], number>
+  byHostname: Record<string, number>
 }
 
 export type ReportFilters = {
@@ -111,6 +124,17 @@ export const getLogs = (filters: ReportFilters = {}) => {
 
   const query = params.toString()
   return apiRequest<{ logs: ReportLog[] }>(`/logs${query ? `?${query}` : ""}`)
+}
+
+export const getLogSummary = (filters: ReportFilters = {}) => {
+  const params = new URLSearchParams()
+  if (filters.tool && filters.tool !== "All") params.set("tool", filters.tool)
+  if (filters.hostname) params.set("hostname", filters.hostname)
+  if (filters.from) params.set("from", filters.from)
+  if (filters.to) params.set("to", filters.to)
+
+  const query = params.toString()
+  return apiRequest<{ summary: ReportSummary }>(`/logs/summary${query ? `?${query}` : ""}`)
 }
 
 export const getReportSites = () => apiRequest<{ sites: ReportSite[] }>("/sites")

@@ -8,8 +8,13 @@ import {
   type DetectionCategory,
   type Severity,
   type SyncedLogDocument,
-  type UserDecision
+  type UserDecision,
+  type WarningFeedback
 } from "../models/syncedLog.js"
+import {
+  maxRedactedSnippetLength,
+  validateRedactedSnippetForStorage
+} from "../utils/redactionPolicy.js"
 
 const router = Router()
 
@@ -17,13 +22,7 @@ const tools = ["ChatGPT", "Claude", "Gemini", "Other"] as const
 const eventTypes = ["sensitive-data", "prompt-injection", "risky-upload", "scam-fraud"] as const
 const severities = ["low", "medium", "high"] as const
 const decisions = ["warned", "blocked", "ignored", "allowed", "redacted-copied"] as const
-const assignedSecretPattern =
-  /\b(?:[a-z0-9]+[_-])*(api[_-]?key|access[_-]?token|secret|password|passwd|pwd|token)\b\s*[:=]\s*["']?([^\s"',;]{6,})/gi
-const assignedConnectionPattern =
-  /\b(?:[a-z0-9]+[_-])?(database|db|mongodb|mongo|postgres|mysql|redis|supabase|firebase|webhook|callback|redirect|site|service|api)[_-]?(url|uri)\b\s*[:=]\s*["']?([^\s"',;]{4,})/gi
-const genericTokenPattern =
-  /\b(?:sk-[A-Za-z0-9_-]{16,}|pk_[A-Za-z0-9_-]{16,}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16})\b/
-const redactedValuePattern = /^\[(?:REDACTED|REDACTED_URL|REDACTED_TOKEN)\]$/i
+const warningFeedback = ["correct-warning", "false-alarm", "missed-risk"] as const
 
 const isOneOf = <T extends readonly string[]>(value: unknown, allowed: T): value is T[number] =>
   typeof value === "string" && allowed.includes(value)
@@ -39,25 +38,33 @@ const normalizeHostname = (value: unknown) =>
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
-const hasUnredactedAssignment = (pattern: RegExp, snippet: string, valueGroup: number) => {
-  pattern.lastIndex = 0
-  let match = pattern.exec(snippet)
+const buildLogQuery = (req: AuthenticatedRequest) => {
+  const tool = req.query.tool
+  const hostname = normalizeHostname(req.query.hostname)
+  const from = parseDate(req.query.from)
+  const to = parseDate(req.query.to)
+  const query: Record<string, unknown> = { userId: req.user?.id }
 
-  while (match) {
-    const value = match[valueGroup] ?? ""
-    if (!redactedValuePattern.test(value)) {
-      return true
-    }
-    match = pattern.exec(snippet)
+  if (isOneOf(tool, tools)) {
+    query.tool = tool
   }
 
-  return false
+  if (hostname) {
+    query.hostname = { $regex: `(^|\\.)${escapeRegex(hostname)}$` }
+  }
+
+  if (from || to) {
+    query.timestamp = {
+      ...(from ? { $gte: from } : {}),
+      ...(to ? { $lte: to } : {})
+    }
+  }
+
+  return query
 }
 
-const hasUnredactedSecretLikeText = (snippet: string) =>
-  hasUnredactedAssignment(assignedSecretPattern, snippet, 2) ||
-  hasUnredactedAssignment(assignedConnectionPattern, snippet, 3) ||
-  genericTokenPattern.test(snippet)
+const emptyCountMap = <T extends readonly string[]>(items: T) =>
+  Object.fromEntries(items.map((item) => [item, 0])) as Record<T[number], number>
 
 const publicLog = (log: SyncedLogDocument) => ({
   id: log._id?.toHexString(),
@@ -68,6 +75,7 @@ const publicLog = (log: SyncedLogDocument) => ({
   eventType: log.eventType,
   severity: log.severity,
   decision: log.decision,
+  feedback: log.feedback,
   title: log.title,
   redactedSnippet: log.redactedSnippet,
   evidence: log.evidence,
@@ -76,6 +84,68 @@ const publicLog = (log: SyncedLogDocument) => ({
 
 router.use(requireAuth)
 
+router.get("/summary", async (req: AuthenticatedRequest, res, next) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: "Authentication required" })
+      return
+    }
+
+    const query = buildLogQuery(req)
+    const db = await getDb()
+    const logs = await syncedLogsCollection(db)
+      .find(query, {
+        projection: {
+          feedback: 1,
+          severity: 1,
+          eventType: 1,
+          decision: 1,
+          hostname: 1
+        }
+      })
+      .toArray()
+
+    const byFeedback = emptyCountMap(warningFeedback)
+    const bySeverity = emptyCountMap(severities)
+    const byEventType = emptyCountMap(eventTypes)
+    const byDecision = emptyCountMap(decisions)
+    const byHostname: Record<string, number> = {}
+
+    for (const log of logs) {
+      bySeverity[log.severity] += 1
+      byEventType[log.eventType] += 1
+      byDecision[log.decision] += 1
+      byHostname[log.hostname] = (byHostname[log.hostname] ?? 0) + 1
+
+      if (log.feedback) {
+        byFeedback[log.feedback] += 1
+      }
+    }
+
+    const feedbackTotal = Object.values(byFeedback).reduce((sum, count) => sum + count, 0)
+    const falseAlarmRate =
+      feedbackTotal === 0 ? 0 : Number((byFeedback["false-alarm"] / feedbackTotal).toFixed(4))
+    const missedRiskRate =
+      feedbackTotal === 0 ? 0 : Number((byFeedback["missed-risk"] / feedbackTotal).toFixed(4))
+
+    res.json({
+      summary: {
+        totalLogs: logs.length,
+        feedbackTotal,
+        falseAlarmRate,
+        missedRiskRate,
+        byFeedback,
+        bySeverity,
+        byEventType,
+        byDecision,
+        byHostname
+      }
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
 router.get("/", async (req: AuthenticatedRequest, res, next) => {
   try {
     if (!req.user) {
@@ -83,27 +153,8 @@ router.get("/", async (req: AuthenticatedRequest, res, next) => {
       return
     }
 
-    const tool = req.query.tool
-    const hostname = normalizeHostname(req.query.hostname)
-    const from = parseDate(req.query.from)
-    const to = parseDate(req.query.to)
     const limit = Math.min(Number(req.query.limit ?? 100) || 100, 200)
-    const query: Record<string, unknown> = { userId: req.user.id }
-
-    if (isOneOf(tool, tools)) {
-      query.tool = tool
-    }
-
-    if (hostname) {
-      query.hostname = { $regex: `(^|\\.)${escapeRegex(hostname)}$` }
-    }
-
-    if (from || to) {
-      query.timestamp = {
-        ...(from ? { $gte: from } : {}),
-        ...(to ? { $lte: to } : {})
-      }
-    }
+    const query = buildLogQuery(req)
 
     const db = await getDb()
     const logs = await syncedLogsCollection(db)
@@ -141,9 +192,14 @@ router.post("/", async (req: AuthenticatedRequest, res, next) => {
     const decision = isOneOf(body.decision, decisions)
       ? (body.decision as UserDecision)
       : undefined
+    const feedback = isOneOf(body.feedback, warningFeedback)
+      ? (body.feedback as WarningFeedback)
+      : undefined
     const title = typeof body.title === "string" ? body.title.trim().slice(0, 160) : ""
     const redactedSnippet =
-      typeof body.redactedSnippet === "string" ? body.redactedSnippet.trim().slice(0, 600) : ""
+      typeof body.redactedSnippet === "string"
+        ? body.redactedSnippet.trim().slice(0, maxRedactedSnippetLength + 1)
+        : ""
     const evidence = Array.isArray(body.evidence)
       ? body.evidence
           .filter((item): item is string => typeof item === "string")
@@ -167,8 +223,9 @@ router.post("/", async (req: AuthenticatedRequest, res, next) => {
       return
     }
 
-    if (hasUnredactedSecretLikeText(redactedSnippet)) {
-      res.status(400).json({ error: "Log snippet must be redacted before sync" })
+    const snippetValidation = validateRedactedSnippetForStorage(redactedSnippet)
+    if (!snippetValidation.valid) {
+      res.status(400).json({ error: snippetValidation.error })
       return
     }
 
@@ -190,6 +247,7 @@ router.post("/", async (req: AuthenticatedRequest, res, next) => {
           eventType,
           severity,
           decision,
+          ...(feedback ? { feedback } : {}),
           title,
           redactedSnippet,
           evidence

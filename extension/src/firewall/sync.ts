@@ -24,6 +24,7 @@ const payloadFromLog = (log: ActivityLog) => ({
   eventType: log.eventType,
   severity: log.severity,
   decision: log.decision,
+  feedback: log.feedback,
   title: log.title,
   redactedSnippet: log.redactedSnippet,
   evidence: log.evidence ?? []

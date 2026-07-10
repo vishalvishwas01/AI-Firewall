@@ -10,6 +10,7 @@
     "build": "plasmo build",
     "package": "plasmo package",
     "test": "vitest run --environment node",
+    "benchmark:report": "vitest run --environment node src/firewall/benchmarkReport.cli.test.ts --reporter=verbose",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

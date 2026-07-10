@@ -1,12 +1,20 @@
 import { defaultSettings } from "./detectors"
 import { syncActivityLog } from "./sync"
-import type { ActivityLog, ProtectedSite, ProtectionSettings } from "./types"
+import type {
+  ActivityLog,
+  ProtectedSite,
+  ProtectionSettings,
+  WarningFeedback,
+  WarningFeedbackRecord
+} from "./types"
 
 const settingsKey = "ai-firewall-settings"
 const logsKey = "ai-firewall-activity"
+const feedbackKey = "ai-firewall-feedback"
 const syncQueueKey = "ai-firewall-sync-queue"
 const protectedSitesKey = "ai-firewall-protected-sites"
 const maxLogs = 50
+const maxFeedbackRecords = 100
 const maxQueuedLogs = 100
 
 export const defaultProtectedSites: ProtectedSite[] = [
@@ -84,9 +92,9 @@ export const saveProtectedSites = async (sites: ProtectedSite[]): Promise<void> 
   await setValue(protectedSitesKey, normalized)
 }
 
-export const setSetting = async (
-  key: keyof ProtectionSettings,
-  value: boolean
+export const setSetting = async <Key extends keyof ProtectionSettings>(
+  key: Key,
+  value: ProtectionSettings[Key]
 ): Promise<ProtectionSettings> => {
   const settings = await getSettings()
   const next = { ...settings, [key]: value }
@@ -100,6 +108,29 @@ export const getActivityLogs = async (): Promise<ActivityLog[]> => {
 
 export const getQueuedSyncLogs = async (): Promise<ActivityLog[]> => {
   return getValue<ActivityLog[]>(syncQueueKey, [])
+}
+
+export const getWarningFeedbackRecords = async (): Promise<WarningFeedbackRecord[]> => {
+  return getValue<WarningFeedbackRecord[]>(feedbackKey, [])
+}
+
+export const addWarningFeedbackRecord = async (
+  feedback: WarningFeedback,
+  site: string
+): Promise<WarningFeedbackRecord[]> => {
+  const records = await getWarningFeedbackRecords()
+  const next = [
+    {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      timestamp: Date.now(),
+      site,
+      feedback
+    },
+    ...records
+  ].slice(0, maxFeedbackRecords)
+
+  await setValue(feedbackKey, next)
+  return next
 }
 
 const saveQueuedSyncLogs = async (logs: ActivityLog[]): Promise<void> => {
@@ -123,6 +154,9 @@ const requestBackgroundSync = () => {
 }
 
 export const retryQueuedSyncLogs = async (): Promise<void> => {
+  const settings = await getSettings()
+  if (!settings.redactedSync) return
+
   const queued = await getQueuedSyncLogs()
   if (queued.length === 0) return
 
@@ -146,9 +180,30 @@ export const addActivityLog = async (log: ActivityLog): Promise<ActivityLog[]> =
   const logs = await getActivityLogs()
   const next = [log, ...logs].slice(0, maxLogs)
   await setValue(logsKey, next)
-  await queueSyncLog(log)
 
-  requestBackgroundSync()
+  const settings = await getSettings()
+  if (settings.redactedSync) {
+    await queueSyncLog(log)
+    requestBackgroundSync()
+  }
+
+  return next
+}
+
+export const updateActivityLogFeedback = async (
+  id: string,
+  feedback: WarningFeedback
+): Promise<ActivityLog[]> => {
+  const logs = await getActivityLogs()
+  const next = logs.map((log) => (log.id === id ? { ...log, feedback } : log))
+  await setValue(logsKey, next)
+
+  const updated = next.find((log) => log.id === id)
+  const settings = await getSettings()
+  if (updated && settings.redactedSync) {
+    await queueSyncLog(updated)
+    requestBackgroundSync()
+  }
 
   return next
 }

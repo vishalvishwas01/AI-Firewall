@@ -3,6 +3,7 @@ import type { Collection, Db, ObjectId } from "mongodb"
 export type Severity = "low" | "medium" | "high"
 export type DetectionCategory = "sensitive-data" | "prompt-injection" | "risky-upload" | "scam-fraud"
 export type UserDecision = "warned" | "blocked" | "ignored" | "allowed" | "redacted-copied"
+export type WarningFeedback = "correct-warning" | "false-alarm" | "missed-risk"
 export type AiTool = "ChatGPT" | "Claude" | "Gemini" | "Other"
 
 export type SyncedLogDocument = {
@@ -15,6 +16,7 @@ export type SyncedLogDocument = {
   eventType: DetectionCategory
   severity: Severity
   decision: UserDecision
+  feedback?: WarningFeedback
   title: string
   redactedSnippet: string
   evidence: string[]

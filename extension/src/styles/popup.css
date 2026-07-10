@@ -219,10 +219,57 @@ h2 {
   width: 18px;
 }
 
+.trust-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sensitivity-control {
+  background: #f8fafc;
+  border: 1px solid #e5dfd2;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 4px;
+}
+
+.sensitivity-control button {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #5c564d;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 750;
+  min-height: 30px;
+}
+
+.sensitivity-control button.active {
+  background: #12211f;
+  color: #f8f5ed;
+}
+
+.sensitivity-control button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.sync-toggle {
+  margin: 0;
+}
+
 .section-heading {
   align-items: center;
   display: flex;
   justify-content: space-between;
+}
+
+.warning-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
 }
 
 .icon-button {
@@ -402,4 +449,39 @@ h2 {
 
 .evidence-list li + li {
   margin-top: 2px;
+}
+
+.feedback-actions {
+  align-items: center;
+  border-top: 1px solid #eee5d8;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.feedback-actions span {
+  color: #6b665d;
+  font-size: 11px;
+  font-weight: 750;
+  margin-right: 2px;
+}
+
+.feedback-actions button {
+  background: #fff;
+  border: 1px solid #ddd7cc;
+  border-radius: 999px;
+  color: #332f28;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 750;
+  min-height: 24px;
+  padding: 3px 8px;
+}
+
+.feedback-actions button.active {
+  background: #12211f;
+  border-color: #12211f;
+  color: #f8f5ed;
 }

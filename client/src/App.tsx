@@ -21,6 +21,7 @@ import {
 import {
   createReportSite,
   deleteReportSite,
+  getLogSummary,
   getLogs,
   getReportSites,
   getSession,
@@ -28,6 +29,7 @@ import {
   logout,
   signup,
   type ReportLog,
+  type ReportSummary,
   type ReportSite,
   type SessionUser
 } from "./lib/api";
@@ -371,6 +373,7 @@ function ReportsPage({
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const [logs, setLogs] = useState<ReportLog[]>([]);
+  const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [sites, setSites] = useState<ReportSite[]>([]);
   const [selectedHostname, setSelectedHostname] = useState("");
   const [from, setFrom] = useState("");
@@ -407,6 +410,37 @@ function ReportsPage({
     }
     return "border-teal-200 bg-teal-50 text-teal-700";
   };
+  const feedbackLabel = (feedback: ReportLog["feedback"]) => {
+    if (feedback === "correct-warning") return "Correct warning";
+    if (feedback === "false-alarm") return "False alarm";
+    if (feedback === "missed-risk") return "Missed risk";
+    return "";
+  };
+  const formatRate = (rate: number) => `${Math.round(rate * 100)}%`;
+  const summaryCards = summary
+    ? [
+      {
+        label: "Synced warnings",
+        value: summary.totalLogs.toLocaleString(),
+        detail: "redacted records in this view"
+      },
+      {
+        label: "Marked correct",
+        value: summary.byFeedback["correct-warning"].toLocaleString(),
+        detail: `${summary.feedbackTotal.toLocaleString()} feedback events`
+      },
+      {
+        label: "False alarms",
+        value: summary.byFeedback["false-alarm"].toLocaleString(),
+        detail: `${formatRate(summary.falseAlarmRate)} of feedback`
+      },
+      {
+        label: "Missed risks",
+        value: summary.byFeedback["missed-risk"].toLocaleString(),
+        detail: `${formatRate(summary.missedRiskRate)} of feedback`
+      }
+    ]
+    : [];
 
   const closeAddSiteModal = () => {
     setIsAddSiteOpen(false);
@@ -473,13 +507,18 @@ function ReportsPage({
     setLoading(true);
     setError("");
 
-    getLogs({
+    const filters = {
       hostname: selectedHostname || undefined,
       from: from || undefined,
       to: to || undefined
-    })
-      .then(({ logs: nextLogs }) => {
-        if (active) setLogs(nextLogs);
+    };
+
+    Promise.all([getLogs(filters), getLogSummary(filters)])
+      .then(([logsResponse, summaryResponse]) => {
+        if (active) {
+          setLogs(logsResponse.logs);
+          setSummary(summaryResponse.summary);
+        }
       })
       .catch((reportError) => {
         if (active) setError(reportError instanceof Error ? reportError.message : "Failed to load reports");
@@ -664,14 +703,87 @@ function ReportsPage({
               {error}
             </div>
           ) : logs.length === 0 ? (
-            <div className="rounded-lg border border-slate-200 bg-white p-8 text-sm leading-6 text-slate-600">
-              No synced logs yet. When the extension starts uploading redacted
-              records, they will appear here.
-            </div>
+            <>
+              {summary ? (
+                <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {summaryCards.map((card) => (
+                    <div key={card.label} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        {card.label}
+                      </p>
+                      <p className="mt-2 text-2xl font-semibold text-slate-950">{card.value}</p>
+                      <p className="mt-1 text-sm text-slate-600">{card.detail}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <div className="rounded-lg border border-slate-200 bg-white p-8 text-sm leading-6 text-slate-600">
+                No synced logs yet. When the extension starts uploading redacted
+                records, they will appear here.
+              </div>
+            </>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+            <>
+              <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {summaryCards.map((card) => (
+                  <div key={card.label} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      {card.label}
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-950">{card.value}</p>
+                    <p className="mt-1 text-sm text-slate-600">{card.detail}</p>
+                  </div>
+                ))}
+              </div>
+
+              {summary ? (
+                <div className="mb-4 grid gap-4 lg:grid-cols-3">
+                  <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-700">
+                      Severity mix
+                    </h2>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {(["high", "medium", "low"] as const).map((severity) => (
+                        <span key={severity} className={`rounded-full border px-2.5 py-1 text-xs font-semibold uppercase ${severityClass(severity)}`}>
+                          {severity}: {summary.bySeverity[severity]}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-700">
+                      Warning type
+                    </h2>
+                    <div className="mt-3 space-y-2 text-sm text-slate-600">
+                      {Object.entries(summary.byEventType).map(([eventType, count]) => (
+                        <div key={eventType} className="flex items-center justify-between gap-3">
+                          <span>{eventType}</span>
+                          <strong className="text-slate-950">{count}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-700">
+                      User decisions
+                    </h2>
+                    <div className="mt-3 space-y-2 text-sm text-slate-600">
+                      {Object.entries(summary.byDecision).map(([decision, count]) => (
+                        <div key={decision} className="flex items-center justify-between gap-3">
+                          <span>{decision}</span>
+                          <strong className="text-slate-950">{count}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                   <thead className="bg-slate-50 text-slate-600">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Date</th>
@@ -700,7 +812,12 @@ function ReportsPage({
                           </span>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
-                          {log.decision}
+                          <span>{log.decision}</span>
+                          {log.feedback ? (
+                            <span className="mt-1 block rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-600">
+                              {feedbackLabel(log.feedback)}
+                            </span>
+                          ) : null}
                         </td>
                         <td className="px-4 py-4 font-medium text-slate-950">
                           {log.title}
@@ -718,9 +835,10 @@ function ReportsPage({
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                  </table>
+                </div>
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>

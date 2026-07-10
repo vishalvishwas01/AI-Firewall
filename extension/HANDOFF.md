@@ -234,8 +234,8 @@ Proposed implementation phases:
    - Popup checks saved protected sites instead of a hardcoded three-site list.
    - Popup shows only the current protected site, or `Add this domain` on unsupported pages.
    - Matching supports exact hostnames and subdomains, so a saved parent domain protects matching subdomains.
-   - Protected pages show the composer badge at the bottom-left edge.
-   - Popup clear-history action is styled as destructive and asks for confirmation.
+   - Protected pages show the composer badge attached to the bottom-right edge.
+   - Popup clear-history action is styled as destructive and clears directly.
 9. Verification and QA - Status: Pending
    - Test signup/login/logout.
    - Test extension unauthenticated redirect.
@@ -244,6 +244,663 @@ Proposed implementation phases:
    - Test unsupported-page Add domain redirect.
    - Test that only redacted snippets are stored.
    - Update README/QA/release materials and both handoffs.
+
+### Phase 10: VC-Review Business Defensibility Plan
+
+Status: In Progress
+
+Source/context:
+
+- A VC-style review validated the core problem and developer wedge but flagged that the plan reads more like a product roadmap than a defensible business.
+- Main concerns to address before investor-facing review:
+  - Weak moat if the product is only regex/pattern matching.
+  - Platform risk if OpenAI, Anthropic, Google, or browser vendors ship native AI data-leak warnings.
+  - Trust paradox: asking users to install a broad-permission extension to protect sensitive AI conversations.
+  - Warning fatigue from over-triggering security UX.
+  - Monetization sequence delays the market with real budget: teams and organizations.
+  - Missing named competitive landscape.
+  - Missing TAM/SAM/SOM and benchmark methodology.
+  - Missing precise redaction/storage specification.
+- User explicitly said to ignore certification/compliance and mobile for now.
+
+Business direction change:
+
+- Keep individual/freemium as acquisition and trust-building, not the main revenue engine.
+- Move team/org readiness forward in parallel with MVP stabilization.
+- Position the product as a neutral, cross-platform browser safety layer rather than a feature that one AI platform can fully replace.
+- Treat provable trust, benchmarks, redaction guarantees, and warning-fatigue controls as product features, not marketing afterthoughts.
+
+#### Phase 10.1: Implementation Reset - Trust Controls, Warning Sensitivity, And Benchmark Baseline
+
+Status: Done
+
+Completed on 2026-07-09:
+
+- Corrected Phase 10 direction from pitch-writing to product implementation that directly addresses VC objections.
+- Added product-level trust control:
+  - `ProtectionSettings.redactedSync`.
+  - Popup `Redacted report sync` toggle.
+  - When disabled, new warnings stay local and are not queued for dashboard sync.
+  - Existing queued logs are not retried while sync is disabled.
+- Added warning-fatigue control:
+  - `ProtectionSettings.sensitivityMode`.
+  - Popup sensitivity selector: `Relaxed`, `Balanced`, `Strict`.
+  - Relaxed mode only interrupts on high-confidence/high-severity detections.
+  - Balanced mode keeps current default behavior.
+  - Strict mode escalates low sensitive-data detections to review-level.
+  - Text, paste, send, assistant-output scan, and risky-upload flows now respect sensitivity mode.
+- Added benchmark foundation:
+  - `src/firewall/benchmarkFixtures.ts`.
+  - `src/firewall/detectors.benchmark.test.ts`.
+  - Fixtures cover obvious secrets, connection strings, prompt injection, scam/fraud language, benign developer questions, and normal AI requests.
+
+Goal:
+
+- Make the actual product start addressing VC objections before any new pitch:
+  - Trust paradox.
+  - Warning fatigue.
+  - Weak/no benchmark discipline.
+  - Over-reliance on claims instead of measurable behavior.
+
+Deliverables:
+
+- Extension trust controls in popup.
+- Redacted sync opt-out enforced before queuing sync records.
+- Sensitivity modes stored locally and used by detection paths.
+- Benchmark fixtures and Vitest benchmark regression test.
+
+Acceptance criteria:
+
+- User can turn off redacted dashboard sync from the extension popup.
+- User can reduce warning fatigue without disabling all protection.
+- Detection behavior has a baseline fixture set that can grow into an accuracy benchmark.
+- Any future investor pitch can point to product mechanics, not only positioning language.
+
+#### Phase 10.2: Competitive Landscape And Differentiation
+
+Status: Done
+
+Completed on 2026-07-09:
+
+- Added `../docs/COMPETITIVE_LANDSCAPE.md` as the Phase 10.2 competitive landscape draft.
+- Named the real competitive categories:
+  - Developer secret scanning.
+  - Enterprise DLP / AI data security.
+  - AI governance and control.
+  - AI security platforms.
+  - Platform-native controls.
+- Added named competitors and adjacent platform risks:
+  - GitGuardian.
+  - TruffleHog / Truffle Security.
+  - Nightfall AI.
+  - Harmonic Security.
+  - Prompt Security.
+  - Lakera.
+  - OpenAI, Anthropic, Google, Microsoft, and browser vendors as platform-native risks.
+- Added competitor table covering:
+  - What each company/category does.
+  - Primary customer.
+  - Deployment model.
+  - Strength.
+  - Gap/opening for AI Permission Firewall.
+  - Differentiation.
+- Clarified where AI Permission Firewall should not compete head-on yet:
+  - Full enterprise DLP breadth.
+  - Endpoint fleet coverage.
+  - SIEM/SOAR integrations.
+  - Certification/compliance claims.
+  - Mature ML classifier superiority.
+  - AI agent/MCP gateway depth.
+- Clarified where the product can compete now:
+  - Developer secret leakage into AI tools.
+  - Browser pre-send/paste/upload intervention.
+  - Local-first detection.
+  - Redacted-only reporting.
+  - Lightweight individual and small-team adoption.
+  - Custom protected domains.
+  - Trust-through-transparency.
+- Added a stronger "Why not the platforms themselves?" answer using the password-manager analogy.
+
+Goal:
+
+- Build an honest competitor map before writing another VC-facing document.
+
+Competitors/categories to research and summarize:
+
+- Secret scanning/dev security:
+  - GitGuardian
+  - TruffleHog
+- AI DLP / shadow AI governance:
+  - Nightfall AI
+  - Harmonic Security
+  - Prompt Security
+- AI security / prompt-injection protection:
+  - Lakera
+- Platform-native controls:
+  - OpenAI
+  - Anthropic
+  - Google/Gemini
+  - Browser-native privacy/security features
+
+Differentiation to test, not assume:
+
+- Browser-native and user-facing rather than admin-only.
+- Local-first detection and redacted-only reporting.
+- Individual-to-team adoption path.
+- Custom protected domains beyond the default AI tools.
+- In-context warning UX at the moment before send/upload.
+- Potential open-source detection core for trust and distribution.
+
+Deliverables:
+
+- Add a competitor table to the business/pitch material:
+  - Company/category
+  - Primary customer
+  - Deployment model
+  - Data handled
+  - Strength
+  - Weakness/gap
+  - AI Permission Firewall differentiation
+- Add a short "Why not the AI platforms themselves?" section.
+
+Acceptance criteria:
+
+- No investor-facing plan should claim a blank market.
+- Competitors are named directly.
+- Differentiation is specific, falsifiable, and not just "better UX."
+
+#### Phase 10.3: Trust Architecture And Transparency Plan
+
+Status: Pending
+
+Goal:
+
+- Reduce the trust paradox of a browser extension reading sensitive AI interactions.
+
+Product decisions to evaluate:
+
+- Publish a clear local-first architecture page.
+- Show exactly what is inspected locally, what is stored locally, what is synced, and what is never stored.
+- Add a redacted-log preview in product UX before sync where practical.
+- Consider open-sourcing the detector/redaction core while keeping account/dashboard code proprietary.
+- Add an optional "local-only mode" for users who do not want cloud reporting.
+- Add export/delete controls for local and account-backed report data.
+
+Deliverables:
+
+- Trust architecture document.
+- Public-facing privacy/trust page draft.
+- Internal checklist for any new detector or sync feature:
+  - Does it inspect locally?
+  - Does it store raw text?
+  - What exactly is redacted?
+  - What leaves the browser?
+  - Can the user disable or delete it?
+
+Acceptance criteria:
+
+- A privacy-conscious user can understand the product without needing to read source code.
+- The product can answer "why should I trust this extension?" with concrete mechanisms, not vibes.
+- Future investor material includes trust as a moat component.
+
+#### Phase 10.4: Redaction And Storage Technical Spec
+
+Status: Done
+
+Completed on 2026-07-10:
+
+- Added `../docs/REDACTION_STORAGE_SPEC.md` as the reviewable redacted-only reporting contract.
+- Defined the current redaction placeholders:
+  - `[REDACTED]`
+  - `[REDACTED_URL]`
+  - `[REDACTED_TOKEN]`
+  - `[REDACTED_EMAIL]`
+  - `[REDACTED_CARD]`
+  - `[REDACTED_PHONE]`
+- Documented local extension storage fields and limits:
+  - activity log cap: 50 records
+  - queued sync cap: 100 records
+  - redacted snippet cap: 240 characters
+  - missed-risk feedback remains metadata-only
+- Documented server storage fields and guarantees:
+  - authenticated user scoping
+  - duplicate handling by `userId + extensionLogId`
+  - no raw values in `redactedSnippet`
+  - evidence labels only, not raw regex matches
+- Added `src/firewall/redactionPolicy.test.ts` to lock the extension redaction/storage contract:
+  - secret assignment redaction
+  - service URI redaction
+  - generic token redaction
+  - email redaction
+  - card-like number redaction
+  - phone-like number redaction
+  - 240-character snippet cap
+- Added server-side policy helper:
+  - `../server/src/utils/redactionPolicy.ts`
+  - centralizes max snippet length and unredacted reportable text detection
+- Updated `../server/src/routes/logs.ts` to use the shared server-side snippet policy before saving synced logs.
+
+Goal:
+
+- Convert "redacted-only reporting" from a principle into a precise technical spec.
+
+Spec must define:
+
+- Categories detected:
+  - API keys
+  - tokens
+  - passwords
+  - JWT secrets
+  - service URLs/URIs
+  - connection strings
+  - email/phone/card-like values
+  - risky upload metadata
+  - prompt-injection/scam evidence
+- For each category:
+  - What pattern or method detects it.
+  - What value is masked.
+  - What placeholder is used.
+  - Whether any hash/fingerprint is stored.
+  - Whether evidence labels are stored.
+  - Whether raw text is ever retained.
+- Local storage:
+  - Activity log fields.
+  - Maximum log count.
+  - Retention behavior.
+- Server storage:
+  - Synced log fields.
+  - Redacted snippet length.
+  - User scoping.
+  - Duplicate handling.
+  - Server-side rejection of unredacted secret-like snippets.
+
+Deliverables:
+
+- `docs/REDACTION_SPEC.md` or equivalent.
+- Update README/QA to point to the spec.
+- Add examples:
+  - Input: `JWT_SECRET=abc123...`
+  - Stored snippet: `JWT_SECRET=[REDACTED]`
+  - Evidence: `secret assignment`
+
+Acceptance criteria:
+
+- Redaction behavior is reviewable by an external advisor.
+- QA can test the spec with fixtures.
+- Investor material can truthfully say redacted reporting is technically specified and enforced.
+
+#### Phase 10.5: Detection Benchmark And Accuracy Program
+
+Status: In Progress
+
+Completed on 2026-07-10:
+
+- Added benchmark report builder:
+  - `src/firewall/benchmarkReport.ts`
+  - Produces per-fixture outcomes:
+    - true positive
+    - true negative
+    - false positive
+    - false negative
+    - detected categories
+    - highest severity
+    - severity correctness
+    - redaction correctness
+    - redacted snippet
+- Extended benchmark fixtures:
+  - Added expected redacted snippets for secret, MongoDB URI, and GitHub token cases.
+- Updated benchmark regression test:
+  - Uses `buildDetectionBenchmarkReport()`.
+  - Fails on false positives, false negatives, severity mismatches, or redaction mismatches.
+- Added CLI-style benchmark report test:
+  - `src/firewall/benchmarkReport.cli.test.ts`
+  - Prints totals, rates, and per-case rows.
+- Added npm script:
+  - `npm run benchmark:report`
+  - Runs the report through Vitest without adding a new TS runtime dependency.
+
+Follow-up completed on 2026-07-10:
+
+- Expanded benchmark fixtures beyond the first baseline:
+  - OpenAI-style token.
+  - Password assignment.
+  - Confidential pricing text with email redaction.
+  - Restricted acquisition/business note.
+  - Customer phone number.
+  - Card-like billing number.
+  - Additional benign developer examples around env vars, API key references, redaction implementation, and database URL documentation.
+  - Additional scam/fraud impersonation example.
+- Added `forbiddenRedactedValues` to benchmark fixtures so tests can verify raw sensitive values do not survive redaction.
+- Updated benchmark report output:
+  - Adds `rawLeakFree` per fixture.
+  - Adds `rawLeakChecked` and `rawLeakFree` totals.
+  - Adds `rawLeakFreeRate`.
+- Updated benchmark regression test so raw leak checks must pass for every fixture that declares forbidden raw values.
+- Updated CLI-style benchmark table output to show raw-leak status.
+
+Goal:
+
+- Replace vague "improve detection" claims with measurable accuracy targets.
+
+Benchmark plan:
+
+- Create fixture sets for:
+  - Secrets and credentials.
+  - Environment files.
+  - Service URLs and connection strings.
+  - Benign developer text.
+  - Confidential business text.
+  - Prompt-injection examples.
+  - Scam/fraud examples.
+  - Non-English scam/injection examples later in Phase 10.9.
+- Track:
+  - True positives.
+  - False positives.
+  - False negatives.
+  - Severity correctness.
+  - Redaction correctness.
+  - User-decision outcomes in field testing.
+
+Initial target metrics:
+
+- Secret/credential detection:
+  - High recall target for common credential formats.
+  - Very low tolerance for missed obvious secrets.
+- Benign developer text:
+  - Low false-positive target so developers do not disable the tool.
+- Prompt-injection/scam:
+  - Treat current rules as baseline only; semantic detection needs improvement.
+
+Deliverables:
+
+- Benchmark fixture directory.
+- Test runner/report script.
+- Baseline benchmark report.
+- Field-test feedback form focused on false positives and warning fatigue.
+
+Acceptance criteria:
+
+- Future claims include numbers, not only adjectives.
+- False positives and false negatives are tracked over time.
+- Benchmarks become a trust and differentiation asset.
+
+#### Phase 10.6: Warning-Fatigue Reduction Program
+
+Status: In Progress
+
+Completed on 2026-07-09:
+
+- Added explicit warning feedback capture without raw prompt storage.
+- In content warning modal:
+  - Added `Correct` and `False alarm` feedback buttons.
+  - Selected feedback is stored with the redacted warning log when the user cancels, allows, copies redacted text, or uses redacted text.
+- In warning toast:
+  - Added `Correct` and `False alarm` feedback buttons for non-blocking warnings.
+  - Feedback updates the existing local redacted log by id.
+- In popup recent-warning history:
+  - Added feedback controls for each warning log.
+  - Feedback is saved locally and queued for redacted sync when report sync is enabled.
+- Added metadata-only missed-risk feedback:
+  - Popup `Missed risk` button stores timestamp, site, and `missed-risk`.
+  - It does not ask for or store raw prompt text.
+- Extended data model:
+  - `WarningFeedback = correct-warning | false-alarm | missed-risk`.
+  - `ActivityLog.feedback`.
+  - `WarningFeedbackRecord` for missed-risk metadata.
+  - Synced logs now accept and return optional `feedback`.
+  - Client report dashboard displays feedback labels beside decisions.
+
+Completed on 2026-07-10:
+
+- Added account-backed feedback summary reporting:
+  - `GET /logs/summary` on the server.
+  - Same authenticated user scope and filters as `/logs`.
+  - Counts total redacted logs, feedback totals, false-alarm rate, missed-risk rate, severity mix, warning type mix, decision mix, and hostname mix.
+- Added client API support:
+  - `ReportSummary`.
+  - `getLogSummary()`.
+- Updated the `/reports` dashboard:
+  - Summary cards for synced warnings, marked-correct warnings, false alarms, and missed risks.
+  - Secondary panels for severity mix, warning type, and user decisions.
+  - Summary respects the selected website/domain and date filters.
+- This makes warning fatigue measurable from the product dashboard instead of only visible per individual row.
+
+Goal:
+
+- Make warnings useful enough that users do not habituate and click through blindly.
+
+Product changes to evaluate:
+
+- Sensitivity levels:
+  - Relaxed
+  - Balanced
+  - Strict
+- Adaptive warning behavior:
+  - High severity: block/review modal.
+  - Medium severity: review modal only when action risk is meaningful.
+  - Low severity: subtle badge/logging, not repeated blocking.
+- Cooldowns and duplicate suppression beyond current same-message repeat guard.
+- "Why this matters" copy that is short and specific.
+- User feedback buttons:
+  - Correct warning
+  - False alarm
+  - Missed risk
+- Do-not-warn-again scoped carefully by domain/category, not globally.
+
+Deliverables:
+
+- Warning fatigue design spec.
+- UI changes for feedback and sensitivity.
+- Metrics tracked in local/report logs without storing raw content.
+
+Acceptance criteria:
+
+- Users can tune warning intensity.
+- Product can measure which warning categories are noisy.
+- Field testers report fewer unnecessary interruptions.
+
+#### Phase 10.7: Teams-First Business And Product Track
+
+Status: Pending
+
+Goal:
+
+- Move team/org monetization earlier because that is where budget exists.
+
+Team MVP scope:
+
+- Organization/workspace entity.
+- Invite or add team members.
+- Admin view of redacted risk events.
+- Protected domain policy defaults for the team.
+- Team-level summary metrics:
+  - Count by severity.
+  - Count by category.
+  - Count by protected domain.
+  - Trend over time.
+- No raw prompt storage.
+- User-level visibility should be handled carefully:
+  - Default to privacy-preserving aggregate views where possible.
+  - Make any user-level reporting explicit and admin-configured.
+
+Business deliverables:
+
+- Team pricing hypothesis.
+- ICP definition:
+  - AI-heavy startup teams.
+  - dev agencies.
+  - consulting teams.
+  - small companies without enterprise DLP.
+- Pilot plan:
+  - 3 to 5 design partners.
+  - Clear success criteria.
+  - Feedback on deployment friction and reporting value.
+
+Acceptance criteria:
+
+- Roadmap includes team revenue before deep individual monetization.
+- Pitch can explain who pays and why.
+- Product can support a small team pilot without pretending to be enterprise-complete.
+
+#### Phase 10.8: Open-Source Core Evaluation
+
+Status: Pending
+
+Goal:
+
+- Decide whether to open-source the detection/redaction core to address trust and distribution.
+
+Options:
+
+- Open-source only detector/redactor package.
+- Open-source extension core but keep dashboard/server proprietary.
+- Keep closed-source for now but publish detailed specs and benchmarks.
+
+Evaluation criteria:
+
+- Trust benefit.
+- Competitive risk.
+- Community contribution potential.
+- Maintenance burden.
+- Investor narrative value.
+- Ability to build a proprietary moat around team workflows, reporting, policy, and benchmarks.
+
+Deliverables:
+
+- Decision memo.
+- If approved, package boundary plan:
+  - What code moves into the public core.
+  - What stays private.
+  - License recommendation.
+  - Contribution policy.
+
+Acceptance criteria:
+
+- Open-source is treated as a strategic choice, not a vague future idea.
+- Trust strategy is stronger whether or not the core is opened.
+
+#### Phase 10.9: Cross-Browser And Non-English Expansion
+
+Status: Planned, after core MVP/team plan stabilizes
+
+Goal:
+
+- Strengthen "neutral browser layer" positioning beyond Chrome-only and English-centric rules.
+
+Cross-browser direction:
+
+- Edge should be first because Chromium support may be closest to current implementation.
+- Firefox should be evaluated next.
+- Safari should be evaluated later due to extension model differences.
+
+Non-English direction:
+
+- Secrets are mostly language-agnostic.
+- Scam/fraud and prompt-injection detection are currently English-centric.
+- Add fixture sets for major non-English languages based on target market priorities.
+- Evaluate whether rules, lightweight local models, or hybrid approaches are needed.
+
+Deliverables:
+
+- Browser compatibility research note.
+- Non-English detection research note.
+- Fixture plan for non-English scam/injection examples.
+
+Acceptance criteria:
+
+- The plan no longer claims "browser-native" while implicitly meaning Chrome forever.
+- Non-English risk is acknowledged as product scope, not ignored.
+
+#### Phase 10.10: On-Device Semantic Detection Research
+
+Status: Planned
+
+Goal:
+
+- Build a more defensible detection layer beyond regex/pattern matching.
+
+Research areas:
+
+- Lightweight local model for semantic prompt-injection/scam detection.
+- Browser-compatible model size/performance constraints.
+- Hybrid architecture:
+  - Rules for secrets/credentials.
+  - Semantic model for scam, coercion, prompt injection, and confidential business context.
+- Privacy-preserving inference:
+  - Runs locally.
+  - No raw prompt sent to the server.
+
+Deliverables:
+
+- Research memo on feasible local model options.
+- Prototype plan for a local semantic classifier.
+- Benchmark comparison:
+  - Rules-only baseline.
+  - Hybrid rules plus local model.
+
+Acceptance criteria:
+
+- Moat narrative improves from "regex extension" to "privacy-preserving AI interaction risk engine."
+- Any model work remains local-first unless the user explicitly approves another architecture.
+
+#### Phase 10.11: Self-Hosted And Data-Residency Option
+
+Status: Planned
+
+Goal:
+
+- Prepare for regulated or privacy-sensitive teams that cannot use a shared cloud backend.
+
+Scope:
+
+- Self-hosted server/API option.
+- Customer-owned MongoDB or compatible database.
+- Configurable retention.
+- Clear deployment docs.
+- No certification work in this phase.
+
+Deliverables:
+
+- Self-hosted architecture note.
+- Environment variable matrix.
+- Deployment outline for a single organization.
+
+Acceptance criteria:
+
+- Enterprise/regulatory objection "where is my data stored?" has an answer.
+- This remains a planning track until team MVP proves demand.
+
+#### Phase 10.12: VC-Ready Business Document Refresh
+
+Status: Pending, after Phases 10.1 through 10.7 have draft outputs
+
+Goal:
+
+- Rewrite the shareable investor document using the strengthened plan.
+
+Required sections:
+
+- Executive summary.
+- Problem and wedge.
+- Why now.
+- Product architecture.
+- Trust and privacy architecture.
+- Redaction/storage spec summary.
+- Competitive landscape.
+- Platform-risk answer.
+- Moat thesis.
+- Detection benchmark plan and early metrics.
+- Warning-fatigue strategy.
+- Team-first business model.
+- GTM and design-partner plan.
+- Roadmap.
+- Risks and mitigations.
+
+Acceptance criteria:
+
+- The document should read like a defensible business plan, not only a product description.
+- It should proactively answer the strongest VC objections.
+- It should not include certification or mobile roadmap details until the user brings those back into scope.
 
 ### Phase 8.1: Better Warning Details
 
@@ -304,11 +961,9 @@ Status: Done
 
 ## Next Immediate Steps
 
-1. Rebuild and reload the unpacked extension in Chrome, then accept the broader HTTPS host permission if prompted.
-2. Manually verify popup current-site display on ChatGPT, Claude, Gemini, and a custom protected site.
-3. Manually verify unsupported-site Add domain opens `/reports` with the hostname prefilled.
-4. Smoke test warning modal, local history, queued sync, and `/reports` display on a custom domain.
-5. Update README/QA/release materials after dynamic-domain behavior is stable.
+1. Continue implementation-driven Phase 10 work, not pitch-writing.
+2. Next implementation slice: add small team/org foundations only after individual trust/fatigue/benchmark basics are in place.
+3. Keep certification/compliance and mobile out of scope until the user explicitly brings them back.
 
 ## Related Handoffs
 
