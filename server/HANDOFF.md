@@ -150,6 +150,15 @@ Organization member:
 - `createdAt`
 - `updatedAt`
 
+Organization site policy:
+
+- `_id`
+- `organizationId`
+- `hostname`
+- `label`
+- `createdAt`
+- `updatedAt`
+
 Privacy requirements:
 
 - Store redacted snippets only.
@@ -312,7 +321,7 @@ Next verification/doc work:
 
 ## Phase 10.7: Team/Organization Foundations
 
-Status: In Progress
+Status: Done
 
 Completed on 2026-07-10:
 
@@ -350,6 +359,28 @@ Follow-up completed on 2026-07-10:
   - Owners cannot be removed or role-changed through these endpoints.
   - Admins cannot change or remove other admins.
 - These changes do not alter log storage; team reporting remains aggregate-only.
+
+Organization protected-site policy follow-up completed on 2026-07-19:
+
+- Added the `organization_site_policies` collection and unique organization/domain index.
+- Added organization policy endpoints:
+  - `GET /orgs/:id/sites` for active members.
+  - `POST /orgs/:id/sites` for owners/admins.
+  - `DELETE /orgs/:id/sites/:siteId` for owners/admins.
+- Domain and label values are normalized before persistence.
+- `GET /sites` now merges personal report sites with policies inherited through active organization memberships.
+- Merged sites expose `source`, `managed`, `organizationId`, and `organizationName`.
+- When a personal and organization site share a hostname, the personal label is retained and the result is marked managed.
+- `DELETE /sites/:id` rejects removal while the hostname is inherited from an active organization.
+- Team policies remain configuration metadata only and do not change redacted log storage.
+
+## Next Phase 10 Slice
+
+Status: Planned
+
+- Add time-bucketed organization summary trends without exposing raw snippets or per-user prompt content.
+- Add invitation lifecycle controls, including revoking pending invitations and activating matching invitations safely.
+- Keep organization reporting aggregate-only by default.
 
 ## Important Defaults
 

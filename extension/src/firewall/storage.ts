@@ -85,7 +85,11 @@ export const saveProtectedSites = async (sites: ProtectedSite[]): Promise<void> 
     .map((site) => ({
       hostname: site.hostname.trim().toLowerCase().replace(/^www\./, ""),
       label: site.label.trim(),
-      isDefault: Boolean(site.isDefault)
+      isDefault: Boolean(site.isDefault),
+      source: site.source === "organization" ? "organization" as const : "personal" as const,
+      managed: Boolean(site.managed),
+      ...(site.organizationId ? { organizationId: site.organizationId } : {}),
+      ...(site.organizationName ? { organizationName: site.organizationName } : {})
     }))
     .filter((site) => site.hostname && site.label)
 

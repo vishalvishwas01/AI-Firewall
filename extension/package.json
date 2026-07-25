@@ -1,9 +1,9 @@
 {
-  "name": "ai-permission-firewall",
-  "displayName": "AI Permission Firewall",
+  "name": "hallguard",
+  "displayName": "HallGuard",
   "version": "0.1.0",
-  "description": "Local-first browser extension that warns before risky AI prompts, uploads, and scam-like content.",
-  "author": "AI Permission Firewall",
+  "description": "HallGuard is a local-first AI permission firewall that warns before risky prompts, uploads, and scam-like content.",
+  "author": "HallGuard",
   "private": true,
   "scripts": {
     "dev": "plasmo dev",

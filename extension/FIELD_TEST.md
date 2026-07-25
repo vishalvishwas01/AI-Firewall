@@ -1,4 +1,4 @@
-# AI Permission Firewall Field Test
+# HallGuard Field Test
 
 Use this during normal browsing before adding more UI or changing rule sensitivity. The goal is to learn whether the MVP protects useful moments without interrupting ordinary AI chat too often.
 

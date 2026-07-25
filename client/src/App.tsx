@@ -20,10 +20,13 @@ import {
 } from "./data/siteContent";
 import {
   addOrganizationMember,
+  createOrganizationSitePolicy,
   createOrganization,
   createReportSite,
   deleteReportSite,
+  deleteOrganizationSitePolicy,
   getOrganization,
+  getOrganizationSitePolicies,
   getOrganizations,
   getLogSummary,
   getLogs,
@@ -38,6 +41,7 @@ import {
   type OrganizationMember,
   type OrganizationRole,
   type OrganizationSummary,
+  type OrganizationSitePolicy,
   type ReportLog,
   type ReportSummary,
   type ReportSite,
@@ -99,7 +103,11 @@ const sendSitesToExtension = async (sites: ReportSite[]) => {
         sites: sites.map((site) => ({
           hostname: site.hostname,
           label: site.label,
-          isDefault: site.isDefault
+          isDefault: site.isDefault,
+          source: site.source,
+          managed: site.managed,
+          organizationId: site.organizationId,
+          organizationName: site.organizationName
         }))
       },
       () => resolve()
@@ -222,13 +230,13 @@ function SiteHeader({
       <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-6 sm:px-8 lg:px-10">
         <a href="/" className="flex items-center gap-3 font-semibold text-slate-950">
           <img
-            src="/ai-firewall-icon.png"
+            src="/hallguard-icon.png"
             alt=""
             className="h-7 w-7 rounded"
             width="28"
             height="28"
           />
-          <span>AI Permission Firewall</span>
+          <span>HallGuard</span>
         </a>
         <nav className="flex items-center gap-2 text-sm font-semibold">
           {sessionLoading ? (
@@ -591,7 +599,7 @@ function ReportsPage({
   };
 
   const confirmRemoveSelectedSite = () => {
-    if (selectedSite) {
+    if (selectedSite && !selectedSite.managed) {
       setSitePendingRemoval(selectedSite);
     }
   };
@@ -665,7 +673,10 @@ function ReportsPage({
                       : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
                   }`}
                 >
-                  {site.label}
+                  <span>{site.label}</span>
+                  {site.managed ? (
+                    <span className="ml-2 text-[10px] font-semibold uppercase opacity-75">Managed</span>
+                  ) : null}
                 </button>
               ))}
               {sitesLoading ? (
@@ -680,13 +691,19 @@ function ReportsPage({
                 <span>
                   Selected: <strong className="text-slate-950">{selectedSite.label}</strong> ({selectedSite.hostname})
                 </span>
-                <button
-                  type="button"
-                  onClick={confirmRemoveSelectedSite}
-                  className="rounded-md border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:border-rose-400 hover:bg-rose-100"
-                >
-                  Remove website
-                </button>
+                {selectedSite.managed ? (
+                  <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
+                    Managed by {selectedSite.organizationName ?? "your organization"}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={confirmRemoveSelectedSite}
+                    className="rounded-md border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:border-rose-400 hover:bg-rose-100"
+                  >
+                    Remove website
+                  </button>
+                )}
               </div>
             ) : null}
 
@@ -982,16 +999,22 @@ function TeamPage({
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [summary, setSummary] = useState<OrganizationSummary | null>(null);
+  const [sitePolicies, setSitePolicies] = useState<OrganizationSitePolicy[]>([]);
   const [organizationName, setOrganizationName] = useState("");
+  const [policyHostname, setPolicyHostname] = useState("");
+  const [policyLabel, setPolicyLabel] = useState("");
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState<Exclude<OrganizationRole, "owner">>("member");
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [savingOrganization, setSavingOrganization] = useState(false);
   const [savingMember, setSavingMember] = useState(false);
+  const [savingPolicy, setSavingPolicy] = useState(false);
+  const [removingPolicyId, setRemovingPolicyId] = useState("");
   const [updatingMemberId, setUpdatingMemberId] = useState("");
   const [removingMemberId, setRemovingMemberId] = useState("");
   const [memberPendingRemoval, setMemberPendingRemoval] = useState<OrganizationMember | null>(null);
+  const [policyPendingRemoval, setPolicyPendingRemoval] = useState<OrganizationSitePolicy | null>(null);
   const [error, setError] = useState("");
 
   const canManageMembers =
@@ -1005,10 +1028,19 @@ function TeamPage({
   };
 
   const loadOrganizationDetail = async (organizationId: string) => {
-    const response = await getOrganization(organizationId);
+    const [response, policyResponse] = await Promise.all([
+      getOrganization(organizationId),
+      getOrganizationSitePolicies(organizationId)
+    ]);
     setSelectedOrganization(response.organization);
     setMembers(response.members);
     setSummary(response.summary);
+    setSitePolicies(policyResponse.sites);
+  };
+
+  const syncMergedSitesToExtension = async () => {
+    const { sites } = await getReportSites();
+    await sendSitesToExtension(sites);
   };
 
   useEffect(() => {
@@ -1056,6 +1088,7 @@ function TeamPage({
       setSelectedOrganization(null);
       setMembers([]);
       setSummary(null);
+      setSitePolicies([]);
       return;
     }
 
@@ -1112,6 +1145,44 @@ function TeamPage({
       setError(teamError instanceof Error ? teamError.message : "Failed to add member");
     } finally {
       setSavingMember(false);
+    }
+  };
+
+  const submitSitePolicy = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedOrganization || !canManageMembers) return;
+
+    setSavingPolicy(true);
+    setError("");
+
+    try {
+      await createOrganizationSitePolicy(selectedOrganization.id, policyHostname, policyLabel);
+      setPolicyHostname("");
+      setPolicyLabel("");
+      await loadOrganizationDetail(selectedOrganization.id);
+      await syncMergedSitesToExtension();
+    } catch (teamError) {
+      setError(teamError instanceof Error ? teamError.message : "Failed to add protected website");
+    } finally {
+      setSavingPolicy(false);
+    }
+  };
+
+  const removeSitePolicy = async (policy: OrganizationSitePolicy) => {
+    if (!selectedOrganization || !canManageMembers) return;
+
+    setRemovingPolicyId(policy.id);
+    setError("");
+
+    try {
+      await deleteOrganizationSitePolicy(selectedOrganization.id, policy.id);
+      await loadOrganizationDetail(selectedOrganization.id);
+      await syncMergedSitesToExtension();
+    } catch (teamError) {
+      setError(teamError instanceof Error ? teamError.message : "Failed to remove protected website");
+    } finally {
+      setRemovingPolicyId("");
+      setPolicyPendingRemoval(null);
     }
   };
 
@@ -1318,6 +1389,88 @@ function TeamPage({
                   ) : null}
                 </div>
 
+                <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+                  <form
+                    onSubmit={submitSitePolicy}
+                    className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+                  >
+                    <h2 className="text-lg font-semibold text-slate-950">Protected websites</h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      These domains are inherited by every active organization member.
+                    </p>
+                    <label className="mt-4 block text-sm font-semibold text-slate-950">
+                      Domain
+                      <input
+                        type="text"
+                        required
+                        disabled={!canManageMembers}
+                        value={policyHostname}
+                        onChange={(event) => setPolicyHostname(event.target.value)}
+                        placeholder="example.com"
+                        className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-950 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 disabled:bg-slate-100"
+                      />
+                    </label>
+                    <label className="mt-4 block text-sm font-semibold text-slate-950">
+                      Website name
+                      <input
+                        type="text"
+                        required
+                        disabled={!canManageMembers}
+                        value={policyLabel}
+                        onChange={(event) => setPolicyLabel(event.target.value)}
+                        placeholder="Company AI workspace"
+                        className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-950 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 disabled:bg-slate-100"
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={!canManageMembers || savingPolicy}
+                      className="button-primary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {savingPolicy ? "Saving" : "Add protected website"}
+                    </button>
+                    {!canManageMembers ? (
+                      <p className="mt-3 text-sm text-slate-500">
+                        Only owners and admins can change organization protection.
+                      </p>
+                    ) : null}
+                  </form>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                    <h2 className="text-lg font-semibold text-slate-950">Organization policy</h2>
+                    {sitePolicies.length === 0 ? (
+                      <p className="mt-4 text-sm leading-6 text-slate-600">
+                        No organization-managed websites yet.
+                      </p>
+                    ) : (
+                      <div className="mt-4 divide-y divide-slate-200">
+                        {sitePolicies.map((policy) => (
+                          <div key={policy.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+                            <div>
+                              <p className="font-semibold text-slate-950">{policy.label}</p>
+                              <p className="mt-1 text-xs text-slate-500">{policy.hostname}</p>
+                            </div>
+                            {canManageMembers ? (
+                              <button
+                                type="button"
+                                disabled={removingPolicyId === policy.id}
+                                onClick={() => setPolicyPendingRemoval(policy)}
+                                className="rounded-md border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {removingPolicyId === policy.id ? "Removing" : "Remove"}
+                              </button>
+                            ) : (
+                              <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
+                                Managed
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
                   <form
                     onSubmit={submitMember}
@@ -1457,6 +1610,41 @@ function TeamPage({
           </div>
         </div>
       ) : null}
+
+      {policyPendingRemoval ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="remove-policy-title"
+            className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-2xl"
+          >
+            <h2 id="remove-policy-title" className="text-xl font-semibold text-slate-950">
+              Remove protected website?
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Remove <strong className="text-slate-950">{policyPendingRemoval.label}</strong> ({policyPendingRemoval.hostname}) from {selectedOrganization?.name ?? "this organization"}? Active members will no longer inherit it.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setPolicyPendingRemoval(null)}
+                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void removeSitePolicy(policyPendingRemoval)}
+                disabled={removingPolicyId === policyPendingRemoval.id}
+                className="rounded-md border border-rose-700 bg-rose-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {removingPolicyId === policyPendingRemoval.id ? "Removing" : "Remove"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -1473,7 +1661,7 @@ function HeroSection() {
         >
           <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm">
             <img
-              src="/ai-firewall-icon.png"
+              src="/hallguard-icon.png"
               alt=""
               className="h-6 w-6 rounded"
               width="24"
@@ -1482,7 +1670,7 @@ function HeroSection() {
             Local-first Chrome extension for safer AI chats
           </div>
           <h1 className="max-w-4xl text-4xl font-semibold leading-tight tracking-normal text-slate-950 sm:text-5xl lg:text-6xl">
-            AI Permission Firewall
+            HallGuard
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-700 sm:text-xl">
             Warn users before sensitive data, risky uploads, prompt injection,
@@ -1550,7 +1738,7 @@ function ProductMock() {
             </div>
             <div>
               <p className="text-sm font-semibold text-white">
-                AI Permission Firewall warning
+                HallGuard warning
               </p>
               <p className="mt-2 text-sm leading-6 text-amber-50">
                 This message appears to include a secret token and a risky

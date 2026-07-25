@@ -1,4 +1,4 @@
-# AI Permission Firewall QA Checklist
+# HallGuard QA Checklist
 
 Use this checklist before sharing a new build. The extension should be loaded from:
 
@@ -38,7 +38,7 @@ C:\Users\HP\Documents\AI-Firewall\build\chrome-mv3-prod
 - Enable Developer mode.
 - Click Load unpacked.
 - Select `build/chrome-mv3-prod`.
-- Confirm the extension appears as AI Permission Firewall.
+- Confirm the extension appears as HallGuard.
 - Pin the extension and open the popup.
 
 ## Popup Checks

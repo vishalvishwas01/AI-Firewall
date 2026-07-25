@@ -701,7 +701,7 @@ Acceptance criteria:
 
 #### Phase 10.7: Teams-First Business And Product Track
 
-Status: In Progress
+Status: Done
 
 Completed on 2026-07-10:
 
@@ -751,6 +751,20 @@ Follow-up completed on 2026-07-10:
   - remove action for manageable members.
   - in-app remove-member confirmation modal with blurred backdrop.
 - Team summary remains aggregate-only and redacted-risk metadata-only.
+
+Organization protected-site policy follow-up completed on 2026-07-19:
+
+- Added organization-managed protected-domain policy storage and API support in the server.
+- The client merges personal and inherited organization domains before syncing to the extension.
+- Extension protected-site records now preserve optional ownership metadata:
+  - `source`
+  - `managed`
+  - `organizationId`
+  - `organizationName`
+- Both internal and external background message listeners validate policy metadata before storage.
+- Existing exact-domain and subdomain matching behavior is unchanged.
+- Existing locally stored protected sites remain compatible because ownership fields are optional.
+- Detection stays local and organization reporting remains redacted and aggregate-only.
 
 Goal:
 
@@ -1034,7 +1048,7 @@ Status: Done
 ## Next Immediate Steps
 
 1. Continue implementation-driven Phase 10 work, not pitch-writing.
-2. Next implementation slice: add team protected-site policy defaults or a team summary trend view.
+2. Next implementation slice: add aggregate organization summary trends and invitation lifecycle hardening.
 3. Then decide whether to expose benchmark results in-product or keep them developer-facing for now.
 4. Keep certification/compliance and mobile out of scope until the user explicitly brings them back.
 

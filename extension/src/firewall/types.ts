@@ -25,6 +25,10 @@ export type ProtectedSite = {
   hostname: string
   label: string
   isDefault: boolean
+  source?: "personal" | "organization"
+  managed?: boolean
+  organizationId?: string
+  organizationName?: string
 }
 
 export type Detection = {

@@ -96,7 +96,7 @@ export const faqItems = [
       "Not before the extension is installed. For now the website should guide users to manual install instructions. Later, the primary CTA can point to the Chrome Web Store listing."
   },
   {
-    question: "Does AI Permission Firewall read my AI account?",
+    question: "Does HallGuard read my AI account?",
     answer:
       "The extension watches supported AI chat pages for risky text and upload moments. Detection stays local, and account-backed reporting is designed to sync redacted warning records only."
   },

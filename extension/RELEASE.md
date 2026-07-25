@@ -1,4 +1,4 @@
-# AI Permission Firewall Release Checklist
+# HallGuard Release Checklist
 
 Use this checklist when preparing a build to share or archive.
 

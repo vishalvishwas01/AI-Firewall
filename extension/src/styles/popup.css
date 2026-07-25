@@ -43,6 +43,12 @@ input {
   width: 44px;
 }
 
+.status-icon img {
+  display: block;
+  height: 44px;
+  width: 44px;
+}
+
 h1,
 h2,
 p {

@@ -5,10 +5,12 @@ import { getDb } from "../db/mongo.js"
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js"
 import {
   organizationMembersCollection,
+  organizationSitePoliciesCollection,
   organizationsCollection,
   type OrganizationDocument,
   type OrganizationMemberDocument,
-  type OrganizationRole
+  type OrganizationRole,
+  type OrganizationSitePolicyDocument
 } from "../models/organization.js"
 import { syncedLogsCollection } from "../models/syncedLog.js"
 import { usersCollection } from "../models/user.js"
@@ -26,6 +28,26 @@ const normalizeEmail = (value: unknown) =>
 
 const normalizeName = (value: unknown) =>
   typeof value === "string" ? value.trim().slice(0, 100) : ""
+
+const normalizeHostname = (value: unknown) => {
+  const raw = typeof value === "string" ? value.trim().toLowerCase() : ""
+  if (!raw) return ""
+
+  try {
+    const withProtocol = raw.startsWith("http://") || raw.startsWith("https://")
+    const hostname = new URL(withProtocol ? raw : `https://${raw}`).hostname
+    return hostname.replace(/^www\./, "").slice(0, 180)
+  } catch {
+    return raw
+      .replace(/^https?:\/\//, "")
+      .split("/")[0]
+      .replace(/^www\./, "")
+      .slice(0, 180)
+  }
+}
+
+const normalizeSiteLabel = (value: unknown) =>
+  typeof value === "string" ? value.trim().slice(0, 80) : ""
 
 const isOneOf = <T extends readonly string[]>(value: unknown, allowed: T): value is T[number] =>
   typeof value === "string" && allowed.includes(value)
@@ -52,6 +74,14 @@ const publicMember = (member: OrganizationMemberDocument) => ({
   status: member.status,
   createdAt: member.createdAt.toISOString(),
   updatedAt: member.updatedAt.toISOString()
+})
+
+const publicSitePolicy = (site: OrganizationSitePolicyDocument) => ({
+  id: site._id?.toHexString(),
+  hostname: site.hostname,
+  label: site.label,
+  createdAt: site.createdAt.toISOString(),
+  updatedAt: site.updatedAt.toISOString()
 })
 
 const requireOrganizationMembership = async (
@@ -254,6 +284,99 @@ router.get("/:id", async (req: AuthenticatedRequest, res, next) => {
       members: members.map(publicMember),
       summary
     })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.get("/:id/sites", async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const access = await requireOrganizationMembership(req, req.params.id)
+    if (!access || !access.org._id) {
+      res.status(404).json({ error: "Organization not found" })
+      return
+    }
+
+    const db = await getDb()
+    const sites = await organizationSitePoliciesCollection(db)
+      .find({ organizationId: access.org._id })
+      .sort({ label: 1, hostname: 1 })
+      .toArray()
+
+    res.json({ sites: sites.map(publicSitePolicy) })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.post("/:id/sites", async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const access = await requireOrganizationMembership(req, req.params.id, ["owner", "admin"])
+    if (!access || !access.org._id) {
+      res.status(404).json({ error: "Organization not found" })
+      return
+    }
+
+    const hostname = normalizeHostname(req.body?.hostname)
+    const label = normalizeSiteLabel(req.body?.label)
+    if (!hostname || !label || !hostname.includes(".")) {
+      res.status(400).json({ error: "Enter a domain and website name" })
+      return
+    }
+
+    const db = await getDb()
+    const now = new Date()
+    const policies = organizationSitePoliciesCollection(db)
+    await policies.updateOne(
+      { organizationId: access.org._id, hostname },
+      {
+        $setOnInsert: {
+          organizationId: access.org._id,
+          hostname,
+          createdAt: now
+        },
+        $set: {
+          label,
+          updatedAt: now
+        }
+      },
+      { upsert: true }
+    )
+
+    const site = await policies.findOne({
+      organizationId: access.org._id,
+      hostname
+    })
+    if (!site) {
+      throw new Error("Organization site policy could not be loaded")
+    }
+
+    res.status(201).json({ site: publicSitePolicy(site) })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.delete("/:id/sites/:siteId", async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const access = await requireOrganizationMembership(req, req.params.id, ["owner", "admin"])
+    if (!access || !access.org._id || !ObjectId.isValid(req.params.siteId)) {
+      res.status(404).json({ error: "Organization site policy not found" })
+      return
+    }
+
+    const db = await getDb()
+    const result = await organizationSitePoliciesCollection(db).deleteOne({
+      _id: new ObjectId(req.params.siteId),
+      organizationId: access.org._id
+    })
+
+    if (result.deletedCount === 0) {
+      res.status(404).json({ error: "Organization site policy not found" })
+      return
+    }
+
+    res.status(204).end()
   } catch (error) {
     next(error)
   }

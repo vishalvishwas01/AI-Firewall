@@ -9,6 +9,7 @@ import {
   authCookieOptions,
   signAuthToken,
 } from "../middleware/auth.js"
+import { activateOrganizationInvitations } from "../models/organization.js"
 import { usersCollection, type UserDocument } from "../models/user.js"
 
 const router = Router()
@@ -71,6 +72,11 @@ router.post("/signup", async (req, res, next) => {
       throw new Error("Created user could not be loaded")
     }
 
+    if (!user._id) {
+      throw new Error("Created user has no id")
+    }
+
+    await activateOrganizationInvitations(db, user._id, user.email)
     const token = setSessionCookie(res, user)
     res.status(201).json({ user: publicUser(user), token })
   } catch (error) {
@@ -92,6 +98,11 @@ router.post("/login", async (req, res, next) => {
       return
     }
 
+    if (!user._id) {
+      throw new Error("Authenticated user has no id")
+    }
+
+    await activateOrganizationInvitations(db, user._id, user.email)
     const token = setSessionCookie(res, user)
     res.json({ user: publicUser(user), token })
   } catch (error) {

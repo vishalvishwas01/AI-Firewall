@@ -10,6 +10,37 @@ void retryQueuedSyncLogs().catch(() => undefined)
 const hostnameMatchesSite = (hostname: string, siteHostname: string) =>
   hostname === siteHostname || hostname.endsWith(`.${siteHostname}`)
 
+const protectedSitesFromMessage = (value: unknown): ProtectedSite[] => {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((site) => {
+    if (
+      typeof site !== "object" ||
+      site === null ||
+      !("hostname" in site) ||
+      !("label" in site) ||
+      typeof site.hostname !== "string" ||
+      typeof site.label !== "string"
+    ) {
+      return []
+    }
+
+    return [{
+      hostname: site.hostname,
+      label: site.label,
+      isDefault: "isDefault" in site && site.isDefault === true,
+      source: "source" in site && site.source === "organization" ? "organization" as const : "personal" as const,
+      managed: "managed" in site && site.managed === true,
+      ...("organizationId" in site && typeof site.organizationId === "string"
+        ? { organizationId: site.organizationId }
+        : {}),
+      ...("organizationName" in site && typeof site.organizationName === "string"
+        ? { organizationName: site.organizationName }
+        : {})
+    }]
+  })
+}
+
 const refreshMatchingTabs = async (sites: ProtectedSite[]) => {
   if (typeof chrome === "undefined" || !chrome.tabs?.query || !chrome.tabs.reload) {
     return
@@ -55,15 +86,7 @@ if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
       "sites" in message &&
       Array.isArray(message.sites)
     ) {
-      const sites = message.sites.filter(
-        (site): site is ProtectedSite =>
-          typeof site === "object" &&
-          site !== null &&
-          "hostname" in site &&
-          "label" in site &&
-          typeof site.hostname === "string" &&
-          typeof site.label === "string"
-      )
+      const sites = protectedSitesFromMessage(message.sites)
 
       void saveProtectedSites(sites)
         .then(() => refreshMatchingTabs(sites))
@@ -101,15 +124,7 @@ if (typeof chrome !== "undefined" && chrome.runtime?.onMessageExternal) {
       "sites" in message &&
       Array.isArray(message.sites)
     ) {
-      const sites = message.sites.filter(
-        (site): site is ProtectedSite =>
-          typeof site === "object" &&
-          site !== null &&
-          "hostname" in site &&
-          "label" in site &&
-          typeof site.hostname === "string" &&
-          typeof site.label === "string"
-      )
+      const sites = protectedSitesFromMessage(message.sites)
 
       void saveProtectedSites(sites)
         .then(() => refreshMatchingTabs(sites))

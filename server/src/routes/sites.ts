@@ -4,6 +4,11 @@ import { Router } from "express"
 import { getDb } from "../db/mongo.js"
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js"
 import {
+  organizationMembersCollection,
+  organizationSitePoliciesCollection,
+  organizationsCollection
+} from "../models/organization.js"
+import {
   defaultReportSites,
   reportSitesCollection,
   type ReportSiteDocument
@@ -82,12 +87,65 @@ router.get("/", async (req: AuthenticatedRequest, res, next) => {
     await ensureDefaultSites(req.user.id)
 
     const db = await getDb()
-    const sites = await reportSitesCollection(db)
+    const personalSites = await reportSitesCollection(db)
       .find({ userId: req.user.id, deletedAt: { $exists: false } })
       .sort({ isDefault: -1, label: 1 })
       .toArray()
+    const memberships = await organizationMembersCollection(db)
+      .find({ userId: req.user.id, status: "active" })
+      .toArray()
+    const organizationIds = memberships.map((membership) => membership.organizationId)
+    const [organizations, policies] = organizationIds.length
+      ? await Promise.all([
+          organizationsCollection(db).find({ _id: { $in: organizationIds } }).toArray(),
+          organizationSitePoliciesCollection(db)
+            .find({ organizationId: { $in: organizationIds } })
+            .sort({ label: 1, hostname: 1 })
+            .toArray()
+        ])
+      : [[], []]
+    const organizationNames = new Map(
+      organizations.flatMap((organization) =>
+        organization._id ? [[organization._id.toHexString(), organization.name] as const] : []
+      )
+    )
+    const mergedSites = new Map(
+      personalSites.map((site) => [
+        site.hostname,
+        {
+          ...publicSite(site),
+          source: "personal" as const,
+          managed: false
+        }
+      ])
+    )
 
-    res.json({ sites: sites.map(publicSite) })
+    for (const policy of policies) {
+      const organizationId = policy.organizationId.toHexString()
+      const organizationName = organizationNames.get(organizationId) ?? "Organization"
+      const personalSite = mergedSites.get(policy.hostname)
+
+      mergedSites.set(policy.hostname, {
+        ...(personalSite ?? {
+          id: policy._id?.toHexString(),
+          hostname: policy.hostname,
+          label: policy.label,
+          isDefault: false,
+          createdAt: policy.createdAt.toISOString(),
+          updatedAt: policy.updatedAt.toISOString(),
+          source: "organization" as const
+        }),
+        managed: true,
+        organizationId,
+        organizationName
+      })
+    }
+
+    res.json({
+      sites: [...mergedSites.values()].sort((a, b) =>
+        Number(b.isDefault) - Number(a.isDefault) || a.label.localeCompare(b.label)
+      )
+    })
   } catch (error) {
     next(error)
   }
@@ -140,7 +198,7 @@ router.post("/", async (req: AuthenticatedRequest, res, next) => {
       throw new Error("Report site could not be loaded")
     }
 
-    res.status(201).json({ site: publicSite(site) })
+    res.status(201).json({ site: { ...publicSite(site), source: "personal", managed: false } })
   } catch (error) {
     next(error)
   }
@@ -166,6 +224,22 @@ router.delete("/:id", async (req: AuthenticatedRequest, res, next) => {
 
     if (!site) {
       res.status(404).json({ error: "Report site not found" })
+      return
+    }
+
+    const memberships = await organizationMembersCollection(db)
+      .find({ userId: req.user.id, status: "active" })
+      .toArray()
+    const organizationIds = memberships.map((membership) => membership.organizationId)
+    const inheritedPolicy = organizationIds.length
+      ? await organizationSitePoliciesCollection(db).findOne({
+          organizationId: { $in: organizationIds },
+          hostname: site.hostname
+        })
+      : null
+
+    if (inheritedPolicy) {
+      res.status(403).json({ error: "This website is managed by your organization" })
       return
     }
 

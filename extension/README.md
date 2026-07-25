@@ -1,4 +1,4 @@
-# AI Permission Firewall
+# HallGuard
 
 Local-first Chrome extension MVP for warning individual users before risky AI prompts, uploads, and scam-like content on ChatGPT, Claude, and Gemini.
 
@@ -14,7 +14,7 @@ The extension is designed for individual use: no backend, no team dashboard, no 
 
 ## Local-First Privacy
 
-AI Permission Firewall runs its checks in the browser. The MVP has no backend, no dashboard, and no team administration flow. Settings and recent warning history are stored in `chrome.storage.local`, and warning snippets are redacted before they are saved.
+HallGuard runs its AI permission firewall checks in the browser. The MVP has no backend, no dashboard, and no team administration flow. Settings and recent warning history are stored in `chrome.storage.local`, and warning snippets are redacted before they are saved.
 
 ## Install The Built Extension
 

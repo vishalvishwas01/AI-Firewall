@@ -442,21 +442,21 @@ const getComposerBadge = () => {
   composerBadge = document.createElement("div")
   composerBadge.className = "ai-firewall-composer-badge"
   composerBadge.setAttribute("aria-hidden", "true")
-  composerBadge.textContent = "AI Firewall protected"
+  composerBadge.textContent = "HallGuard protected"
   document.body.appendChild(composerBadge)
   return composerBadge
 }
 
 const badgeTextForDetections = (detections: Detection[]) => {
   if (detections.some((detection) => detection.severity === "high")) {
-    return { state: "block", label: "AI Firewall will block" }
+    return { state: "block", label: "HallGuard will block" }
   }
 
   if (detections.length > 0) {
-    return { state: "review", label: "AI Firewall review" }
+    return { state: "review", label: "HallGuard review" }
   }
 
-  return { state: "protected", label: "AI Firewall protected" }
+  return { state: "protected", label: "HallGuard protected" }
 }
 
 const positionComposerBadge = (composer: Element, badge: HTMLDivElement) => {
@@ -624,7 +624,7 @@ const showReviewModal = ({
       <div class="ai-firewall-modal-body">
         <p>${
           isHigh
-            ? `AI Permission Firewall recommends blocking this ${escapeHtml(actionLabel)} until you review it.`
+            ? `HallGuard recommends blocking this ${escapeHtml(actionLabel)} until you review it.`
             : `Review this ${escapeHtml(actionLabel)} before continuing.`
         }</p>
         ${

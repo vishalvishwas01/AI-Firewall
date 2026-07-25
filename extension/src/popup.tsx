@@ -1,6 +1,8 @@
 import { AlertTriangle, CheckCircle2, CircleSlash, Eraser, Eye, Lock, ShieldCheck, Upload } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
+import hallGuardLogo from "data-base64:~assets/icon.png"
+
 import "./styles/popup.css"
 
 import {
@@ -217,10 +219,10 @@ const Popup = () => {
     <main className="popup-shell">
       <section className="status-band">
         <div className="status-icon" aria-hidden="true">
-          <ShieldCheck size={24} />
+          <img src={hallGuardLogo} alt="" />
         </div>
         <div>
-          <h1>AI Permission Firewall</h1>
+          <h1>HallGuard</h1>
           <p>{statusText}</p>
         </div>
       </section>
@@ -379,7 +381,7 @@ const Popup = () => {
             <button
               className="text-button"
               onClick={() => void reportMissedRisk()}
-              title="Report that AI Firewall missed a risky moment on this page"
+              title="Report that HallGuard missed a risky moment on this page"
               type="button">
               {missedRiskSaved ? "Saved" : "Missed risk"}
             </button>

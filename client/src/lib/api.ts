@@ -15,6 +15,10 @@ export type ReportSite = {
   hostname: string
   label: string
   isDefault: boolean
+  source: "personal" | "organization"
+  managed: boolean
+  organizationId?: string
+  organizationName?: string
   createdAt: string
   updatedAt: string
 }
@@ -70,6 +74,14 @@ export type OrganizationMember = {
 export type OrganizationSummary = ReportSummary & {
   activeMembers: number
   invitedMembers: number
+}
+
+export type OrganizationSitePolicy = {
+  id: string
+  hostname: string
+  label: string
+  createdAt: string
+  updatedAt: string
 }
 
 export type ReportFilters = {
@@ -213,5 +225,23 @@ export const updateOrganizationMemberRole = (
 
 export const removeOrganizationMember = (organizationId: string, memberId: string) =>
   apiRequest<void>(`/orgs/${organizationId}/members/${memberId}`, {
+    method: "DELETE"
+  })
+
+export const getOrganizationSitePolicies = (organizationId: string) =>
+  apiRequest<{ sites: OrganizationSitePolicy[] }>(`/orgs/${organizationId}/sites`)
+
+export const createOrganizationSitePolicy = (
+  organizationId: string,
+  hostname: string,
+  label: string
+) =>
+  apiRequest<{ site: OrganizationSitePolicy }>(`/orgs/${organizationId}/sites`, {
+    method: "POST",
+    body: JSON.stringify({ hostname, label })
+  })
+
+export const deleteOrganizationSitePolicy = (organizationId: string, siteId: string) =>
+  apiRequest<void>(`/orgs/${organizationId}/sites/${siteId}`, {
     method: "DELETE"
   })

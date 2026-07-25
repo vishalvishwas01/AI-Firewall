@@ -405,6 +405,18 @@ Team hardening follow-up completed on 2026-07-10:
   - admin users cannot change/remove other admins.
   - member removal uses an in-app confirmation modal with backdrop blur.
 
+Organization protected-site policy follow-up completed on 2026-07-19:
+
+- Added typed client API support for organization policy list/create/delete routes.
+- `/team` now lists inherited protected-site policies for all active members.
+- Owners/admins can add a domain and display label.
+- Owners/admins can remove a policy through an in-app confirmation modal with backdrop blur.
+- Members can view policies but cannot modify them.
+- Policy changes reload the merged `/sites` response and push it to the loaded extension.
+- `/reports` labels organization-managed domains and identifies the managing organization.
+- Personal removal controls are hidden for managed domains.
+- The report-site contract now carries `source`, `managed`, `organizationId`, and `organizationName`.
+
 ## SEO Requirements
 
 - The React app should be single-page but still SEO-conscious through strong static HTML metadata and crawlable rendered content.
@@ -478,6 +490,6 @@ Environment variables:
 ## Next Immediate Steps
 
 1. Continue Phase 10 implementation work before any new investor document rewrite.
-2. Next team slice: team protected-site policy defaults or team summary trends.
-3. Keep `/reports` and `/team` aligned with redacted-only storage and warning-fatigue metrics.
+2. Next team slice: add time-bucketed organization summary trends to `/team`.
+3. Add pending-invitation revoke/activation lifecycle controls without exposing user-level prompt content.
 4. Deployment remains deferred until the user brings it back into scope.
