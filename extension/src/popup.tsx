@@ -1,7 +1,7 @@
 import { AlertTriangle, CheckCircle2, CircleSlash, Eraser, Eye, Lock, ShieldCheck, Upload } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
-import hallGuardLogo from "data-base64:~assets/icon.png"
+import hallGuardLogo from "data-base64:../assets/icon.png"
 
 import "./styles/popup.css"
 
