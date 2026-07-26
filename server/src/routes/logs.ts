@@ -146,6 +146,29 @@ router.get("/summary", async (req: AuthenticatedRequest, res, next) => {
   }
 })
 
+router.get("/export", async (req: AuthenticatedRequest, res, next) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: "Authentication required" })
+      return
+    }
+
+    const db = await getDb()
+    const logs = await syncedLogsCollection(db)
+      .find({ userId: req.user.id })
+      .sort({ timestamp: -1 })
+      .toArray()
+
+    res.json({
+      exportedAt: new Date().toISOString(),
+      privacy: "Redacted account-backed warning records only",
+      logs: logs.map(publicLog)
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
 router.get("/", async (req: AuthenticatedRequest, res, next) => {
   try {
     if (!req.user) {

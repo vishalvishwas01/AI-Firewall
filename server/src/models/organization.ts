@@ -16,7 +16,8 @@ export type OrganizationMemberDocument = {
   userId?: ObjectId
   email: string
   role: OrganizationRole
-  status: "active" | "invited"
+  status: "active" | "invited" | "revoked"
+  revokedAt?: Date
   createdAt: Date
   updatedAt: Date
 }
@@ -43,6 +44,12 @@ export const organizationSitePoliciesCollection = (
 ): Collection<OrganizationSitePolicyDocument> =>
   db.collection<OrganizationSitePolicyDocument>("organization_site_policies")
 
+export const pendingInvitationActivationFilter = (userId: ObjectId, email: string) => ({
+  email: email.trim().toLowerCase(),
+  status: "invited" as const,
+  $or: [{ userId: { $exists: false as const } }, { userId }]
+})
+
 export const activateOrganizationInvitations = async (
   db: Db,
   userId: ObjectId,
@@ -50,15 +57,15 @@ export const activateOrganizationInvitations = async (
 ) => {
   const now = new Date()
   return organizationMembersCollection(db).updateMany(
-    {
-      email,
-      status: "invited"
-    },
+    pendingInvitationActivationFilter(userId, email),
     {
       $set: {
         userId,
         status: "active",
         updatedAt: now
+      },
+      $unset: {
+        revokedAt: ""
       }
     }
   )

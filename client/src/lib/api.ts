@@ -66,7 +66,8 @@ export type OrganizationMember = {
   userId?: string
   email: string
   role: OrganizationRole
-  status: "active" | "invited"
+  status: "active" | "invited" | "revoked"
+  revokedAt?: string
   createdAt: string
   updatedAt: string
 }
@@ -74,6 +75,69 @@ export type OrganizationMember = {
 export type OrganizationSummary = ReportSummary & {
   activeMembers: number
   invitedMembers: number
+  revokedInvitations: number
+}
+
+export type OrganizationTrendPoint = {
+  date: string
+  totalLogs: number
+  bySeverity: ReportSummary["bySeverity"]
+  byEventType: ReportSummary["byEventType"]
+  byFeedback: ReportSummary["byFeedback"]
+}
+
+export type OrganizationTrends = {
+  rangeDays: 7 | 30 | 90
+  bucket: "day"
+  from: string
+  to: string
+  points: OrganizationTrendPoint[]
+}
+
+export type DetectionBenchmarkResult = {
+  id: string
+  outcome: "true-positive" | "true-negative" | "false-positive" | "false-negative"
+  categories: string[]
+  severity?: "low" | "medium" | "high"
+  severityCorrect: boolean | null
+  redactionCorrect: boolean | null
+  rawLeakFree: boolean | null
+}
+
+export type DetectionBenchmark = {
+  fixtureVersion: string
+  generatedAt: string
+  scope: string
+  totals: {
+    cases: number
+    truePositive: number
+    trueNegative: number
+    falsePositive: number
+    falseNegative: number
+    severityChecked: number
+    severityCorrect: number
+    redactionChecked: number
+    redactionCorrect: number
+    rawLeakChecked: number
+    rawLeakFree: number
+  }
+  rates: {
+    precision: number | null
+    recall: number | null
+    accuracy: number
+    falsePositiveRate: number | null
+    falseNegativeRate: number | null
+    severityCorrectRate: number | null
+    redactionCorrectRate: number | null
+    rawLeakFreeRate: number | null
+  }
+  results: DetectionBenchmarkResult[]
+}
+
+export type AccountLogExport = {
+  exportedAt: string
+  privacy: string
+  logs: ReportLog[]
 }
 
 export type OrganizationSitePolicy = {
@@ -174,6 +238,11 @@ export const getLogSummary = (filters: ReportFilters = {}) => {
   return apiRequest<{ summary: ReportSummary }>(`/logs/summary${query ? `?${query}` : ""}`)
 }
 
+export const exportAccountLogs = () => apiRequest<AccountLogExport>("/logs/export")
+
+export const getAdminBenchmark = () =>
+  apiRequest<{ benchmark: DetectionBenchmark }>("/admin/benchmark")
+
 export const getReportSites = () => apiRequest<{ sites: ReportSite[] }>("/sites")
 
 export const createReportSite = (hostname: string, label: string) =>
@@ -203,6 +272,9 @@ export const getOrganization = (id: string) =>
     summary: OrganizationSummary
   }>(`/orgs/${id}`)
 
+export const getOrganizationTrends = (id: string, days: 7 | 30 | 90 = 30) =>
+  apiRequest<{ trends: OrganizationTrends }>(`/orgs/${id}/trends?days=${days}`)
+
 export const addOrganizationMember = (
   organizationId: string,
   email: string,
@@ -227,6 +299,12 @@ export const removeOrganizationMember = (organizationId: string, memberId: strin
   apiRequest<void>(`/orgs/${organizationId}/members/${memberId}`, {
     method: "DELETE"
   })
+
+export const revokeOrganizationInvitation = (organizationId: string, memberId: string) =>
+  apiRequest<{ member: OrganizationMember }>(
+    `/orgs/${organizationId}/invitations/${memberId}/revoke`,
+    { method: "POST" }
+  )
 
 export const getOrganizationSitePolicies = (organizationId: string) =>
   apiRequest<{ sites: OrganizationSitePolicy[] }>(`/orgs/${organizationId}/sites`)

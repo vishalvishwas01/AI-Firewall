@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -25,8 +25,11 @@ import {
   createReportSite,
   deleteReportSite,
   deleteOrganizationSitePolicy,
+  exportAccountLogs,
+  getAdminBenchmark,
   getOrganization,
   getOrganizationSitePolicies,
+  getOrganizationTrends,
   getOrganizations,
   getLogSummary,
   getLogs,
@@ -35,6 +38,7 @@ import {
   login,
   logout,
   removeOrganizationMember,
+  revokeOrganizationInvitation,
   signup,
   updateOrganizationMemberRole,
   type Organization,
@@ -42,6 +46,8 @@ import {
   type OrganizationRole,
   type OrganizationSummary,
   type OrganizationSitePolicy,
+  type OrganizationTrends,
+  type DetectionBenchmark,
   type ReportLog,
   type ReportSummary,
   type ReportSite,
@@ -64,6 +70,16 @@ const isExtensionAuthFlow = () =>
   new URLSearchParams(window.location.search).get("source") === "extension";
 
 const authRedirectKey = "ai-firewall-auth-redirect";
+
+const downloadJson = (filename: string, value: unknown) => {
+  const blob = new Blob([JSON.stringify(value, null, 2)], { type: "application/json" });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  window.URL.revokeObjectURL(url);
+};
 
 // const sendSessionToExtension = async (token: string) => {
 //   if (!extensionId || !window.chrome?.runtime?.sendMessage) return;
@@ -123,6 +139,7 @@ function App() {
   const isReports = path === "/reports";
   const isTeam = path === "/team";
   const isPrivacy = path === "/privacy";
+  const isTrust = path === "/trust";
 
   useEffect(() => {
     let active = true;
@@ -212,6 +229,20 @@ function App() {
     );
   }
 
+  if (isTrust) {
+    return (
+      <main className="min-h-screen bg-slate-50 text-slate-950">
+        <SiteHeader
+          user={user}
+          sessionLoading={sessionLoading}
+          onLogout={handleLogout}
+        />
+        <TrustPage user={user} sessionLoading={sessionLoading} />
+        <SiteFooter />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <SiteHeader
@@ -254,7 +285,10 @@ function SiteHeader({
           />
           <span>HallGuard</span>
         </a>
-        <nav className="flex items-center gap-2 text-sm font-semibold">
+        <nav className="flex max-w-[72vw] items-center gap-2 overflow-x-auto text-sm font-semibold">
+          <a className="button-secondary" href="/trust">
+            Trust
+          </a>
           {sessionLoading ? (
             <span className="text-slate-500">Checking session</span>
           ) : user ? (
@@ -438,6 +472,7 @@ function ReportsPage({
   const [domainInput, setDomainInput] = useState("");
   const [siteNameInput, setSiteNameInput] = useState("");
   const [siteSaving, setSiteSaving] = useState(false);
+  const [exportingLogs, setExportingLogs] = useState(false);
   const selectedSite = sites.find((site) => site.hostname === selectedHostname);
   const defaultSiteOrder = ["chatgpt.com", "claude.ai", "gemini.google.com"];
   const orderedSites = [...sites].sort((a, b) => {
@@ -636,6 +671,19 @@ function ReportsPage({
     await sendSitesToExtension(nextSites);
   };
 
+  const exportRedactedLogs = async () => {
+    setExportingLogs(true);
+    setError("");
+    try {
+      const exported = await exportAccountLogs();
+      downloadJson(`hallguard-redacted-logs-${exported.exportedAt.slice(0, 10)}.json`, exported);
+    } catch (reportError) {
+      setError(reportError instanceof Error ? reportError.message : "Failed to export logs");
+    } finally {
+      setExportingLogs(false);
+    }
+  };
+
   return (
     <section className="bg-slate-50 px-6 py-10 sm:px-8 lg:px-10">
       <div className="mx-auto max-w-7xl">
@@ -650,6 +698,15 @@ function ReportsPage({
             <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
               View redacted logs that were synced for {user?.email ?? "your account"}. Detection stays local; report storage only keeps masked snippets.
             </p>
+            <button
+              type="button"
+              disabled={!user || exportingLogs}
+              onClick={() => void exportRedactedLogs()}
+              className="button-secondary mt-4 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Download className="h-4 w-4" aria-hidden="true" />
+              {exportingLogs ? "Preparing export" : "Export redacted logs"}
+            </button>
           </div>
 
           <div>
@@ -1015,6 +1072,8 @@ function TeamPage({
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [summary, setSummary] = useState<OrganizationSummary | null>(null);
+  const [trends, setTrends] = useState<OrganizationTrends | null>(null);
+  const [trendDays, setTrendDays] = useState<7 | 30 | 90>(30);
   const [sitePolicies, setSitePolicies] = useState<OrganizationSitePolicy[]>([]);
   const [organizationName, setOrganizationName] = useState("");
   const [policyHostname, setPolicyHostname] = useState("");
@@ -1032,10 +1091,12 @@ function TeamPage({
   const [memberPendingRemoval, setMemberPendingRemoval] = useState<OrganizationMember | null>(null);
   const [policyPendingRemoval, setPolicyPendingRemoval] = useState<OrganizationSitePolicy | null>(null);
   const [error, setError] = useState("");
+  const detailRequestId = useRef(0);
 
   const canManageMembers =
     selectedOrganization?.role === "owner" || selectedOrganization?.role === "admin";
   const formatRate = (rate: number) => `${Math.round(rate * 100)}%`;
+  const maxTrendTotal = Math.max(1, ...(trends?.points.map((point) => point.totalLogs) ?? [1]));
 
   const loadOrganizations = async () => {
     const { organizations: nextOrganizations } = await getOrganizations();
@@ -1044,13 +1105,17 @@ function TeamPage({
   };
 
   const loadOrganizationDetail = async (organizationId: string) => {
-    const [response, policyResponse] = await Promise.all([
+    const requestId = ++detailRequestId.current;
+    const [response, policyResponse, trendResponse] = await Promise.all([
       getOrganization(organizationId),
-      getOrganizationSitePolicies(organizationId)
+      getOrganizationSitePolicies(organizationId),
+      getOrganizationTrends(organizationId, trendDays)
     ]);
+    if (requestId !== detailRequestId.current) return;
     setSelectedOrganization(response.organization);
     setMembers(response.members);
     setSummary(response.summary);
+    setTrends(trendResponse.trends);
     setSitePolicies(policyResponse.sites);
   };
 
@@ -1104,6 +1169,7 @@ function TeamPage({
       setSelectedOrganization(null);
       setMembers([]);
       setSummary(null);
+      setTrends(null);
       setSitePolicies([]);
       return;
     }
@@ -1126,7 +1192,7 @@ function TeamPage({
     return () => {
       active = false;
     };
-  }, [user, selectedOrganizationId]);
+  }, [user, selectedOrganizationId, trendDays]);
 
   const submitOrganization = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1228,10 +1294,20 @@ function TeamPage({
     setError("");
 
     try {
-      await removeOrganizationMember(selectedOrganization.id, member.id);
+      if (member.status === "invited") {
+        await revokeOrganizationInvitation(selectedOrganization.id, member.id);
+      } else {
+        await removeOrganizationMember(selectedOrganization.id, member.id);
+      }
       await loadOrganizationDetail(selectedOrganization.id);
     } catch (teamError) {
-      setError(teamError instanceof Error ? teamError.message : "Failed to remove member");
+      setError(
+        teamError instanceof Error
+          ? teamError.message
+          : member.status === "invited"
+            ? "Failed to revoke invitation"
+            : "Failed to remove member"
+      );
     } finally {
       setRemovingMemberId("");
       setMemberPendingRemoval(null);
@@ -1344,11 +1420,12 @@ function TeamPage({
 
                   {summary ? (
                     <>
-                      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                         {[
                           ["Synced warnings", summary.totalLogs.toLocaleString()],
                           ["Active members", summary.activeMembers.toLocaleString()],
                           ["Invited", summary.invitedMembers.toLocaleString()],
+                          ["Revoked", summary.revokedInvitations.toLocaleString()],
                           ["False alarm rate", formatRate(summary.falseAlarmRate)]
                         ].map(([label, value]) => (
                           <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
@@ -1358,6 +1435,67 @@ function TeamPage({
                             <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
                           </div>
                         ))}
+                      </div>
+
+                      <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-700">
+                              Warning trend
+                            </h3>
+                            <p className="mt-1 text-xs text-slate-500">
+                              Daily aggregate warning counts. No prompt content or per-user detail.
+                            </p>
+                          </div>
+                          <div className="flex rounded-md border border-slate-300 bg-white p-1" aria-label="Trend range">
+                            {([7, 30, 90] as const).map((days) => (
+                              <button
+                                key={days}
+                                type="button"
+                                onClick={() => setTrendDays(days)}
+                                className={`rounded px-2.5 py-1 text-xs font-semibold ${
+                                  trendDays === days
+                                    ? "bg-slate-950 text-white"
+                                    : "text-slate-600 hover:bg-slate-100"
+                                }`}
+                              >
+                                {days}d
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {trends ? (
+                          <div className="mt-5 overflow-x-auto pb-1">
+                            <div
+                              className="flex h-32 min-w-full items-end gap-1"
+                              style={{ minWidth: `${Math.max(480, trends.points.length * 12)}px` }}
+                              role="img"
+                              aria-label={`${trends.rangeDays}-day aggregate warning trend`}
+                            >
+                              {trends.points.map((point) => (
+                                <div
+                                  key={point.date}
+                                  className="group relative flex min-w-1 flex-1 items-end"
+                                  title={`${point.date}: ${point.totalLogs} warnings`}
+                                >
+                                  <div
+                                    className="w-full rounded-t bg-teal-600 transition hover:bg-teal-700"
+                                    style={{
+                                      height: `${Math.max(4, (point.totalLogs / maxTrendTotal) * 112)}px`,
+                                      opacity: point.totalLogs === 0 ? 0.22 : 1
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-2 flex justify-between text-xs text-slate-500">
+                              <span>{trends.points[0]?.date}</span>
+                              <span>{trends.points[trends.points.length - 1]?.date}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="mt-4 text-sm text-slate-500">Loading trend...</p>
+                        )}
                       </div>
 
                       <div className="mt-5 grid gap-4 lg:grid-cols-3">
@@ -1540,10 +1678,16 @@ function TeamPage({
                         <div key={member.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
                           <div>
                             <p className="font-semibold text-slate-950">{member.email}</p>
-                            <p className="mt-1 text-xs text-slate-500">{member.status}</p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {member.status === "invited"
+                                ? "Invitation pending"
+                                : member.status === "revoked"
+                                  ? "Invitation revoked"
+                                  : "Active member"}
+                            </p>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
-                            {canManageMembers && member.role !== "owner" ? (
+                            {canManageMembers && member.role !== "owner" && member.status !== "revoked" ? (
                               <>
                                 <select
                                   value={member.role}
@@ -1572,7 +1716,9 @@ function TeamPage({
                                   onClick={() => setMemberPendingRemoval(member)}
                                   className="rounded-md border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                  {removingMemberId === member.id ? "Removing" : "Remove"}
+                                  {removingMemberId === member.id
+                                    ? member.status === "invited" ? "Revoking" : "Removing"
+                                    : member.status === "invited" ? "Revoke" : "Remove"}
                                 </button>
                               </>
                             ) : (
@@ -1601,10 +1747,12 @@ function TeamPage({
             className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-2xl"
           >
             <h2 id="remove-member-title" className="text-xl font-semibold text-slate-950">
-              Remove member?
+              {memberPendingRemoval.status === "invited" ? "Revoke invitation?" : "Remove member?"}
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Remove <strong className="text-slate-950">{memberPendingRemoval.email}</strong> from {selectedOrganization?.name ?? "this organization"}?
+              {memberPendingRemoval.status === "invited" ? "Revoke the pending invitation for" : "Remove"}{" "}
+              <strong className="text-slate-950">{memberPendingRemoval.email}</strong>{" "}
+              {memberPendingRemoval.status === "invited" ? `from ${selectedOrganization?.name ?? "this organization"}? They will not be activated if they later sign in.` : `from ${selectedOrganization?.name ?? "this organization"}?`}
             </p>
             <div className="mt-6 flex flex-wrap justify-end gap-3">
               <button
@@ -1620,7 +1768,9 @@ function TeamPage({
                 disabled={removingMemberId === memberPendingRemoval.id}
                 className="rounded-md border border-rose-700 bg-rose-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {removingMemberId === memberPendingRemoval.id ? "Removing" : "Remove"}
+                {removingMemberId === memberPendingRemoval.id
+                  ? memberPendingRemoval.status === "invited" ? "Revoking" : "Removing"
+                  : memberPendingRemoval.status === "invited" ? "Revoke invitation" : "Remove"}
               </button>
             </div>
           </div>
@@ -1869,6 +2019,203 @@ function SupportSection() {
             </div>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+function TrustPage({
+  user,
+  sessionLoading
+}: {
+  user: SessionUser | null;
+  sessionLoading: boolean;
+}) {
+  const [benchmark, setBenchmark] = useState<DetectionBenchmark | null>(null);
+  const [benchmarkLoading, setBenchmarkLoading] = useState(false);
+  const [benchmarkError, setBenchmarkError] = useState("");
+  const formatRate = (rate: number | null) =>
+    rate === null ? "Not measured" : `${Math.round(rate * 100)}%`;
+
+  useEffect(() => {
+    document.title = "Trust Architecture | HallGuard";
+    return () => {
+      document.title = "HallGuard | AI Permission Firewall";
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setBenchmark(null);
+      setBenchmarkError("");
+      return;
+    }
+
+    let active = true;
+    setBenchmarkLoading(true);
+    setBenchmarkError("");
+    getAdminBenchmark()
+      .then(({ benchmark: nextBenchmark }) => {
+        if (active) setBenchmark(nextBenchmark);
+      })
+      .catch((trustError) => {
+        if (active) {
+          setBenchmarkError(
+            trustError instanceof Error ? trustError.message : "Benchmark access unavailable"
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setBenchmarkLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  const architecture = [
+    {
+      title: "Inspected locally",
+      copy: "Composer text, paste text, upload metadata, and visible risk signals are evaluated inside the browser extension."
+    },
+    {
+      title: "Stored locally",
+      copy: "Settings, protected domains, feedback metadata, and up to 50 warning records with 240-character redacted snippets."
+    },
+    {
+      title: "Synced when enabled",
+      copy: "Authenticated reports receive warning metadata, evidence labels, and redacted snippets only. Sync can be switched off."
+    },
+    {
+      title: "Never stored by design",
+      copy: "Raw secrets, credentials, tokens, service URLs, emails, phone numbers, card-like values, files, or full raw prompts."
+    }
+  ];
+
+  return (
+    <section className="bg-slate-50 px-6 py-10 sm:px-8 lg:px-10">
+      <div className="mx-auto max-w-7xl">
+        <div className="border-b border-slate-200 pb-8">
+          <p className="text-sm font-semibold uppercase tracking-wider text-teal-700">
+            Trust architecture
+          </p>
+          <h1 className="mt-2 max-w-4xl text-3xl font-semibold text-slate-950 sm:text-4xl">
+            Concrete privacy mechanisms, not a promise to “just trust us.”
+          </h1>
+          <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
+            HallGuard detects risk locally. Account reporting is optional and redacted. This page describes what crosses each boundary and exposes the current synthetic benchmark to authorized organization owners and admins.
+          </p>
+        </div>
+
+        <div className="grid gap-4 py-6 md:grid-cols-2 xl:grid-cols-4">
+          {architecture.map((item) => (
+            <article key={item.title} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="text-base font-semibold text-slate-950">{item.title}</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">{item.copy}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-950">User controls</h2>
+            <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
+              <li><strong className="text-slate-950">Local-only mode:</strong> turn off Redacted report sync in the extension popup. New warnings remain local and are not queued.</li>
+              <li><strong className="text-slate-950">Local deletion:</strong> clear recent warning history from the popup.</li>
+              <li><strong className="text-slate-950">Local export:</strong> download redacted activity, queued redacted records, and metadata-only feedback from the popup.</li>
+              <li><strong className="text-slate-950">Account export:</strong> download all account-backed redacted warning records from Reports.</li>
+              <li><strong className="text-slate-950">Detection controls:</strong> independently disable categories and choose Relaxed, Balanced, or Strict sensitivity.</li>
+            </ul>
+          </article>
+          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-950">Enforcement points</h2>
+            <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
+              <li>Browser redaction happens before local history or sync queue storage.</li>
+              <li>The server independently rejects reportable raw values covered by the redaction specification.</li>
+              <li>Synced records are scoped to the authenticated account.</li>
+              <li>Team reporting returns aggregate metadata instead of prompt snippets or per-user prompt detail.</li>
+            </ul>
+            <a href="/privacy" className="mt-5 inline-flex font-semibold text-teal-700 underline underline-offset-4">
+              Read the privacy policy
+            </a>
+          </article>
+        </div>
+
+        <article className="mt-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-teal-700">
+                Authenticated admin view
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-950">Detection benchmark</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                This is a synthetic regression suite, not a claim of production-world accuracy. Access is limited to active organization owners and admins.
+              </p>
+            </div>
+            {benchmark ? (
+              <span className="rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">
+                Fixture {benchmark.fixtureVersion}
+              </span>
+            ) : null}
+          </div>
+
+          {sessionLoading || benchmarkLoading ? (
+            <p className="mt-5 text-sm text-slate-600">Checking benchmark access...</p>
+          ) : !user ? (
+            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+              <a href="/login" className="font-semibold text-teal-700 underline underline-offset-4">Sign in</a>{" "}
+              with an organization owner or admin account to view benchmark details.
+            </div>
+          ) : benchmarkError ? (
+            <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              {benchmarkError}
+            </div>
+          ) : benchmark ? (
+            <>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                {[
+                  ["Fixtures", benchmark.totals.cases.toString()],
+                  ["Precision", formatRate(benchmark.rates.precision)],
+                  ["Recall", formatRate(benchmark.rates.recall)],
+                  ["Severity", formatRate(benchmark.rates.severityCorrectRate)],
+                  ["Raw leak free", formatRate(benchmark.rates.rawLeakFreeRate)]
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 overflow-x-auto rounded-lg border border-slate-200">
+                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                  <thead className="bg-slate-50 text-slate-600">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Fixture</th>
+                      <th className="px-4 py-3 font-semibold">Outcome</th>
+                      <th className="px-4 py-3 font-semibold">Category</th>
+                      <th className="px-4 py-3 font-semibold">Severity</th>
+                      <th className="px-4 py-3 font-semibold">Checks</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {benchmark.results.map((result) => (
+                      <tr key={result.id}>
+                        <td className="px-4 py-3 font-medium text-slate-950">{result.id}</td>
+                        <td className="px-4 py-3 text-slate-600">{result.outcome}</td>
+                        <td className="px-4 py-3 text-slate-600">{result.categories.join(", ") || "benign"}</td>
+                        <td className="px-4 py-3 text-slate-600">{result.severity ?? "—"}</td>
+                        <td className="px-4 py-3 text-slate-600">
+                          Severity {result.severityCorrect === null ? "n/a" : result.severityCorrect ? "pass" : "fail"}; redaction {result.redactionCorrect === null ? "n/a" : result.redactionCorrect ? "pass" : "fail"}; leak {result.rawLeakFree === null ? "n/a" : result.rawLeakFree ? "pass" : "fail"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : null}
+        </article>
       </div>
     </section>
   );
@@ -2191,6 +2538,9 @@ function SiteFooter() {
           <span>© 2026 HallGuard. AI permission firewall.</span>
         </div>
         <nav aria-label="Legal" className="flex items-center gap-5 font-semibold">
+          <a className="transition hover:text-white" href="/trust">
+            Trust architecture
+          </a>
           <a className="transition hover:text-white" href="/privacy">
             Privacy Policy
           </a>

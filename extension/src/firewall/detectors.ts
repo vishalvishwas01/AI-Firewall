@@ -107,6 +107,7 @@ export const detectSensitiveData = (text: string): Detection[] => {
   }
   if (phonePattern.test(text)) {
     evidence.push("phone-number-like text")
+    severity = severity === "high" ? "high" : "medium"
   }
   if (privatePhrasePattern.test(text)) {
     evidence.push("private/confidential phrase")

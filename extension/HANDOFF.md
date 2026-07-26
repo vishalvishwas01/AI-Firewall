@@ -411,7 +411,40 @@ Acceptance criteria:
 
 #### Phase 10.3: Trust Architecture And Transparency Plan
 
-Status: Pending
+Status: Done
+
+Completed on 2026-07-27:
+
+- Added `../docs/TRUST_ARCHITECTURE.md` as the internal/public architecture source of truth.
+- Added `../docs/TRUST_FEATURE_CHECKLIST.md` for every new detector, model, storage, sync, export, reporting, or organization-policy change.
+- Added public website route `/trust` that explains:
+  - what is inspected locally
+  - what is stored locally
+  - what is synced when enabled
+  - what is never stored by design
+  - local-only mode and user controls
+  - independent browser/server enforcement points
+  - current limitations
+- Confirmed the existing `Redacted report sync` toggle is the optional local-only mode: when disabled, new warnings stay local and are not queued.
+- Existing warning review modals show a redacted preview before the user chooses redacted use/copy or allows the action, providing the practical pre-sync preview requested by this phase.
+- Added extension-local redacted JSON export for activity logs, queued redacted records, and metadata-only feedback.
+- Existing popup clear-history control remains the local warning-history deletion mechanism.
+- Added account-backed redacted JSON export through `GET /logs/export` and the `/reports` UI.
+- Added sanitized authenticated benchmark access:
+  - `GET /admin/benchmark`
+  - active organization owner/admin authorization
+  - `/trust` admin benchmark panel
+  - raw fixture text, expected snippets, forbidden raw values, customer data, and production prompts are excluded from the API payload
+- Benchmark UI clearly describes the 18-case fixture set as a synthetic regression baseline, not production-world accuracy.
+- Updated the extension README to remove obsolete no-backend/no-dashboard claims and link the trust/redaction specifications.
+- Reconfirmed `../docs/OPEN_SOURCE_CORE_BOUNDARY.md` as the evaluated candidate detector/redactor boundary; the license/publishing decision remains Phase 10.8 work.
+- Permanent account-wide deletion was evaluated and deferred: it needs a separately reviewed confirmation, organization membership, retention, audit, and recoverability lifecycle before a destructive endpoint is exposed.
+
+Acceptance outcome:
+
+- Privacy-conscious users can understand the architecture from `/trust` without reading source code.
+- The answer to “why trust the extension?” is now grounded in local detection, pre-storage redaction, optional sync, independent server validation, bounded storage, exports, and aggregate-only team reporting.
+- Trust is now a concrete product/documentation surface suitable for later investor material.
 
 Goal:
 
@@ -766,6 +799,21 @@ Organization protected-site policy follow-up completed on 2026-07-19:
 - Existing locally stored protected sites remain compatible because ownership fields are optional.
 - Detection stays local and organization reporting remains redacted and aggregate-only.
 
+Organization trends and invitation lifecycle follow-up completed on 2026-07-27:
+
+- Server and client now provide 7, 30, and 90-day aggregate organization warning trends without raw snippets or per-user prompt detail.
+- Pending organization invitations can be durably revoked and cannot activate after revocation.
+- Matching pending invitations activate on signup/login only when the normalized email matches and the invitation is still unclaimed.
+- Re-inviting a revoked email restores the existing membership lifecycle record safely.
+- Extension protected-site behavior did not change in this slice and passed its regression build/tests.
+
+Benchmark regression follow-up completed on 2026-07-27:
+
+- Phone-number-like PII now receives medium severity, matching the existing benchmark requirement.
+- Updated the disabled-settings detector test fixture for the current `ProtectionSettings` contract.
+- Full benchmark results returned to 100% severity correctness for the current 18-case fixture set.
+- `npm run typecheck`, all 41 extension tests, and `npm run build` passed on 2026-07-27.
+
 Goal:
 
 - Move team/org monetization earlier because that is where budget exists.
@@ -1047,10 +1095,10 @@ Status: Done
 
 ## Next Immediate Steps
 
-1. Continue implementation-driven Phase 10 work, not pitch-writing.
-2. Next implementation slice: add aggregate organization summary trends and invitation lifecycle hardening.
-3. Then decide whether to expose benchmark results in-product or keep them developer-facing for now.
-4. Keep certification/compliance and mobile out of scope until the user explicitly brings them back.
+1. Expand Phase 10.5 beyond the small synthetic baseline with larger reviewed fixtures and field-validation methodology.
+2. Continue Phase 10.6 warning-fatigue implementation, including duplicate suppression and scoped do-not-warn controls.
+3. Complete the Phase 10.8 open-source-core decision memo; no publishing or license decision has been made.
+4. Keep investor-document rewriting, certification/compliance, and mobile out of scope until explicitly resumed.
 
 ## Related Handoffs
 

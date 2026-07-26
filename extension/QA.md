@@ -53,6 +53,8 @@ C:\Users\HP\Documents\AI-Firewall\build\chrome-mv3-prod
 - Confirm Clear history is disabled when there are no warnings.
 - Trigger one warning, reopen the popup, and confirm Clear history is enabled.
 - Clear history and confirm Recent warnings returns to empty.
+- With at least one local warning, export local redacted data and confirm the JSON contains redacted records only.
+- Turn off Redacted report sync and confirm new warnings remain local and do not increase the queued sync count.
 - Toggle one protection off, repeat its matching test, and confirm that category no longer warns.
 
 ## Site Smoke Tests

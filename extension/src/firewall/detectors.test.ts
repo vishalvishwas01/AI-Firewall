@@ -107,7 +107,9 @@ describe("combined analysis and redaction", () => {
       sensitiveData: false,
       promptInjection: true,
       uploadWarnings: true,
-      scamDetection: true
+      scamDetection: true,
+      sensitivityMode: "balanced",
+      redactedSync: true
     })
 
     expect(detections).toHaveLength(0)

@@ -118,6 +118,22 @@ export const getWarningFeedbackRecords = async (): Promise<WarningFeedbackRecord
   return getValue<WarningFeedbackRecord[]>(feedbackKey, [])
 }
 
+export const getLocalReportExport = async () => {
+  const [activityLogs, queuedSyncLogs, warningFeedback] = await Promise.all([
+    getActivityLogs(),
+    getQueuedSyncLogs(),
+    getWarningFeedbackRecords()
+  ])
+
+  return {
+    exportedAt: new Date().toISOString(),
+    privacy: "Local redacted warning records and metadata only",
+    activityLogs,
+    queuedSyncLogs,
+    warningFeedback
+  }
+}
+
 export const addWarningFeedbackRecord = async (
   feedback: WarningFeedback,
   site: string

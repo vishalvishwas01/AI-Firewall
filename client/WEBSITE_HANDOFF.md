@@ -417,6 +417,29 @@ Organization protected-site policy follow-up completed on 2026-07-19:
 - Personal removal controls are hidden for managed domains.
 - The report-site contract now carries `source`, `managed`, `organizationId`, and `organizationName`.
 
+Organization trends and invitation lifecycle follow-up completed on 2026-07-27:
+
+- Added typed client support for `GET /orgs/:id/trends?days=7|30|90`.
+- `/team` now displays a daily aggregate warning trend with 7, 30, and 90-day ranges.
+- Trend responses and UI contain counts only; they do not expose raw snippets, prompt content, or per-user prompt detail.
+- Member lifecycle UI now distinguishes active members, pending invitations, and revoked invitations.
+- Pending invitations use a dedicated `Revoke` action and confirmation copy instead of the active-member removal flow.
+- Revoked invitations remain visible for lifecycle clarity and can be re-invited through the existing add-member form.
+- Summary cards now include revoked invitation counts.
+- Client TypeScript build-info files now live at the client root and are ignored, avoiding the Windows sandbox failure caused by writing incremental metadata under `node_modules/.tmp`.
+
+Trust architecture and authenticated benchmark follow-up completed on 2026-07-27:
+
+- Added public `/trust` route and persistent Trust navigation/footer links.
+- `/trust` explains local inspection, bounded local storage, optional redacted sync, never-stored data, user controls, enforcement points, and limitations.
+- Added authenticated benchmark client support for `GET /admin/benchmark`.
+- Active organization owners/admins can view sanitized fixture outcomes and summary metrics.
+- Public and non-admin users see an explicit sign-in/admin access state instead of benchmark data.
+- Benchmark copy explicitly says the current fixture set is synthetic regression coverage, not production-world accuracy.
+- Added redacted account-log export to `/reports` using `GET /logs/export`.
+- Header navigation now scrolls within its own mobile boundary instead of causing page-level overflow as authenticated links grow.
+- Added `docs/TRUST_ARCHITECTURE.md` and `docs/TRUST_FEATURE_CHECKLIST.md` as the implementation/review sources behind the page.
+
 ## SEO Requirements
 
 - The React app should be single-page but still SEO-conscious through strong static HTML metadata and crawlable rendered content.
@@ -478,6 +501,11 @@ Environment variables:
 - Phase 9.3 server `npm run build`: passed on 2026-06-27.
 - Phase 9.3 client `npm run build`: passed on 2026-06-27 and generated `dist/`.
 - Local signup/login, extension auth bridge, redacted MongoDB log sync, and `/reports` display were user-verified on 2026-06-28 with env configured outside the repo.
+- Phase 10 organization trends/invitation lifecycle client `npm run typecheck`: passed on 2026-07-27.
+- Phase 10 organization trends/invitation lifecycle client `npm run build`: passed on 2026-07-27.
+- Local production preview auth-route guard was checked at 1280px and 390px on 2026-07-27: unauthenticated `/team` redirected to `/login`, with no horizontal overflow or console errors. The authenticated trend view was not populated through browser QA because no live account/database records were created for testing.
+- Phase 10.3 client `npm run typecheck` and `npm run build`: passed on 2026-07-27.
+- `/trust` production preview passed rendered checks at 1280px and 390px on 2026-07-27: public architecture and unauthenticated admin gate rendered, with no document overflow or console errors.
 
 ## Important Defaults
 
@@ -489,7 +517,7 @@ Environment variables:
 
 ## Next Immediate Steps
 
-1. Continue Phase 10 implementation work before any new investor document rewrite.
-2. Next team slice: add time-bucketed organization summary trends to `/team`.
-3. Add pending-invitation revoke/activation lifecycle controls without exposing user-level prompt content.
-4. Deployment remains deferred until the user brings it back into scope.
+1. Expand benchmark coverage and field-validation methodology before broadening any accuracy claims.
+2. Continue warning-fatigue work with duplicate suppression and carefully scoped do-not-warn controls.
+3. Complete the open-source-core decision memo without publishing until license and maintenance choices are approved.
+4. Deployment and investor-document rewriting remain deferred until explicitly resumed.

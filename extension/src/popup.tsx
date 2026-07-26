@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, CircleSlash, Eraser, Eye, Lock, ShieldCheck, Upload } from "lucide-react"
+import { AlertTriangle, CheckCircle2, CircleSlash, Download, Eraser, Eye, Lock, ShieldCheck, Upload } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import hallGuardLogo from "data-base64:../assets/icon.png"
@@ -17,6 +17,7 @@ import {
   addWarningFeedbackRecord,
   clearActivityLogs,
   getActivityLogs,
+  getLocalReportExport,
   getProtectedSites,
   getQueuedSyncLogs,
   getSettings,
@@ -194,6 +195,17 @@ const Popup = () => {
   const clearLogs = async () => {
     await clearActivityLogs()
     setLogs([])
+  }
+
+  const exportLocalData = async () => {
+    const exported = await getLocalReportExport()
+    const blob = new Blob([JSON.stringify(exported, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement("a")
+    anchor.href = url
+    anchor.download = `hallguard-local-redacted-data-${exported.exportedAt.slice(0, 10)}.json`
+    anchor.click()
+    URL.revokeObjectURL(url)
   }
 
   const retrySync = async () => {
@@ -378,6 +390,13 @@ const Popup = () => {
         <div className="section-heading">
           <h2>Recent warnings</h2>
           <div className="warning-actions">
+            <button
+              className="icon-button"
+              onClick={() => void exportLocalData()}
+              title="Export local redacted data"
+              type="button">
+              <Download size={16} />
+            </button>
             <button
               className="text-button"
               onClick={() => void reportMissedRisk()}

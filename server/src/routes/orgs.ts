@@ -14,6 +14,12 @@ import {
 } from "../models/organization.js"
 import { syncedLogsCollection } from "../models/syncedLog.js"
 import { usersCollection } from "../models/user.js"
+import {
+  addLogToOrganizationTrend,
+  createOrganizationTrendWindow,
+  normalizeOrganizationTrendDays,
+  type OrganizationTrendDays
+} from "../utils/organizationTrends.js"
 
 const router = Router()
 
@@ -49,6 +55,8 @@ const normalizeHostname = (value: unknown) => {
 const normalizeSiteLabel = (value: unknown) =>
   typeof value === "string" ? value.trim().slice(0, 80) : ""
 
+const routeParam = (value: string | string[]) => (Array.isArray(value) ? value[0] ?? "" : value)
+
 const isOneOf = <T extends readonly string[]>(value: unknown, allowed: T): value is T[number] =>
   typeof value === "string" && allowed.includes(value)
 
@@ -72,6 +80,7 @@ const publicMember = (member: OrganizationMemberDocument) => ({
   email: member.email,
   role: member.role,
   status: member.status,
+  revokedAt: member.revokedAt?.toISOString(),
   createdAt: member.createdAt.toISOString(),
   updatedAt: member.updatedAt.toISOString()
 })
@@ -127,6 +136,7 @@ const buildOrganizationSummary = async (organizationId: ObjectId) => {
       totalLogs: 0,
       activeMembers: allMembers.filter((member) => member.status === "active").length,
       invitedMembers: allMembers.filter((member) => member.status === "invited").length,
+      revokedInvitations: allMembers.filter((member) => member.status === "revoked").length,
       feedbackTotal: 0,
       falseAlarmRate: 0,
       missedRiskRate: 0,
@@ -170,6 +180,7 @@ const buildOrganizationSummary = async (organizationId: ObjectId) => {
     totalLogs: logs.length,
     activeMembers: allMembers.filter((member) => member.status === "active").length,
     invitedMembers: allMembers.filter((member) => member.status === "invited").length,
+    revokedInvitations: allMembers.filter((member) => member.status === "revoked").length,
     feedbackTotal,
     falseAlarmRate:
       feedbackTotal === 0 ? 0 : Number((byFeedback["false-alarm"] / feedbackTotal).toFixed(4)),
@@ -180,6 +191,36 @@ const buildOrganizationSummary = async (organizationId: ObjectId) => {
     byEventType,
     byDecision,
     byHostname
+  }
+}
+
+const buildOrganizationTrends = async (organizationId: ObjectId, days: OrganizationTrendDays) => {
+  const db = await getDb()
+  const members = await organizationMembersCollection(db)
+    .find({ organizationId, status: "active", userId: { $exists: true } })
+    .toArray()
+  const userIds = members.flatMap((member) => (member.userId ? [member.userId] : []))
+  const { from, to, points } = createOrganizationTrendWindow(days)
+
+  if (userIds.length > 0) {
+    const logs = await syncedLogsCollection(db)
+      .find(
+        { userId: { $in: userIds }, timestamp: { $gte: from, $lt: to } },
+        { projection: { timestamp: 1, severity: 1, eventType: 1, feedback: 1 } }
+      )
+      .toArray()
+
+    for (const log of logs) {
+      addLogToOrganizationTrend(points, log)
+    }
+  }
+
+  return {
+    rangeDays: days,
+    bucket: "day" as const,
+    from: from.toISOString(),
+    to: to.toISOString(),
+    points: [...points.values()]
   }
 }
 
@@ -264,9 +305,27 @@ router.post("/", async (req: AuthenticatedRequest, res, next) => {
   }
 })
 
+router.get("/:id/trends", async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const access = await requireOrganizationMembership(req, routeParam(req.params.id))
+    if (!access || !access.org._id) {
+      res.status(404).json({ error: "Organization not found" })
+      return
+    }
+
+    const trends = await buildOrganizationTrends(
+      access.org._id,
+      normalizeOrganizationTrendDays(req.query.days)
+    )
+    res.json({ trends })
+  } catch (error) {
+    next(error)
+  }
+})
+
 router.get("/:id", async (req: AuthenticatedRequest, res, next) => {
   try {
-    const access = await requireOrganizationMembership(req, req.params.id)
+    const access = await requireOrganizationMembership(req, routeParam(req.params.id))
     if (!access || !access.org._id) {
       res.status(404).json({ error: "Organization not found" })
       return
@@ -291,7 +350,7 @@ router.get("/:id", async (req: AuthenticatedRequest, res, next) => {
 
 router.get("/:id/sites", async (req: AuthenticatedRequest, res, next) => {
   try {
-    const access = await requireOrganizationMembership(req, req.params.id)
+    const access = await requireOrganizationMembership(req, routeParam(req.params.id))
     if (!access || !access.org._id) {
       res.status(404).json({ error: "Organization not found" })
       return
@@ -311,7 +370,7 @@ router.get("/:id/sites", async (req: AuthenticatedRequest, res, next) => {
 
 router.post("/:id/sites", async (req: AuthenticatedRequest, res, next) => {
   try {
-    const access = await requireOrganizationMembership(req, req.params.id, ["owner", "admin"])
+    const access = await requireOrganizationMembership(req, routeParam(req.params.id), ["owner", "admin"])
     if (!access || !access.org._id) {
       res.status(404).json({ error: "Organization not found" })
       return
@@ -359,15 +418,16 @@ router.post("/:id/sites", async (req: AuthenticatedRequest, res, next) => {
 
 router.delete("/:id/sites/:siteId", async (req: AuthenticatedRequest, res, next) => {
   try {
-    const access = await requireOrganizationMembership(req, req.params.id, ["owner", "admin"])
-    if (!access || !access.org._id || !ObjectId.isValid(req.params.siteId)) {
+    const siteId = routeParam(req.params.siteId)
+    const access = await requireOrganizationMembership(req, routeParam(req.params.id), ["owner", "admin"])
+    if (!access || !access.org._id || !ObjectId.isValid(siteId)) {
       res.status(404).json({ error: "Organization site policy not found" })
       return
     }
 
     const db = await getDb()
     const result = await organizationSitePoliciesCollection(db).deleteOne({
-      _id: new ObjectId(req.params.siteId),
+      _id: new ObjectId(siteId),
       organizationId: access.org._id
     })
 
@@ -384,7 +444,7 @@ router.delete("/:id/sites/:siteId", async (req: AuthenticatedRequest, res, next)
 
 router.post("/:id/members", async (req: AuthenticatedRequest, res, next) => {
   try {
-    const access = await requireOrganizationMembership(req, req.params.id, ["owner", "admin"])
+    const access = await requireOrganizationMembership(req, routeParam(req.params.id), ["owner", "admin"])
     if (!access || !access.org._id) {
       res.status(404).json({ error: "Organization not found" })
       return
@@ -414,6 +474,10 @@ router.post("/:id/members", async (req: AuthenticatedRequest, res, next) => {
           role,
           status: user?._id ? "active" : "invited",
           updatedAt: now
+        },
+        $unset: {
+          revokedAt: "",
+          ...(user?._id ? {} : { userId: "" })
         }
       },
       { upsert: true }
@@ -436,8 +500,9 @@ router.post("/:id/members", async (req: AuthenticatedRequest, res, next) => {
 
 router.patch("/:id/members/:memberId", async (req: AuthenticatedRequest, res, next) => {
   try {
-    const access = await requireOrganizationMembership(req, req.params.id, ["owner", "admin"])
-    if (!access || !access.org._id || !ObjectId.isValid(req.params.memberId)) {
+    const memberId = routeParam(req.params.memberId)
+    const access = await requireOrganizationMembership(req, routeParam(req.params.id), ["owner", "admin"])
+    if (!access || !access.org._id || !ObjectId.isValid(memberId)) {
       res.status(404).json({ error: "Organization member not found" })
       return
     }
@@ -450,7 +515,7 @@ router.patch("/:id/members/:memberId", async (req: AuthenticatedRequest, res, ne
 
     const db = await getDb()
     const member = await organizationMembersCollection(db).findOne({
-      _id: new ObjectId(req.params.memberId),
+      _id: new ObjectId(memberId),
       organizationId: access.org._id
     })
 
@@ -494,17 +559,69 @@ router.patch("/:id/members/:memberId", async (req: AuthenticatedRequest, res, ne
   }
 })
 
+router.post("/:id/invitations/:memberId/revoke", async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const memberId = routeParam(req.params.memberId)
+    const access = await requireOrganizationMembership(req, routeParam(req.params.id), ["owner", "admin"])
+    if (!access || !access.org._id || !ObjectId.isValid(memberId)) {
+      res.status(404).json({ error: "Pending invitation not found" })
+      return
+    }
+
+    const db = await getDb()
+    const member = await organizationMembersCollection(db).findOne({
+      _id: new ObjectId(memberId),
+      organizationId: access.org._id
+    })
+
+    if (!member?._id) {
+      res.status(404).json({ error: "Pending invitation not found" })
+      return
+    }
+    if (member.status !== "invited") {
+      res.status(409).json({ error: "Only pending invitations can be revoked" })
+      return
+    }
+    if (access.membership.role === "admin" && member.role === "admin") {
+      res.status(403).json({ error: "Admins cannot revoke other admin invitations" })
+      return
+    }
+
+    const revokedAt = new Date()
+    const result = await organizationMembersCollection(db).updateOne(
+      { _id: member._id, organizationId: access.org._id, status: "invited" },
+      {
+        $set: { status: "revoked", revokedAt, updatedAt: revokedAt },
+        $unset: { userId: "" }
+      }
+    )
+    if (result.modifiedCount !== 1) {
+      res.status(409).json({ error: "Invitation is no longer pending" })
+      return
+    }
+    const revoked = await organizationMembersCollection(db).findOne({
+      _id: member._id,
+      organizationId: access.org._id
+    })
+    if (!revoked) throw new Error("Revoked invitation could not be loaded")
+    res.json({ member: publicMember(revoked) })
+  } catch (error) {
+    next(error)
+  }
+})
+
 router.delete("/:id/members/:memberId", async (req: AuthenticatedRequest, res, next) => {
   try {
-    const access = await requireOrganizationMembership(req, req.params.id, ["owner", "admin"])
-    if (!access || !access.org._id || !ObjectId.isValid(req.params.memberId)) {
+    const memberId = routeParam(req.params.memberId)
+    const access = await requireOrganizationMembership(req, routeParam(req.params.id), ["owner", "admin"])
+    if (!access || !access.org._id || !ObjectId.isValid(memberId)) {
       res.status(404).json({ error: "Organization member not found" })
       return
     }
 
     const db = await getDb()
     const member = await organizationMembersCollection(db).findOne({
-      _id: new ObjectId(req.params.memberId),
+      _id: new ObjectId(memberId),
       organizationId: access.org._id
     })
 
@@ -515,6 +632,11 @@ router.delete("/:id/members/:memberId", async (req: AuthenticatedRequest, res, n
 
     if (member.role === "owner") {
       res.status(400).json({ error: "Owner cannot be removed here" })
+      return
+    }
+
+    if (member.status !== "active") {
+      res.status(409).json({ error: "Only active members can be removed; revoke pending invitations instead" })
       return
     }
 

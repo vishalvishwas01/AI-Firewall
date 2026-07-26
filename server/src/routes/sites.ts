@@ -36,6 +36,15 @@ const normalizeHostname = (value: unknown) => {
 const normalizeLabel = (value: unknown) =>
   typeof value === "string" ? value.trim().slice(0, 80) : ""
 
+const routeParam = (value: string | string[]) => (Array.isArray(value) ? value[0] ?? "" : value)
+
+type PublicReportSite = ReturnType<typeof publicSite> & {
+  source: "personal" | "organization"
+  managed: boolean
+  organizationId?: string
+  organizationName?: string
+}
+
 const publicSite = (site: ReportSiteDocument) => ({
   id: site._id?.toHexString(),
   hostname: site.hostname,
@@ -109,7 +118,7 @@ router.get("/", async (req: AuthenticatedRequest, res, next) => {
         organization._id ? [[organization._id.toHexString(), organization.name] as const] : []
       )
     )
-    const mergedSites = new Map(
+    const mergedSites = new Map<string, PublicReportSite>(
       personalSites.map((site) => [
         site.hostname,
         {
@@ -211,14 +220,15 @@ router.delete("/:id", async (req: AuthenticatedRequest, res, next) => {
       return
     }
 
-    if (!ObjectId.isValid(req.params.id)) {
+    const siteId = routeParam(req.params.id)
+    if (!ObjectId.isValid(siteId)) {
       res.status(404).json({ error: "Report site not found" })
       return
     }
 
     const db = await getDb()
     const site = await reportSitesCollection(db).findOne({
-      _id: new ObjectId(req.params.id),
+      _id: new ObjectId(siteId),
       userId: req.user.id
     })
 

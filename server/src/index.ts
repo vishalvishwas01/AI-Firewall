@@ -12,6 +12,7 @@ import { authRouter } from "./routes/auth.js"
 import { logsRouter } from "./routes/logs.js"
 import { sitesRouter } from "./routes/sites.js"
 import { orgsRouter } from "./routes/orgs.js"
+import { adminRouter } from "./routes/admin.js"
 
 const app = express()
 
@@ -52,6 +53,7 @@ app.use("/auth", authRouter)
 app.use("/logs", logsRouter)
 app.use("/sites", sitesRouter)
 app.use("/orgs", orgsRouter)
+app.use("/admin", adminRouter)
 
 app.use(
   (

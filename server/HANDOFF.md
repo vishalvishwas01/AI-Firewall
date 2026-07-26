@@ -376,11 +376,69 @@ Organization protected-site policy follow-up completed on 2026-07-19:
 
 ## Next Phase 10 Slice
 
+Status: Done
+
+Completed on 2026-07-27:
+
+- Added authenticated `GET /orgs/:id/trends` with supported `days=7`, `days=30`, and `days=90` ranges.
+- Trend results use UTC daily buckets and contain aggregate counts only:
+  - total warnings
+  - severity counts
+  - event-type counts
+  - feedback counts
+- Trend database reads project metadata fields only and never return raw snippets, prompt content, or per-user prompt detail.
+- Added durable organization member status `revoked` and optional `revokedAt`.
+- Added `POST /orgs/:id/invitations/:memberId/revoke` for pending invitations.
+- Revocation is atomic against `status: invited`; a concurrent activation returns a conflict instead of incorrectly reporting success.
+- Invitation activation on signup/login now targets only normalized-email, still-pending, unclaimed invitations.
+- Re-inviting a revoked email restores the existing membership record, clears revocation metadata, and safely activates it immediately when the user already exists.
+- Active-member deletion now rejects pending/revoked records so lifecycle actions remain explicit.
+- Organization summaries now include `revokedInvitations`.
+- Added focused Node tests for supported trend ranges, UTC bucket aggregation, aggregate-only response shape, and invitation activation filters.
+- Corrected Express 5 `string | string[]` route-parameter handling in organization and site routes.
+- Corrected the merged report-site response typing for organization ownership metadata.
+
+Verification on 2026-07-27:
+
+- `npm run typecheck`: passed.
+- `npm test`: passed, 3 tests.
+- `npm run build`: passed.
+
+## Next Phase 10 Work
+
 Status: Planned
 
-- Add time-bucketed organization summary trends without exposing raw snippets or per-user prompt content.
-- Add invitation lifecycle controls, including revoking pending invitations and activating matching invitations safely.
-- Keep organization reporting aggregate-only by default.
+- Expand benchmark coverage and field-validation methodology beyond the current small synthetic baseline.
+- Continue warning-fatigue controls while keeping organization reporting aggregate-only by default.
+- Complete the open-source-core decision memo without publishing until license and maintenance choices are approved.
+
+## Phase 10.3: Trust Architecture And Authenticated Benchmark
+
+Status: Done
+
+Completed on 2026-07-27:
+
+- Added authenticated `GET /admin/benchmark`.
+- Access requires an active organization membership with role `owner` or `admin`.
+- The server exposes a sanitized, versioned benchmark snapshot containing:
+  - fixture identifiers
+  - outcomes
+  - categories
+  - severity
+  - severity/redaction/raw-leak pass states
+  - aggregate totals and rates
+- The benchmark payload excludes raw fixture input, redacted snippets, forbidden raw values, customer content, and production prompts.
+- Added a server privacy regression test that verifies excluded raw fields are absent.
+- Added authenticated `GET /logs/export` for the current user's complete redacted account-backed warning history.
+- Export responses remain scoped by authenticated `userId` and use the existing public redacted-log shape.
+- Added `docs/TRUST_ARCHITECTURE.md` and `docs/TRUST_FEATURE_CHECKLIST.md`.
+- Permanent account-wide deletion was evaluated and deferred pending a separately reviewed destructive-action, membership, retention, audit, and recoverability design.
+
+Verification on 2026-07-27:
+
+- `npm run typecheck`: passed.
+- `npm test`: passed, 4 tests.
+- `npm run build`: passed.
 
 ## Important Defaults
 
