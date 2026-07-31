@@ -11,6 +11,7 @@ from .contracts import (
     ARTIFACT_CONTRACT_ID,
     DATASET_CONTRACT_ID,
     DETERMINISTIC_SEED,
+    EVALUATION_REPORT_CONTRACT_ID,
     FEATURE_NAMES,
     GENERATOR_CATALOG_CONTRACT_ID,
     TRAINING_STATE_CONTRACT_ID,
@@ -54,6 +55,9 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
     training_state_schema = json.loads(
         (root / "contracts" / "training-state.schema.json").read_text(encoding="utf-8")
     )
+    evaluation_report_schema = json.loads(
+        (root / "contracts" / "evaluation-report.schema.json").read_text(encoding="utf-8")
+    )
     catalog = json.loads(
         (root / "datasets" / "manifests" / "synthetic-generators-v1.catalog.json").read_text(
             encoding="utf-8"
@@ -67,6 +71,8 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
         raise ValueError("generator catalog contract id mismatch")
     if TRAINING_STATE_CONTRACT_ID not in training_state_schema["$id"]:
         raise ValueError("training state contract id mismatch")
+    if EVALUATION_REPORT_CONTRACT_ID not in evaluation_report_schema["$id"]:
+        raise ValueError("evaluation report contract id mismatch")
     if artifact_schema["properties"]["featureOrder"]["const"] != list(FEATURE_NAMES):
         raise ValueError("artifact JSON schema feature order mismatch")
     if manifest_schema["properties"]["seed"]["const"] != DETERMINISTIC_SEED:
@@ -89,7 +95,7 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Validate the staged HallGuard ML workspace")
     parser.add_argument("--root", type=Path, default=Path.cwd())
-    parser.add_argument("--stage", choices=("m0", "m1", "m2"), default="m2")
+    parser.add_argument("--stage", choices=("m0", "m1", "m2", "m3"), default="m3")
     args = parser.parse_args()
     validate_workspace(args.root.resolve(), stage=args.stage)
     print(f"HallGuard {args.stage.upper()} workspace validation passed")

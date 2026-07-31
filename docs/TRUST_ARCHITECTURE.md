@@ -133,7 +133,11 @@ The committed generator catalog contains metadata and official structural refere
 
 ML M2 now has a verified offline training path. Candidate text is normalized and converted to the exact 16 numerical features, after which feature rows discard text, values, and offsets. A stable label-stratified group allocator keeps every mutation family in one train/validation/test partition. The fit uses train-only scaling and pinned scikit-learn logistic regression; non-convergence and dependency drift fail closed.
 
-Two independent 1,024-row fits converged in 29 iterations and produced identical draft-state hash `0d398a98c34829408f4e863a1035415cd11be0e5b829ce58716aa88bd4caa451`. The only permitted output is an ignored draft state containing numerical parameters, group counts, provenance, and dependency versions. It cannot contain evaluation/calibration metrics, predictions, source content, or release claims and is not an extension artifact. Verification retained no state file. M3 is not started and the bundled bootstrap remains unchanged.
+Two independent 1,024-row fits converged in 29 iterations and produced identical draft-state hash `0d398a98c34829408f4e863a1035415cd11be0e5b829ce58716aa88bd4caa451`. The only permitted M2 output is an ignored draft state containing numerical parameters, group counts, provenance, and dependency versions. Verification retained no state file, and the bundled bootstrap remains unchanged.
+
+ML M3 independently applies the serialized normalization, coefficients, and intercept to 208 held-out synthetic records from 52 groups. Its content-free report publishes aggregate confusion, quality/calibration, confidence-band, and per-family measures without retaining rows, candidates, prompts, snippets, record ids, predictions, or probability arrays. The synthetic Balanced-threshold snapshot produced 104 true positives and 104 true negatives, with Brier `0.000911960195`, log loss `0.010759615708`, and ECE `0.010237400498`.
+
+M3 fails closed on release eligibility. The synthetic-only result cannot substitute for catalog human review, licensed and representative benign corpora, application layered-recall comparison, Chrome latency, compressed bundle growth, or calibration approval. Extension performance is explicitly deferred to M4 and is not inferred from Python timing. No artifact was exported, copied, or activated; the schema-v1 bootstrap remains shadow-only.
 
 ## Rule Knowledge Governance
 

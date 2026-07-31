@@ -359,7 +359,7 @@ Known limitations:
 - No real proposal has been approved or converted; tests use synthetic schema fixtures only.
 - Existing baseline rules were not retroactively presented as human-approved. A future migration may independently review them.
 - Signed updates are a documented future design boundary only and remain disabled.
-- At the E7 stop boundary, model release governance still required separately authorized ML M0–M4 work. M0–M2 completed later; M3–M4 remain planned.
+- At the E7 stop boundary, model release governance still required separately authorized ML M0–M4 work. M0–M3 completed later; M4 remains planned.
 
 Workflow specification: `../docs/RULE_KNOWLEDGE_WORKFLOW.md`.
 
@@ -456,7 +456,22 @@ Completed: **2026-08-01**
 - The extension continues using unchanged schema-v1 `secret-logistic-bootstrap-v1` in shadow mode.
 - M2 draft state is deliberately not an extension artifact and remains release-ineligible.
 
-Stop boundary: **M2 is complete. Stop before M3; evaluation/release gating requires separate authorization.**
+Historical M2 stop boundary: **M2 completed and stopped before separately authorized M3.**
+
+### M3 dependency handoff — evaluation and release gate
+
+Status: **Complete in `../ml/`; release-ineligible; no extension runtime change**
+
+Completed: **2026-08-01**
+
+- ML M3 evaluated direct serialized-state inference on 208 held-out synthetic records across 52 isolated groups.
+- The synthetic Balanced-threshold snapshot had 100% precision/recall and 0% benign false positives, with Brier `0.000911960195`, log loss `0.010759615708`, and ECE `0.010237400498`.
+- A content-free experimental report was published under `../ml/reports/`; it contains no candidates, rows, prompts, snippets, per-record predictions, or probability arrays.
+- Release eligibility is false because catalog human review, licensed/representative benign data, application layered-recall comparison, extension latency, extension bundle growth, and calibration approval are not complete.
+- Extension latency is explicitly `not-measured` with reason `requires-extension-m4-benchmark`; Python timing was not substituted for Chrome runtime evidence.
+- The extension continues using unchanged schema-v1 `secret-logistic-bootstrap-v1` in shadow mode. No extension source, artifact, bundle, warning, redaction, storage, telemetry, or network behavior changed.
+
+Stop boundary: **M3 is complete. Stop before M4; do not copy or activate the M2 draft.**
 
 ## 5. Detection defaults
 

@@ -9,6 +9,7 @@ from pathlib import Path
 from .contracts import (
     ContractError,
     validate_dataset_manifest,
+    validate_evaluation_report,
     validate_generator_catalog,
     validate_generator_record,
     validate_generator_summary,
@@ -127,6 +128,26 @@ def _audit_m2_data_boundary(root: Path) -> list[str]:
     return errors
 
 
+def _audit_m3_data_boundary(root: Path) -> list[str]:
+    errors = _audit_m2_data_boundary(root)
+    errors = [error for error in errors if not error.startswith("M1 forbids premature reports file:")]
+    approved_name = "secret-logistic-m2-synthetic-v1.metrics.json"
+    for path in sorted((root / "reports").rglob("*")):
+        if not path.is_file() or path.relative_to(root) in M1_STATIC_DATA_FILES:
+            continue
+        if path.name != approved_name or path.parent != root / "reports":
+            errors.append(f"M3 forbids undeclared report file: {path.relative_to(root)}")
+            continue
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(value, dict):
+                raise ContractError("evaluation report root must be an object")
+            validate_evaluation_report(value)
+        except (json.JSONDecodeError, ContractError) as error:
+            errors.append(f"{path.relative_to(root)}: {error}")
+    return errors
+
+
 def audit_workspace(root: Path, *, stage: str = "m0") -> None:
     """Audit isolation, manifest privacy, and the current roadmap stop boundary."""
 
@@ -137,6 +158,8 @@ def audit_workspace(root: Path, *, stage: str = "m0") -> None:
         errors.extend(_audit_m1_data_boundary(root))
     elif stage == "m2":
         errors.extend(_audit_m2_data_boundary(root))
+    elif stage == "m3":
+        errors.extend(_audit_m3_data_boundary(root))
     else:
         raise ValueError(f"unsupported governance stage: {stage}")
     if errors:

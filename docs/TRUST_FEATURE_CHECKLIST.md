@@ -147,4 +147,18 @@ Complete this checklist for every new detector, model, storage field, synchroniz
 - [x] Temporary serialized states were byte-identical and the golden training-state digest is locked.
 - [x] Ruff, strict mypy, pytest, compilation, workspace governance, feature/group invariants, schema validation, and no-leak checks pass.
 - [x] No dataset, training state, report, release artifact, or extension model was retained or changed.
-- [x] M2 is complete; M3 remains separately authorized and was not started.
+- [x] M2 completed without retaining a state or changing the extension; M3 was authorized separately.
+
+## M3 Review Record — 2026-08-01
+
+- [x] Evaluation uses only the held-out test partition and verifies zero `templateGroupId` overlap with train/validation.
+- [x] Inference runs directly from serialized normalization, coefficients, and intercept rather than scikit-learn prediction helpers.
+- [x] Aggregate confusion, accuracy, precision, recall, FPR/FNR, Brier, log loss, ECE, ten calibration bins, confidence bands, and per-family metrics are published.
+- [x] The report contains no rows, prompts, snippets, candidates, offsets, record ids, prediction arrays, or probability arrays.
+- [x] Two evaluations and two serialized writes are deterministic; report contract and golden digest are locked.
+- [x] Synthetic critical recall, synthetic sensitive recall, benign FPR, raw-leak, group isolation, calibration computation, determinism, and draft-size checks pass.
+- [x] Release eligibility remains false while catalog review, licensed/representative benign data, application comparison, extension latency/bundle evidence, and calibration approval are missing.
+- [x] Extension latency is marked not measured and deferred to M4; Python timing is not represented as Chrome performance.
+- [x] Ruff, strict mypy, compilation, pytest, M3 governance, and report/no-content validation pass.
+- [x] No extension artifact, source, bundle, runtime behavior, storage, telemetry, permission, or network path changed.
+- [x] M3 is complete with a failed release decision; M4 was not started.

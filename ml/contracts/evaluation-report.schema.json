@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-m3-evaluation-report-v1.schema.json",
+  "title": "HallGuard M3 Synthetic Evaluation Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "reportVersion", "modelVersion", "status", "releaseEligible",
+    "catalogVersion", "catalogReviewStatus", "datasetSha256", "trainingStateSha256",
+    "seed", "evaluationSplit", "thresholds", "counts", "confusion", "metrics",
+    "confidenceBands", "calibrationBins", "families", "draftStateBytes", "latency",
+    "gates", "blockers", "limitations"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reportVersion": { "const": "m3-synthetic-evaluation-v1" },
+    "modelVersion": { "const": "secret-logistic-m2-synthetic-v1" },
+    "status": { "const": "experimental" },
+    "releaseEligible": { "const": false },
+    "catalogVersion": { "const": "synthetic-generators-v1" },
+    "catalogReviewStatus": { "const": "pending-human-review" },
+    "datasetSha256": { "$ref": "#/$defs/sha256" },
+    "trainingStateSha256": { "$ref": "#/$defs/sha256" },
+    "seed": { "const": 20260801 },
+    "evaluationSplit": { "const": "test" },
+    "thresholds": { "type": "object" },
+    "counts": { "type": "object" },
+    "confusion": { "type": "object" },
+    "metrics": { "type": "object" },
+    "confidenceBands": { "type": "object" },
+    "calibrationBins": { "type": "array", "minItems": 10, "maxItems": 10 },
+    "families": { "type": "array", "minItems": 1 },
+    "draftStateBytes": { "type": "integer", "minimum": 1 },
+    "latency": {
+      "const": { "status": "not-measured", "reasonCode": "requires-extension-m4-benchmark" }
+    },
+    "gates": { "type": "object" },
+    "blockers": { "type": "array", "items": { "type": "string" } },
+    "limitations": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

@@ -18,6 +18,25 @@ GENERATOR_OUTPUT_SCHEMA_VERSION = 1
 TRAINING_STATE_CONTRACT_ID = "hallguard-m2-training-state-v1"
 TRAINING_STATE_VERSION = "m2-logistic-training-state-v1"
 M2_MODEL_VERSION = "secret-logistic-m2-synthetic-v1"
+EVALUATION_REPORT_CONTRACT_ID = "hallguard-m3-evaluation-report-v1"
+EVALUATION_REPORT_VERSION = "m3-synthetic-evaluation-v1"
+M3_GATE_NAMES = (
+    "heldOutGroupIsolation",
+    "deterministicTrainingState",
+    "rawLeakFree",
+    "criticalKnownRecall",
+    "balancedBenignFalsePositiveRate",
+    "syntheticSensitiveRecall",
+    "calibrationComputed",
+    "draftStateSize",
+    "catalogHumanReview",
+    "licensedBenignCorpus",
+    "representativeBenignSet",
+    "applicationLayeredRecall",
+    "extensionLatency",
+    "extensionBundleGrowth",
+    "calibrationApproved",
+)
 
 FEATURE_NAMES = (
     "length",
@@ -56,14 +75,34 @@ DATA_POLICY_FIELDS = (
 )
 
 GENERATOR_RECORD_FIELDS = {
-    "schemaVersion", "recordId", "generatorId", "generatorVersion", "seed",
-    "templateGroupId", "label", "family", "format", "mutationId", "synthetic",
-    "text", "candidateStart", "candidateEnd",
+    "schemaVersion",
+    "recordId",
+    "generatorId",
+    "generatorVersion",
+    "seed",
+    "templateGroupId",
+    "label",
+    "family",
+    "format",
+    "mutationId",
+    "synthetic",
+    "text",
+    "candidateStart",
+    "candidateEnd",
 }
 GENERATOR_SUMMARY_FIELDS = {
-    "catalogVersion", "outputSchemaVersion", "seed", "groupsPerGenerator",
-    "generatorCount", "templateGroupCount", "recordCount", "labels", "datasetSha256",
-    "containsCustomerContent", "containsRealSecrets", "releaseEligible",
+    "catalogVersion",
+    "outputSchemaVersion",
+    "seed",
+    "groupsPerGenerator",
+    "generatorCount",
+    "templateGroupCount",
+    "recordCount",
+    "labels",
+    "datasetSha256",
+    "containsCustomerContent",
+    "containsRealSecrets",
+    "releaseEligible",
 }
 
 
@@ -103,8 +142,16 @@ def validate_artifact(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "modelVersion", "featureVersion", "classifierType", "status",
-            "featureOrder", "normalization", "coefficients", "intercept", "thresholds",
+            "schemaVersion",
+            "modelVersion",
+            "featureVersion",
+            "classifierType",
+            "status",
+            "featureOrder",
+            "normalization",
+            "coefficients",
+            "intercept",
+            "thresholds",
             "training",
         },
         "artifact",
@@ -144,17 +191,11 @@ def validate_artifact(value: dict[str, Any]) -> None:
     )
     if training["kind"] != "offline-trained" or training["seed"] != DETERMINISTIC_SEED:
         raise ContractError("training provenance is not an approved offline run")
-    if not isinstance(training["datasetManifest"], str) or not training[
-        "datasetManifest"
-    ].startswith("dataset-"):
+    if not isinstance(training["datasetManifest"], str) or not training["datasetManifest"].startswith("dataset-"):
         raise ContractError("training.datasetManifest must reference a versioned manifest")
-    if not isinstance(training["metricsReport"], str) or not training["metricsReport"].endswith(
-        ".metrics.json"
-    ):
+    if not isinstance(training["metricsReport"], str) or not training["metricsReport"].endswith(".metrics.json"):
         raise ContractError("training.metricsReport must reference a metrics JSON file")
-    if not isinstance(training["codeRevision"], str) or not re.fullmatch(
-        r"[0-9a-f]{7,40}", training["codeRevision"]
-    ):
+    if not isinstance(training["codeRevision"], str) or not re.fullmatch(r"[0-9a-f]{7,40}", training["codeRevision"]):
         raise ContractError("training.codeRevision must be a Git revision")
     _date_time(training["generatedAt"], "training.generatedAt")
 
@@ -165,8 +206,16 @@ def validate_dataset_manifest(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "manifestId", "datasetVersion", "seed", "createdAt",
-            "featureVersion", "groupSplitKey", "dataPolicy", "licenses", "sources",
+            "schemaVersion",
+            "manifestId",
+            "datasetVersion",
+            "seed",
+            "createdAt",
+            "featureVersion",
+            "groupSplitKey",
+            "dataPolicy",
+            "licenses",
+            "sources",
         },
         "manifest",
     )
@@ -198,9 +247,7 @@ def validate_dataset_manifest(value: dict[str, Any]) -> None:
             {"licenseId", "name", "spdxId", "reference"},
             f"licenses[{index}]",
         )
-        if not isinstance(license_value["reference"], str) or not license_value[
-            "reference"
-        ].startswith("https://"):
+        if not isinstance(license_value["reference"], str) or not license_value["reference"].startswith("https://"):
             raise ContractError(f"licenses[{index}] must use an HTTPS provenance reference")
         license_id = license_value["licenseId"]
         if not isinstance(license_id, str) or not license_id:
@@ -215,8 +262,15 @@ def validate_dataset_manifest(value: dict[str, Any]) -> None:
         _exact_fields(
             source,
             {
-                "sourceId", "kind", "version", "reference", "licenseId", "groupStrategy",
-                "containsCustomerContent", "containsRealSecrets", "review",
+                "sourceId",
+                "kind",
+                "version",
+                "reference",
+                "licenseId",
+                "groupStrategy",
+                "containsCustomerContent",
+                "containsRealSecrets",
+                "review",
             },
             f"sources[{index}]",
         )
@@ -236,9 +290,7 @@ def validate_dataset_manifest(value: dict[str, Any]) -> None:
             {"privacyReviewer", "maintainerReviewer", "securityReviewer", "reviewedAt"},
             f"sources[{index}].review",
         )
-        reviewer_values = (
-            review["privacyReviewer"], review["maintainerReviewer"], review["securityReviewer"]
-        )
+        reviewer_values = (review["privacyReviewer"], review["maintainerReviewer"], review["securityReviewer"])
         if any(not isinstance(reviewer, str) for reviewer in reviewer_values):
             raise ContractError(f"sources[{index}] reviewers must be strings")
         if len(set(reviewer_values)) != 3:
@@ -252,8 +304,15 @@ def validate_generator_catalog(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "catalogVersion", "seed", "outputSchemaVersion", "reviewStatus",
-            "releaseEligible", "dataPolicy", "licenses", "generators",
+            "schemaVersion",
+            "catalogVersion",
+            "seed",
+            "outputSchemaVersion",
+            "reviewStatus",
+            "releaseEligible",
+            "dataPolicy",
+            "licenses",
+            "generators",
         },
         "generatorCatalog",
     )
@@ -283,7 +342,8 @@ def validate_generator_catalog(value: dict[str, Any]) -> None:
         if not isinstance(license_value, dict):
             raise ContractError(f"generatorCatalog.licenses[{index}] must be an object")
         _exact_fields(
-            license_value, {"licenseId", "name", "reference"},
+            license_value,
+            {"licenseId", "name", "reference"},
             f"generatorCatalog.licenses[{index}]",
         )
         license_ids.add(license_value["licenseId"])
@@ -323,7 +383,8 @@ def validate_generator_catalog(value: dict[str, Any]) -> None:
         if not isinstance(source, dict):
             raise ContractError(f"generatorCatalog.generators[{index}].source must be an object")
         _exact_fields(
-            source, {"kind", "reference", "licenseId"},
+            source,
+            {"kind", "reference", "licenseId"},
             f"generatorCatalog.generators[{index}].source",
         )
         if source["kind"] not in {"synthetic-definition", "official-public-shape"}:
@@ -380,18 +441,14 @@ def validate_generator_summary(value: dict[str, Any]) -> None:
         raise ContractError("M1 output must not claim release eligibility")
     if not isinstance(value["labels"], dict) or set(value["labels"]) != {"sensitive", "benign"}:
         raise ContractError("generator summary labels are malformed")
-    numeric_fields = (
-        "groupsPerGenerator", "generatorCount", "templateGroupCount", "recordCount"
-    )
+    numeric_fields = ("groupsPerGenerator", "generatorCount", "templateGroupCount", "recordCount")
     if any(not isinstance(value[field], int) or value[field] < 1 for field in numeric_fields):
         raise ContractError("generator summary counts must be positive integers")
     if any(not isinstance(value["labels"][label], int) or value["labels"][label] < 1 for label in value["labels"]):
         raise ContractError("generator summary label counts must be positive integers")
     if sum(value["labels"].values()) != value["recordCount"]:
         raise ContractError("generator summary label counts do not match recordCount")
-    if not isinstance(value["datasetSha256"], str) or not re.fullmatch(
-        r"[0-9a-f]{64}", value["datasetSha256"]
-    ):
+    if not isinstance(value["datasetSha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", value["datasetSha256"]):
         raise ContractError("generator summary digest is malformed")
 
 
@@ -401,9 +458,23 @@ def validate_training_state(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "stateVersion", "modelVersion", "featureVersion", "classifierType",
-            "status", "releaseEligible", "catalogVersion", "catalogReviewStatus", "datasetSha256",
-            "seed", "featureOrder", "split", "normalization", "coefficients", "intercept", "fit",
+            "schemaVersion",
+            "stateVersion",
+            "modelVersion",
+            "featureVersion",
+            "classifierType",
+            "status",
+            "releaseEligible",
+            "catalogVersion",
+            "catalogReviewStatus",
+            "datasetSha256",
+            "seed",
+            "featureOrder",
+            "split",
+            "normalization",
+            "coefficients",
+            "intercept",
+            "fit",
             "dependencies",
         },
         "trainingState",
@@ -435,8 +506,13 @@ def validate_training_state(value: dict[str, Any]) -> None:
     _exact_fields(
         split,
         {
-            "strategy", "trainGroups", "validationGroups", "testGroups",
-            "trainRecords", "validationRecords", "testRecords",
+            "strategy",
+            "trainGroups",
+            "validationGroups",
+            "testGroups",
+            "trainRecords",
+            "validationRecords",
+            "testRecords",
         },
         "trainingState.split",
     )
@@ -488,3 +564,194 @@ def validate_training_state(value: dict[str, Any]) -> None:
         "scikitLearn": "1.9.0",
     } or not isinstance(dependencies["python"], str):
         raise ContractError("M2 dependency versions do not match reviewed pins")
+
+
+def _bounded_metric(value: Any, location: str, *, nullable: bool = False) -> None:
+    if nullable and value is None:
+        return
+    if not isinstance(value, (int, float)) or isinstance(value, bool) or not 0 <= value <= 1:
+        raise ContractError(f"{location} must be between zero and one")
+
+
+def validate_evaluation_report(value: dict[str, Any]) -> None:
+    """Validate a content-free M3 synthetic evaluation and fail-closed gate decision."""
+
+    _exact_fields(
+        value,
+        {
+            "schemaVersion",
+            "reportVersion",
+            "modelVersion",
+            "status",
+            "releaseEligible",
+            "catalogVersion",
+            "catalogReviewStatus",
+            "datasetSha256",
+            "trainingStateSha256",
+            "seed",
+            "evaluationSplit",
+            "thresholds",
+            "counts",
+            "confusion",
+            "metrics",
+            "confidenceBands",
+            "calibrationBins",
+            "families",
+            "draftStateBytes",
+            "latency",
+            "gates",
+            "blockers",
+            "limitations",
+        },
+        "evaluationReport",
+    )
+    if (
+        value["schemaVersion"] != 1
+        or value["reportVersion"] != EVALUATION_REPORT_VERSION
+        or value["modelVersion"] != M2_MODEL_VERSION
+        or value["status"] != "experimental"
+        or value["releaseEligible"] is not False
+        or value["catalogVersion"] != GENERATOR_CATALOG_VERSION
+        or value["catalogReviewStatus"] != "pending-human-review"
+        or value["seed"] != DETERMINISTIC_SEED
+        or value["evaluationSplit"] != "test"
+        or value["thresholds"] != THRESHOLDS
+    ):
+        raise ContractError("M3 report identity, provenance, or release contract mismatch")
+    for field in ("datasetSha256", "trainingStateSha256"):
+        if not isinstance(value[field], str) or not re.fullmatch(r"[0-9a-f]{64}", value[field]):
+            raise ContractError(f"M3 {field} is malformed")
+
+    counts = value["counts"]
+    if not isinstance(counts, dict):
+        raise ContractError("M3 counts must be an object")
+    _exact_fields(counts, {"records", "groups", "sensitive", "benign"}, "evaluationReport.counts")
+    if any(not isinstance(counts[field], int) or counts[field] < 1 for field in counts):
+        raise ContractError("M3 counts must be positive integers")
+    if counts["sensitive"] + counts["benign"] != counts["records"]:
+        raise ContractError("M3 label counts do not match records")
+
+    confusion = value["confusion"]
+    if not isinstance(confusion, dict):
+        raise ContractError("M3 confusion must be an object")
+    _exact_fields(
+        confusion,
+        {"threshold", "truePositive", "trueNegative", "falsePositive", "falseNegative"},
+        "evaluationReport.confusion",
+    )
+    if confusion["threshold"] != THRESHOLDS["balancedMedium"]:
+        raise ContractError("M3 confusion threshold mismatch")
+    confusion_counts = [confusion[field] for field in set(confusion) - {"threshold"}]
+    if any(not isinstance(item, int) or item < 0 for item in confusion_counts):
+        raise ContractError("M3 confusion counts are invalid")
+    if sum(confusion_counts) != counts["records"]:
+        raise ContractError("M3 confusion counts do not match records")
+
+    metrics = value["metrics"]
+    if not isinstance(metrics, dict):
+        raise ContractError("M3 metrics must be an object")
+    _exact_fields(
+        metrics,
+        {
+            "accuracy",
+            "precision",
+            "recall",
+            "falsePositiveRate",
+            "falseNegativeRate",
+            "brierScore",
+            "logLoss",
+            "expectedCalibrationError",
+        },
+        "evaluationReport.metrics",
+    )
+    for field in set(metrics) - {"logLoss"}:
+        _bounded_metric(metrics[field], f"evaluationReport.metrics.{field}")
+    if not isinstance(metrics["logLoss"], (int, float)) or metrics["logLoss"] < 0:
+        raise ContractError("M3 logLoss must be non-negative")
+
+    bands = value["confidenceBands"]
+    if not isinstance(bands, dict) or set(bands) != {"clean", "medium", "high"}:
+        raise ContractError("M3 confidence bands are malformed")
+    for name, band in bands.items():
+        if not isinstance(band, dict):
+            raise ContractError(f"M3 confidence band {name} must be an object")
+        _exact_fields(
+            band,
+            {"count", "sensitiveCount", "sensitiveRate", "warningPrecision"},
+            f"evaluationReport.confidenceBands.{name}",
+        )
+        if not isinstance(band["count"], int) or not isinstance(band["sensitiveCount"], int):
+            raise ContractError(f"M3 confidence band {name} counts are invalid")
+        _bounded_metric(band["sensitiveRate"], f"evaluationReport.confidenceBands.{name}.sensitiveRate", nullable=True)
+        _bounded_metric(
+            band["warningPrecision"], f"evaluationReport.confidenceBands.{name}.warningPrecision", nullable=True
+        )
+
+    bins = value["calibrationBins"]
+    if not isinstance(bins, list) or len(bins) != 10:
+        raise ContractError("M3 requires ten calibration bins")
+    for index, item in enumerate(bins):
+        if not isinstance(item, dict):
+            raise ContractError(f"M3 calibration bin {index} must be an object")
+        _exact_fields(
+            item,
+            {"lower", "upper", "count", "meanConfidence", "sensitiveRate", "absoluteGap"},
+            f"evaluationReport.calibrationBins[{index}]",
+        )
+        for field in ("lower", "upper", "meanConfidence", "sensitiveRate", "absoluteGap"):
+            _bounded_metric(item[field], f"evaluationReport.calibrationBins[{index}].{field}", nullable=True)
+
+    gates = value["gates"]
+    if not isinstance(gates, dict) or tuple(gates) != M3_GATE_NAMES:
+        raise ContractError("M3 gate order or names are invalid")
+    if any(not isinstance(result, bool) for result in gates.values()):
+        raise ContractError("M3 gate results must be booleans")
+    expected_blockers = [name for name in M3_GATE_NAMES if not gates[name]]
+    if value["blockers"] != expected_blockers or value["releaseEligible"] != all(gates.values()):
+        raise ContractError("M3 blockers or release decision do not match gates")
+    latency = value["latency"]
+    if latency != {"status": "not-measured", "reasonCode": "requires-extension-m4-benchmark"}:
+        raise ContractError("M3 latency boundary is invalid")
+    if not isinstance(value["draftStateBytes"], int) or value["draftStateBytes"] < 1:
+        raise ContractError("M3 draft state size is invalid")
+    if not isinstance(value["families"], list) or not value["families"]:
+        raise ContractError("M3 family metrics are required")
+    family_names: list[str] = []
+    for index, family in enumerate(value["families"]):
+        if not isinstance(family, dict):
+            raise ContractError(f"M3 family {index} must be an object")
+        _exact_fields(
+            family,
+            {
+                "family",
+                "label",
+                "records",
+                "groups",
+                "truePositive",
+                "trueNegative",
+                "falsePositive",
+                "falseNegative",
+                "precision",
+                "recall",
+                "falsePositiveRate",
+            },
+            f"evaluationReport.families[{index}]",
+        )
+        if not isinstance(family["family"], str) or not family["family"]:
+            raise ContractError(f"M3 family {index} name is invalid")
+        family_names.append(family["family"])
+        if family["label"] not in {"sensitive", "benign"}:
+            raise ContractError(f"M3 family {index} label is invalid")
+        for field in ("records", "groups", "truePositive", "trueNegative", "falsePositive", "falseNegative"):
+            if not isinstance(family[field], int) or family[field] < 0:
+                raise ContractError(f"M3 family {index} {field} is invalid")
+        if family["records"] < 1 or family["groups"] < 1:
+            raise ContractError(f"M3 family {index} requires records and groups")
+        for field in ("precision", "recall", "falsePositiveRate"):
+            _bounded_metric(family[field], f"evaluationReport.families[{index}].{field}", nullable=True)
+    if family_names != sorted(family_names) or len(family_names) != len(set(family_names)):
+        raise ContractError("M3 family metrics must be uniquely sorted")
+    if not isinstance(value["limitations"], list) or any(not isinstance(item, str) for item in value["limitations"]):
+        raise ContractError("M3 limitations must be string codes")
+    if not value["limitations"] or len(value["limitations"]) != len(set(value["limitations"])):
+        raise ContractError("M3 limitations must be non-empty unique codes")

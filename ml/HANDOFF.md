@@ -38,7 +38,7 @@ ml/
   artifacts/
     .gitkeep             # reviewed output belongs to M4
   reports/
-    .gitkeep             # calibrated output belongs to M3
+    secret-logistic-m2-synthetic-v1.metrics.json  # M3 content-free, release-ineligible report
   tests/
 ```
 
@@ -192,15 +192,43 @@ Known limitations:
 - Draft state is not the schema-v2 extension artifact and cannot be copied or activated.
 - Precision/recall, calibration, held-out release evaluation, latency, and artifact approval belong to M3.
 
-Next step: **M3 — Evaluation and release gate** (requires explicit authorization). Stop before M3.
+Historical M2 next step: **M3 — Evaluation and release gate**. It was authorized separately and is recorded below.
 
 ### M3 — Evaluation and release gate
 
-Status: **Planned**
+Status: **Complete — evaluation executed; release gate failed closed**
 
-- Report precision, recall, false-positive/negative rates, calibration by confidence band, latency, and artifact size.
-- Require critical-format recall and raw-leak regression gates before an artifact can be copied into the extension.
-- Require human review of dataset provenance and metric changes.
+Completed: **2026-08-01**
+
+- Added exact `hallguard-m3-evaluation-report-v1` schema/Python validation, direct inference from serialized normalization/coefficient/intercept values, deterministic metrics, confidence bands, ten calibration bins, per-family metrics, and ordered release gates.
+- Refit the deterministic 1,024-row draft and evaluated only the 208 held-out test records in 52 groups. Test groups are disjoint from train and validation groups.
+- Balanced threshold `0.65` result: 104 true positives, 104 true negatives, 0 false positives, and 0 false negatives; accuracy/precision/recall were `1.0`, and FPR/FNR were `0.0` on this synthetic-only set.
+- Calibration snapshot: Brier score `0.000911960195`, log loss `0.010759615708`, and expected calibration error `0.010237400498`.
+- Direct serialized-state inference, critical known-format recall, synthetic sensitive-family recall, benign FPR, raw-leak, group-isolation, calibration-computation, determinism, and draft-state-size gates passed.
+- Report content digest is `8c32c30271fcf05f06f596eee7e71740476d2c980116d2def82e5d938fd169cb`; deterministic pretty-file SHA-256 is `87792ec29e4d8749e4c8fb96e8ac1dcdcbec33465e9056a658e35dbcd6ef5305`.
+- Published `reports/secret-logistic-m2-synthetic-v1.metrics.json`. It contains aggregates and version/digest metadata only—no rows, candidates, prompts, snippets, record ids, probability arrays, or predictions.
+
+Release decision: **Not eligible**. The report remains `experimental`, the catalog remains `pending-human-review`, and these gates are blocked:
+
+1. `catalogHumanReview`
+2. `licensedBenignCorpus`
+3. `representativeBenignSet`
+4. `applicationLayeredRecall`
+5. `extensionLatency`
+6. `extensionBundleGrowth`
+7. `calibrationApproved`
+
+Extension P95 latency and compressed bundle growth were intentionally not measured in Python. The report records `requires-extension-m4-benchmark`; M4 owns runtime compatibility and performance evidence. Synthetic perfect classification is not a production-quality claim.
+
+Verification:
+
+- Two check-only evaluations produced identical report summaries and digest.
+- Two report writes were byte-identical.
+- Ruff, strict mypy, compilation, pytest, M3 workspace governance, report-contract validation, and no-content assertions pass.
+- The final test suite has 33 passes and one expected skip for the missing-dependency path because the pinned dependencies are installed.
+- No training state or release artifact was retained, and no extension file/model was copied or modified.
+
+Stop boundary: **M3 is complete with a failed release decision. Stop before M4; artifact handoff requires separate authorization.**
 
 ### M4 — Artifact handoff
 

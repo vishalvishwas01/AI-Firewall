@@ -18,3 +18,4 @@ artifacts/*
 !artifacts/.gitkeep
 reports/*
 !reports/.gitkeep
+!reports/secret-logistic-m2-synthetic-v1.metrics.json

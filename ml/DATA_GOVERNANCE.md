@@ -35,6 +35,8 @@ M1's committed generator catalog is deliberately marked `pending-human-review` a
 
 M2 may fit only an experimental draft from explicitly synthetic rows. Feature rows discard source text and candidate offsets after deriving the approved numerical vector, and partitions are allocated by `templateGroupId`. An M2 state cannot contain predictions, accuracy/calibration metrics, prompt/candidate content, or a release claim. Dependency mismatch, non-convergence, mixed-label groups, group overlap, unknown fields, or premature report/release output fail closed.
 
+M3 may evaluate only the deterministic held-out synthetic test partition. Its one allowlisted report contains aggregate counts, confusion/quality/calibration measures, confidence bands, per-family aggregates, version digests, limitations, and ordered gate decisions. It must not contain generated rows, prompts, snippets, candidate values or offsets, record ids, exact candidate hashes, surrounding text, per-record predictions, or probability arrays. Synthetic results cannot satisfy human review, licensed/representative corpus, application comparison, Chrome performance, or calibration-approval gates. A failed release decision is a valid M3 completion outcome and cannot authorize M4 artifact handoff.
+
 ## Enforcement and incident response
 
 - `hallguard_ml.governance` rejects undeclared data files, forbidden application imports, and manifests that fail the data-policy contract.

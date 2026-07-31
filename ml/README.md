@@ -57,4 +57,22 @@ To write the ignored draft state after that succeeds:
 
 M2 output remains `draft`, `pending-human-review`, and `releaseEligible: false`. It is not an extension artifact and contains no evaluation or calibration metrics. M3 and M4 remain separately gated.
 
+## M3 evaluation command
+
+Evaluate the deterministic draft on held-out synthetic groups without writing a report:
+
+```powershell
+.venv\Scripts\python -m hallguard_ml.evaluate --groups-per-generator 32 --check-only
+```
+
+Write the allowlisted content-free report:
+
+```powershell
+.venv\Scripts\python -m hallguard_ml.evaluate `
+  --groups-per-generator 32 `
+  --output reports/secret-logistic-m2-synthetic-v1.metrics.json
+```
+
+M3 does not export or activate an artifact. Its current release decision is false because human/corpus/application/performance/calibration gates remain incomplete. Chrome latency, bundle growth, compatibility, and artifact handoff belong only to separately authorized M4.
+
 See `DATA_GOVERNANCE.md` for the mandatory ingress and privacy policy.

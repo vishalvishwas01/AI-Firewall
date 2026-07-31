@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,8 +12,8 @@ WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
 
 class GovernanceTests(unittest.TestCase):
-    def test_current_m2_workspace_passes(self) -> None:
-        validate_workspace(WORKSPACE_ROOT, stage="m2")
+    def test_current_m3_workspace_passes(self) -> None:
+        validate_workspace(WORKSPACE_ROOT, stage="m3")
 
     def test_rejects_application_runtime_imports(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -41,6 +42,29 @@ class GovernanceTests(unittest.TestCase):
             (artifacts / "model.json").write_text("{}\n", encoding="utf-8")
             with self.assertRaisesRegex(GovernanceError, "forbids non-draft artifact"):
                 audit_workspace(root, stage="m2")
+
+    def test_m3_rejects_undeclared_and_content_bearing_reports(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src").mkdir()
+            reports = root / "reports"
+            reports.mkdir()
+            (reports / "unreviewed.metrics.json").write_text("{}\n", encoding="utf-8")
+            with self.assertRaisesRegex(GovernanceError, "undeclared report"):
+                audit_workspace(root, stage="m3")
+
+        source = WORKSPACE_ROOT / "reports" / "secret-logistic-m2-synthetic-v1.metrics.json"
+        if source.exists():
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "src").mkdir()
+                reports = root / "reports"
+                reports.mkdir()
+                value = json.loads(source.read_text(encoding="utf-8"))
+                value["candidateValue"] = "forbidden"
+                (reports / source.name).write_text(json.dumps(value), encoding="utf-8")
+                with self.assertRaisesRegex(GovernanceError, "fields mismatch"):
+                    audit_workspace(root, stage="m3")
 
 
 if __name__ == "__main__":
