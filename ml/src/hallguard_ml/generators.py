@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import json
-from pathlib import Path
 import random
 import string
-from typing import Callable, Iterable
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
+from pathlib import Path
 
 from .contracts import (
     DETERMINISTIC_SEED,
@@ -228,7 +228,8 @@ GENERATOR_DEFINITIONS = (
 
 def _derived_rng(seed: int, generator_id: str, group_index: int) -> random.Random:
     material = f"{seed}:{generator_id}:{group_index}".encode()
-    return random.Random(int.from_bytes(hashlib.sha256(material).digest()[:8], "big"))
+    # Deterministic synthetic fixtures, never cryptographic key material.
+    return random.Random(int.from_bytes(hashlib.sha256(material).digest()[:8], "big"))  # noqa: S311
 
 
 def _record(definition: GeneratorDefinition, variant: Variant, group_index: int, seed: int) -> dict[str, object]:

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections import defaultdict
 from dataclasses import dataclass
-import hashlib
+from typing import cast
 
 from .contracts import DETERMINISTIC_SEED
 
@@ -43,7 +44,7 @@ def grouped_stratified_split(
         raise ValueError("split seed must match the reviewed deterministic seed")
     labels_by_group: dict[str, set[int]] = defaultdict(set)
     for row in rows:
-        labels_by_group[str(row["templateGroupId"])].add(int(row["label"]))
+        labels_by_group[str(row["templateGroupId"])].add(cast(int, row["label"]))
     mixed = [group_id for group_id, labels in labels_by_group.items() if len(labels) != 1]
     if mixed:
         raise ValueError("a template group cannot contain mixed labels")
@@ -55,7 +56,7 @@ def grouped_stratified_split(
     if set(groups_by_label) != {0, 1}:
         raise ValueError("both benign and sensitive groups are required")
 
-    split_groups = {"train": set(), "validation": set(), "test": set()}
+    split_groups: dict[str, set[str]] = {"train": set(), "validation": set(), "test": set()}
     for label, group_ids in groups_by_label.items():
         ordered = sorted(group_ids, key=lambda group_id: _rank(seed, label, group_id))
         train, validation, test = _allocate(ordered)

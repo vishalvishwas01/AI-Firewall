@@ -41,7 +41,7 @@ M1 does not train, fit, calibrate, evaluate, or export a model. Those actions be
 
 ## M2 training command
 
-M2 requires the exact versions pinned in `requirements.txt`. After manually installing them in Python 3.14, verify the real fit without writing state:
+M2 requires the exact versions pinned in `requirements.txt`. Verify the installed Python 3.14 environment and real fit without writing state:
 
 ```powershell
 .venv\Scripts\python -m hallguard_ml.train --groups-per-generator 32 --check-only

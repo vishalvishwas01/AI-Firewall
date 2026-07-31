@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import json
-from pathlib import Path
 import platform
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from .contracts import (
@@ -108,7 +108,7 @@ def train_logistic_model(groups_per_generator: int = 32) -> dict[str, object]:
     normalized_train = scaler.fit_transform(train_matrix)
     classifier = dependencies.logistic_regression(
         solver="lbfgs",
-        penalty="l2",
+        l1_ratio=0.0,
         C=1.0,
         max_iter=2000,
         tol=1e-10,
@@ -143,6 +143,7 @@ def train_logistic_model(groups_per_generator: int = 32) -> dict[str, object]:
         "fit": {
             "solver": "lbfgs",
             "penalty": "l2",
+            "l1Ratio": 0.0,
             "c": 1.0,
             "maxIterations": 2000,
             "tolerance": 1e-10,

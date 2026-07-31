@@ -64,10 +64,11 @@
     "fit": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["solver", "penalty", "c", "maxIterations", "tolerance", "iterations", "converged"],
+      "required": ["solver", "penalty", "l1Ratio", "c", "maxIterations", "tolerance", "iterations", "converged"],
       "properties": {
         "solver": { "const": "lbfgs" },
         "penalty": { "const": "l2" },
+        "l1Ratio": { "const": 0.0 },
         "c": { "const": 1.0 },
         "maxIterations": { "const": 2000 },
         "tolerance": { "const": 1e-10 },

@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from hallguard_ml.contracts import (
-    ContractError,
     DETERMINISTIC_SEED,
     FEATURE_NAMES,
     FEATURE_VERSION,
     GENERATOR_CATALOG_VERSION,
     M2_MODEL_VERSION,
     TRAINING_STATE_VERSION,
+    ContractError,
     validate_training_state,
 )
 from hallguard_ml.training import (
@@ -19,7 +22,10 @@ from hallguard_ml.training import (
     sanitized_training_summary,
     train_logistic_model,
     training_state_digest,
+    write_training_state,
 )
+
+EXPECTED_M2_STATE_DIGEST = "0d398a98c34829408f4e863a1035415cd11be0e5b829ce58716aa88bd4caa451"
 
 
 def draft_state() -> dict[str, object]:
@@ -51,6 +57,7 @@ def draft_state() -> dict[str, object]:
         "fit": {
             "solver": "lbfgs",
             "penalty": "l2",
+            "l1Ratio": 0.0,
             "c": 1.0,
             "maxIterations": 2000,
             "tolerance": 1e-10,
@@ -99,10 +106,20 @@ class RealTrainingTests(unittest.TestCase):
     @unittest.skipUnless(DEPENDENCIES_AVAILABLE, "pinned M2 dependencies are not installed")
     def test_real_training_is_reproducible_and_valid(self) -> None:
         load_training_dependencies()
-        first = train_logistic_model(groups_per_generator=8)
-        second = train_logistic_model(groups_per_generator=8)
+        first = train_logistic_model(groups_per_generator=32)
+        second = train_logistic_model(groups_per_generator=32)
         self.assertEqual(first, second)
         validate_training_state(first)
+        self.assertEqual(training_state_digest(first), EXPECTED_M2_STATE_DIGEST)
+        rendered = json.dumps(first, sort_keys=True)
+        for forbidden in ("text", "candidateStart", "candidateEnd", "recordId", "predictions", "metrics"):
+            self.assertNotIn(f'"{forbidden}"', rendered)
+        with tempfile.TemporaryDirectory() as directory:
+            first_path = Path(directory) / "first.training-state.json"
+            second_path = Path(directory) / "second.training-state.json"
+            write_training_state(first, first_path)
+            write_training_state(second, second_path)
+            self.assertEqual(first_path.read_bytes(), second_path.read_bytes())
 
     @unittest.skipIf(DEPENDENCIES_AVAILABLE, "dependency failure path applies only without packages")
     def test_missing_dependencies_fail_with_install_instruction(self) -> None:

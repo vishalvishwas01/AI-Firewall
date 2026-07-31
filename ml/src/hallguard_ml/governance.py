@@ -81,8 +81,9 @@ def _audit_m1_data_boundary(root: Path) -> list[str]:
         if not path.is_file() or path.relative_to(root) in M1_STATIC_DATA_FILES:
             continue
         if path.parent == root / "datasets" / "synthetic" and path.suffix == ".jsonl":
+            line_number = 0
             try:
-                for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):  # noqa: B007
                     value = json.loads(line)
                     if not isinstance(value, dict):
                         raise ContractError("row must be an object")

@@ -359,7 +359,7 @@ Known limitations:
 - No real proposal has been approved or converted; tests use synthetic schema fixtures only.
 - Existing baseline rules were not retroactively presented as human-approved. A future migration may independently review them.
 - Signed updates are a documented future design boundary only and remain disabled.
-- At the E7 stop boundary, model release governance still required separately authorized ML M0–M4 work. M0/M1 completed later; M2 was authorized but remains dependency-blocked, and M3–M4 remain planned.
+- At the E7 stop boundary, model release governance still required separately authorized ML M0–M4 work. M0–M2 completed later; M3–M4 remain planned.
 
 Workflow specification: `../docs/RULE_KNOWLEDGE_WORKFLOW.md`.
 
@@ -445,18 +445,18 @@ Historical M1 stop boundary: **M1 completed and stopped before M2. M2 was author
 
 ### M2 dependency handoff — logistic training
 
-Status: **Blocked in `../ml/`; no extension runtime change**
+Status: **Complete in `../ml/`; no extension runtime change**
 
-Started: **2026-08-01**
+Completed: **2026-08-01**
 
-- ML M2 feature extraction, grouped splitting, scikit-learn service, draft-state contract, governance, and non-fit tests are implemented.
-- The runtime contract now targets user-installed CPython 3.14.6 with NumPy 2.5.1, pandas 3.0.5, and scikit-learn 1.9.0. Compatible Windows wheels are available, but the packages are not installed yet.
-- The real fit has not run; M2 remains blocked and M3 has not started.
-- No coefficients, normalization statistics, convergence result, state, metrics report, or artifact was generated or copied.
+- ML M2 feature extraction, grouped splitting, scikit-learn training, draft-state contract, governance, and real-fit reproducibility checks are complete.
+- Runtime pins are CPython 3.14.6, NumPy 2.5.1, pandas 3.0.5, and scikit-learn 1.9.0.
+- Two 1,024-row fits converged in 29 iterations and produced identical draft-state hash `0d398a98c34829408f4e863a1035415cd11be0e5b829ce58716aa88bd4caa451`.
+- Draft parameters were verified in memory/temporary serialization only; no state, metrics report, or artifact was copied into the extension.
 - The extension continues using unchanged schema-v1 `secret-logistic-bootstrap-v1` in shadow mode.
 - M2 draft state is deliberately not an extension artifact and remains release-ineligible.
 
-Stop boundary: **Resolve and complete M2 before authorizing M3.**
+Stop boundary: **M2 is complete. Stop before M3; evaluation/release gating requires separate authorization.**
 
 ## 5. Detection defaults
 

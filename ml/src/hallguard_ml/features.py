@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from collections import Counter
 import math
 import re
 import unicodedata
-from typing import Mapping
+from collections import Counter
+from collections.abc import Mapping
+from typing import cast
 
 from .contracts import FEATURE_NAMES, validate_generator_record
 
@@ -97,8 +98,8 @@ def feature_row(record: Mapping[str, object]) -> dict[str, object]:
     mutable_record = dict(record)
     validate_generator_record(mutable_record)
     text = str(record["text"])
-    start = int(record["candidateStart"])
-    end = int(record["candidateEnd"])
+    start = cast(int, record["candidateStart"])
+    end = cast(int, record["candidateEnd"])
     features = extract_candidate_features(text[start:end], text[max(0, start - 160):start])
     return {
         "recordId": record["recordId"],

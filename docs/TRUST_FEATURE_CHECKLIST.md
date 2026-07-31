@@ -131,7 +131,7 @@ Complete this checklist for every new detector, model, storage field, synchroniz
 - [x] Sixteen tests, workspace validation, compilation, golden digest, balanced count, and repeat-run determinism pass.
 - [x] ML and extension handoffs plus trust architecture match M1 behavior.
 
-## M2 Implementation Review — 2026-08-01
+## M2 Review Record — 2026-08-01
 
 - [x] Feature order/formulas match `candidate-features-v1` and source text/candidates are discarded afterward.
 - [x] NFKC/full-width and zero-width normalization have parity fixtures.
@@ -142,8 +142,9 @@ Complete this checklist for every new detector, model, storage field, synchroniz
 - [x] Governance rejects reports, non-draft artifacts, dependency drift, group leakage, mixed labels, non-convergence, and unknown fields.
 - [x] No customer, report, telemetry, production, real-secret, personal, screenshot, file, or behavior data is used.
 - [x] No application runtime, network, storage, consent, permission, warning, or extension artifact changed.
-- [x] Twenty-five non-fit tests, compilation, workspace validation, and dependency-failure behavior pass.
-- [x] CPython 3.14.6 migration, binary-wheel resolution, dependency-free tests, workspace validation, and unchanged generator digest pass.
-- [ ] Manually install NumPy 2.5.1, pandas 3.0.5, and scikit-learn 1.9.0 in the Python 3.14 ML environment.
-- [ ] Run the real scikit-learn fit twice and verify convergence, identical state, schema, governance, and no leaks.
-- [ ] Mark M2 complete only after both remaining checks pass; do not start M3 first.
+- [x] CPython 3.14.6 with NumPy 2.5.1, pandas 3.0.5, and scikit-learn 1.9.0 is installed and exact-pin validated.
+- [x] Two real 1,024-row fits converged in 29 iterations with identical state and sanitized-summary hashes.
+- [x] Temporary serialized states were byte-identical and the golden training-state digest is locked.
+- [x] Ruff, strict mypy, pytest, compilation, workspace governance, feature/group invariants, schema validation, and no-leak checks pass.
+- [x] No dataset, training state, report, release artifact, or extension model was retained or changed.
+- [x] M2 is complete; M3 remains separately authorized and was not started.

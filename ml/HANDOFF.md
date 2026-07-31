@@ -81,7 +81,7 @@ Privacy review:
 
 Known limitations:
 
-- The machine has no user-installed Python command; the bundled Python runtime was used for verification. The developer environment and pinned packages still need manual installation.
+- At M0, only bundled Python 3.12 was available. This historical limitation was resolved before the M2 fit by the exact pinned Python 3.14 environment.
 - JSON Schema documents use draft 2020-12, while the dependency-free Python validators enforce the security-critical subset directly. Later release tooling may add a pinned general schema validator if needed.
 - Artifact v2 is deliberately not consumed by the extension yet.
 
@@ -141,38 +141,43 @@ Historical M1 next step: **M2 — Logistic model training**. It was authorized s
 
 ### M2 — Logistic model training
 
-Status: **Blocked — implementation complete; pinned training dependencies not installed**
+Status: **Complete — draft training only; release-ineligible**
 
-Started: **2026-08-01**
+Completed: **2026-08-01**
 
 - Added dependency-free feature extraction matching `candidate-features-v1`, including NFKC/zero-width handling, entropy, ratios, class transitions, repeated-character, safe-shape, context/config, and path features.
 - Feature rows retain only ids, group, numeric label, and the 16 numerical features; source text, values, and offsets are discarded.
 - Added deterministic label-stratified 60/20/20 allocation by `templateGroupId`; mixed-label groups, overlap, and unreviewed seeds fail closed.
-- Added the lazy-loaded pandas/NumPy/scikit-learn training path: pandas frame, NumPy float64 matrix, train-only `StandardScaler`, and fixed `LogisticRegression` using lbfgs, L2, C=1, seed `20260801`, 2,000 iterations, and tolerance `1e-10`.
+- Added the lazy-loaded pandas/NumPy/scikit-learn training path: pandas frame, NumPy float64 matrix, train-only `StandardScaler`, and fixed `LogisticRegression` using lbfgs, L2 (`l1_ratio=0` under scikit-learn 1.9), C=1, seed `20260801`, 2,000 iterations, and tolerance `1e-10`.
 - Added dependency-version and convergence enforcement.
 - Added exact `hallguard-m2-training-state-v1` validation for grouped counts, normalization, coefficients, intercept, fit configuration, dependencies, and provenance.
 - Draft state remains `draft`, `pending-human-review`, and `releaseEligible: false`; metrics and release fields are rejected.
 - Added atomic ignored state writing, content-free state summary/hash, M2 governance, and the `hallguard-ml-train` CLI.
 
-Verification completed without fitting:
+Runtime contract:
 
+- CPython `3.14.6`.
+- NumPy `2.5.1`, pandas `3.0.5`, scikit-learn `1.9.0`.
+- Development pins: mypy `2.3.0`, pytest `9.1.1`, Ruff `0.16.1`, setuptools `83.0.0`, wheel `0.47.0`.
+- The original 3.12 contract was migrated before fitting; requirements, schemas, validators, tests, and handoffs use the exact installed 3.14 pins.
+
+Real-fit verification:
+
+- Two independent `--groups-per-generator 32 --check-only` fits completed and produced identical sanitized summaries and training-state hashes.
+- Dataset: 1,024 deterministic synthetic rows across 256 template groups.
+- Split: 608/208/208 records and 152/52/52 groups for train/validation/test; groups remain disjoint.
+- Fit converged in 29 iterations.
+- Dataset SHA-256: `48c0cd4b704b407fee613affcfbd4418694ec25d53a9b6f1e57fc2e377d8aebd`.
+- Training-state SHA-256: `0d398a98c34829408f4e863a1035415cd11be0e5b829ce58716aa88bd4caa451`.
+- Golden-state and temporary serialization tests prove two states are structurally equal and byte-identical.
 - `python -m compileall -q src tests`: passed.
-- Test suite: 25 passed; the real-fit reproducibility test was skipped because pinned dependencies are unavailable.
-- `python -m hallguard_ml.validate_workspace --root . --stage m2`: passed.
-- Feature parity, normalization parity, text disposal, deterministic balanced group splitting, zero overlap, draft-state validation, release/metrics rejection, governance, and dependency-failure tests passed.
-- No dataset, training state, artifact, or report was left in the workspace.
-
-Blocking verification:
-
-- User-installed runtime: CPython `3.14.6` with pip `26.1.2`.
-- Updated reviewed pins: NumPy `2.5.1`, pandas `3.0.5`, and scikit-learn `1.9.0`; compatible CPython 3.14 Windows wheels were confirmed with pip `--dry-run --only-binary`.
-- Development pins were updated to mypy `2.3.0`, pytest `9.1.1`, Ruff `0.16.1`, setuptools `83.0.0`, and wheel `0.47.0`.
-- The packages are not installed yet, so the real training verification remains blocked.
-- CPython 3.14 migration checks passed: 25 tests passed, one real-fit test remained skipped, workspace validation passed, and the M1 golden digest stayed unchanged.
-- A full `requirements-dev.txt` binary-only dry run resolved successfully for CPython 3.14 without installing anything.
-- The real training CLI fails closed before fitting and requests manual dependency installation.
-- Per policy, Codex did not install or downgrade packages.
-- Real coefficients, intercept, normalization statistics, convergence, and repeat-run state equality are therefore unverified; M2 cannot be marked complete.
+- Ruff: passed.
+- mypy strict check: passed for 10 source files.
+- pytest: 25 passed; the missing-dependency-path test was the one expected skip because dependencies are installed. The real-fit test passed.
+- M2 workspace governance passed.
+- State no-leak assertions passed for text, candidate offsets, record ids, predictions, and metrics.
+- Generated dataset, draft state, artifact, and report files were not retained; only `.gitkeep` files remain.
+- `git diff --check`: passed.
 
 Privacy review:
 
@@ -183,11 +188,11 @@ Privacy review:
 
 Known limitations:
 
-- Real training is blocked until the pinned dependencies are manually installed.
-- The pending, synthetic-only catalog cannot support a production accuracy/release claim even after fitting.
+- The pending, synthetic-only catalog cannot support a production accuracy or release claim.
 - Draft state is not the schema-v2 extension artifact and cannot be copied or activated.
+- Precision/recall, calibration, held-out release evaluation, latency, and artifact approval belong to M3.
 
-Resume M2 after manual installation and rerun real-fit, determinism, schema, governance, and leak checks. **Do not start M3 while M2 is blocked.**
+Next step: **M3 — Evaluation and release gate** (requires explicit authorization). Stop before M3.
 
 ### M3 — Evaluation and release gate
 

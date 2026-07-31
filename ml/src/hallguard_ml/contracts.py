@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 import re
+from datetime import datetime
 from typing import Any
 
 DETERMINISTIC_SEED = 20260801
@@ -461,12 +461,13 @@ def validate_training_state(value: dict[str, Any]) -> None:
         raise ContractError("M2 fit metadata must be an object")
     _exact_fields(
         fit,
-        {"solver", "penalty", "c", "maxIterations", "tolerance", "iterations", "converged"},
+        {"solver", "penalty", "l1Ratio", "c", "maxIterations", "tolerance", "iterations", "converged"},
         "trainingState.fit",
     )
     if (
         fit["solver"] != "lbfgs"
         or fit["penalty"] != "l2"
+        or fit["l1Ratio"] != 0.0
         or fit["c"] != 1.0
         or fit["maxIterations"] != 2000
         or fit["tolerance"] != 1e-10

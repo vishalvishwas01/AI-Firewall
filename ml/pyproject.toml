@@ -36,7 +36,7 @@ testpaths = ["tests"]
 addopts = "--strict-config --strict-markers"
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py314"
 line-length = 120
 
 [tool.ruff.lint]
@@ -46,3 +46,4 @@ select = ["E", "F", "I", "B", "UP", "S"]
 python_version = "3.14"
 strict = true
 packages = ["hallguard_ml"]
+disable_error_code = ["import-untyped"]

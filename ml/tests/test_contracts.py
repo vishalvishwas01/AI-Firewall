@@ -4,10 +4,10 @@ import copy
 import unittest
 
 from hallguard_ml.contracts import (
-    ContractError,
     DETERMINISTIC_SEED,
     FEATURE_NAMES,
     THRESHOLDS,
+    ContractError,
     validate_artifact,
     validate_dataset_manifest,
 )

@@ -7,7 +7,6 @@ from pathlib import Path
 from hallguard_ml.governance import GovernanceError, audit_workspace
 from hallguard_ml.validate_workspace import validate_workspace
 
-
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
 

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections import defaultdict
 import json
 import tempfile
 import unittest
+from collections import defaultdict
 from pathlib import Path
 
 from hallguard_ml.contracts import (
@@ -18,7 +18,6 @@ from hallguard_ml.generators import (
     generate_records,
     write_jsonl,
 )
-
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_M1_SEED_20260801_DIGEST = "32e3562c6a42aa951ab098f999933e6cc0d60cb528206442b3609a4540eb205a"
