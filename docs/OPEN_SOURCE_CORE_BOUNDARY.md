@@ -12,6 +12,11 @@ extension/src/firewall/core.ts
 
 Candidate exports:
 
+- layered `analyze(input, context)` and result contracts
+- declarative rule schemas and bundled rule-set metadata
+- bundled rule-release manifest validation and non-executable distribution policy
+- bounded normalization, candidate-feature extraction, and policy helpers
+- logistic artifact validation, deterministic inference, classification types, and fallback state
 - text detection
 - risky-upload detection
 - highest-severity helper

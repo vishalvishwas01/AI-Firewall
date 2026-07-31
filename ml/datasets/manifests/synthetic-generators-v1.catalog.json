@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "synthetic-generators-v1",
+  "seed": 20260801,
+  "outputSchemaVersion": 1,
+  "reviewStatus": "pending-human-review",
+  "releaseEligible": false,
+  "dataPolicy": {
+    "containsCustomerContent": false,
+    "containsReportSnippets": false,
+    "containsTelemetryPayloads": false,
+    "containsProductionLogs": false,
+    "containsRealSecrets": false,
+    "containsPersonalData": false
+  },
+  "licenses": [
+    {
+      "licenseId": "hallguard-synthetic",
+      "name": "HallGuard-authored synthetic definitions",
+      "reference": "internal://hallguard/ml/generators/v1"
+    },
+    {
+      "licenseId": "official-shape-reference",
+      "name": "Structural reference only; no credential values copied",
+      "reference": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github"
+    }
+  ],
+  "generators": [
+    {
+      "generatorId": "secret.assignment.mixed-v1",
+      "version": 1,
+      "label": "sensitive",
+      "family": "unknown-mixed-assignment",
+      "formats": ["env", "json", "yaml", "code"],
+      "mutationIds": ["env-quoted", "json-field", "yaml-field", "multiline-config"],
+      "source": {
+        "kind": "synthetic-definition",
+        "reference": "internal://hallguard/ml/generators/secret-assignment",
+        "licenseId": "hallguard-synthetic"
+      }
+    },
+    {
+      "generatorId": "secret.base64url.unknown-v1",
+      "version": 1,
+      "label": "sensitive",
+      "family": "unknown-base64url",
+      "formats": ["env", "json", "yaml"],
+      "mutationIds": ["plain", "zero-width-context", "fullwidth-value", "separator-insertion"],
+      "source": {
+        "kind": "synthetic-definition",
+        "reference": "internal://hallguard/ml/generators/unknown-base64url",
+        "licenseId": "hallguard-synthetic"
+      }
+    },
+    {
+      "generatorId": "secret.public-prefix.synthetic-v1",
+      "version": 1,
+      "label": "sensitive",
+      "family": "documented-public-prefix-shape",
+      "formats": ["raw", "env", "json"],
+      "mutationIds": ["github-test-prefix", "github-classic-prefix", "quoted", "lowercase-context"],
+      "source": {
+        "kind": "official-public-shape",
+        "reference": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github",
+        "licenseId": "official-shape-reference"
+      }
+    },
+    {
+      "generatorId": "secret.adversarial.structure-v1",
+      "version": 1,
+      "label": "sensitive",
+      "family": "adversarial-structural-secret",
+      "formats": ["env", "json", "yaml", "code"],
+      "mutationIds": ["repeated-run", "mixed-separators", "unicode-context", "nested-config"],
+      "source": {
+        "kind": "synthetic-definition",
+        "reference": "internal://hallguard/ml/generators/adversarial-structure",
+        "licenseId": "hallguard-synthetic"
+      }
+    },
+    {
+      "generatorId": "benign.safe-shapes-v1",
+      "version": 1,
+      "label": "benign",
+      "family": "known-safe-shapes",
+      "formats": ["raw", "env", "json", "code"],
+      "mutationIds": ["uuid", "hash", "semantic-version", "timestamp"],
+      "source": {
+        "kind": "synthetic-definition",
+        "reference": "internal://hallguard/ml/generators/benign-safe-shapes",
+        "licenseId": "hallguard-synthetic"
+      }
+    },
+    {
+      "generatorId": "benign.developer-config-v1",
+      "version": 1,
+      "label": "benign",
+      "family": "developer-config",
+      "formats": ["env", "json", "yaml", "code"],
+      "mutationIds": ["placeholder", "example-url", "path", "ordinary-identifier"],
+      "source": {
+        "kind": "synthetic-definition",
+        "reference": "internal://hallguard/ml/generators/benign-developer-config",
+        "licenseId": "hallguard-synthetic"
+      }
+    },
+    {
+      "generatorId": "benign.prose-and-package-v1",
+      "version": 1,
+      "label": "benign",
+      "family": "ordinary-developer-text",
+      "formats": ["prose", "code", "json"],
+      "mutationIds": ["package-version", "documentation", "enum-constant", "test-name"],
+      "source": {
+        "kind": "synthetic-definition",
+        "reference": "internal://hallguard/ml/generators/benign-prose",
+        "licenseId": "hallguard-synthetic"
+      }
+    },
+    {
+      "generatorId": "benign.near-miss-v1",
+      "version": 1,
+      "label": "benign",
+      "family": "secret-like-near-miss",
+      "formats": ["env", "json", "yaml", "prose"],
+      "mutationIds": ["short-token", "repeated-placeholder", "public-id", "tutorial-example"],
+      "source": {
+        "kind": "synthetic-definition",
+        "reference": "internal://hallguard/ml/generators/benign-near-miss",
+        "licenseId": "hallguard-synthetic"
+      }
+    }
+  ]
+}

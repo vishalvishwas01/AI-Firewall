@@ -1,0 +1,54 @@
+{
+  "version": "2026.08.01-v1",
+  "rules": [
+    {
+      "id": "secret-assignment-v1", "version": 1, "category": "sensitive-data",
+      "secretType": "Assigned secret", "severity": "high", "strategy": "assignment",
+      "constraints": { "minLength": 6, "maxLength": 256, "keywords": ["api_key", "token", "secret", "password"], "evidenceLabels": ["secret assignment"] },
+      "evidenceCode": "sensitive.secret-assignment",
+      "source": { "kind": "maintainer", "reference": "docs/REDACTION_STORAGE_SPEC.md" }, "status": "active"
+    },
+    {
+      "id": "service-url-assignment-v1", "version": 1, "category": "sensitive-data",
+      "secretType": "Service URL assignment", "severity": "high", "strategy": "assignment",
+      "constraints": { "minLength": 4, "maxLength": 256, "keywords": ["url", "uri"], "evidenceLabels": ["sensitive service URL assignment"] },
+      "evidenceCode": "sensitive.service-url-assignment",
+      "source": { "kind": "maintainer", "reference": "docs/REDACTION_STORAGE_SPEC.md" }, "status": "active"
+    },
+    {
+      "id": "known-api-token-v1", "version": 1, "category": "sensitive-data",
+      "secretType": "Known API token", "severity": "high", "strategy": "prefix",
+      "constraints": { "minLength": 20, "maxLength": 256, "prefixes": ["sk-", "pk_", "ghp_", "xox", "AKIA"], "evidenceLabels": ["API token pattern"] },
+      "evidenceCode": "sensitive.known-api-token",
+      "source": { "kind": "maintainer", "reference": "extension/src/features/detection/detectors.ts" }, "status": "active"
+    },
+    {
+      "id": "personal-data-v1", "version": 1, "category": "sensitive-data",
+      "secretType": "Personal or confidential data", "severity": "medium", "strategy": "structure",
+      "constraints": { "evidenceLabels": ["credit-card-like number", "email address", "phone-number-like text", "private/confidential phrase"] },
+      "evidenceCode": "sensitive.personal-or-confidential",
+      "source": { "kind": "maintainer", "reference": "docs/REDACTION_STORAGE_SPEC.md" }, "status": "active"
+    },
+    {
+      "id": "prompt-injection-v1", "version": 1, "category": "prompt-injection",
+      "secretType": "Prompt injection", "severity": "medium", "strategy": "context",
+      "constraints": { "evidenceLabels": ["ignore-instructions phrase", "system-prompt reveal request", "exfiltration language", "system prompt reference", "developer message reference", "unrestricted-role instruction", "hidden instruction reference", "hidden HTML instruction"] },
+      "evidenceCode": "prompt-injection.context",
+      "source": { "kind": "maintainer", "reference": "extension/src/features/detection/detectors.ts" }, "status": "active"
+    },
+    {
+      "id": "scam-fraud-context-v1", "version": 1, "category": "scam-fraud",
+      "secretType": "Scam or fraud context", "severity": "medium", "strategy": "context",
+      "constraints": { "evidenceLabels": ["urgent language", "money transfer request", "impersonation cue", "credential request"] },
+      "evidenceCode": "scam-fraud.context",
+      "source": { "kind": "maintainer", "reference": "extension/src/features/detection/detectors.ts" }, "status": "active"
+    },
+    {
+      "id": "risky-upload-metadata-v1", "version": 1, "category": "risky-upload",
+      "secretType": "Risky upload metadata", "severity": "medium", "strategy": "structure",
+      "constraints": { "evidenceLabels": [".env", ".pem", ".key", ".csv", ".xlsx", ".pdf", ".docx", ".zip"] },
+      "evidenceCode": "upload.risky-metadata",
+      "source": { "kind": "maintainer", "reference": "extension/src/features/detection/detectors.ts" }, "status": "active"
+    }
+  ]
+}

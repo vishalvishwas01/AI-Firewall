@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-logistic-artifact-v2.schema.json",
+  "title": "HallGuard Offline Logistic Classifier Artifact",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "modelVersion", "featureVersion", "classifierType", "status",
+    "featureOrder", "normalization", "coefficients", "intercept", "thresholds", "training"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "modelVersion": { "type": "string", "pattern": "^secret-logistic-[a-z0-9][a-z0-9.-]{2,63}$" },
+    "featureVersion": { "const": "candidate-features-v1" },
+    "classifierType": { "const": "logistic-regression" },
+    "status": { "const": "shadow" },
+    "featureOrder": {
+      "const": [
+        "length", "lengthBucket", "entropy", "letterRatio", "digitRatio",
+        "uppercaseRatio", "lowercaseRatio", "punctuationRatio", "separatorRatio",
+        "classTransitionRatio", "repeatedCharacterRatio", "safeShape",
+        "assignmentContext", "secretKeywordContext", "structuredConfigContext", "pathLike"
+      ]
+    },
+    "normalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mean", "scale"],
+      "properties": {
+        "mean": { "$ref": "#/$defs/featureVector" },
+        "scale": {
+          "type": "array", "minItems": 16, "maxItems": 16,
+          "items": { "type": "number", "exclusiveMinimum": 0 }
+        }
+      }
+    },
+    "coefficients": { "$ref": "#/$defs/featureVector" },
+    "intercept": { "type": "number" },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relaxedHigh", "balancedMedium", "balancedHigh", "strictMedium", "strictHigh"],
+      "properties": {
+        "relaxedHigh": { "const": 0.9 },
+        "balancedMedium": { "const": 0.65 },
+        "balancedHigh": { "const": 0.9 },
+        "strictMedium": { "const": 0.5 },
+        "strictHigh": { "const": 0.9 }
+      }
+    },
+    "training": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "datasetManifest", "seed", "generatedAt", "metricsReport", "codeRevision"],
+      "properties": {
+        "kind": { "const": "offline-trained" },
+        "datasetManifest": { "type": "string", "pattern": "^dataset-[a-z0-9][a-z0-9.-]{2,63}$" },
+        "seed": { "const": 20260801 },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "metricsReport": { "type": "string", "pattern": "^[a-zA-Z0-9._/-]+\\.metrics\\.json$" },
+        "codeRevision": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" }
+      }
+    }
+  },
+  "$defs": {
+    "featureVector": {
+      "type": "array", "minItems": 16, "maxItems": 16,
+      "items": { "type": "number" }
+    }
+  }
+}

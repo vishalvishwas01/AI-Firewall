@@ -19,6 +19,7 @@ export type ProtectionSettings = {
   scamDetection: boolean
   sensitivityMode: SensitivityMode
   redactedSync: boolean
+  improveDetection: boolean
 }
 
 export type ProtectedSite = {
@@ -37,6 +38,14 @@ export type Detection = {
   title: string
   message: string
   evidence: string[]
+  confidence?: number
+  confidenceBand?: "low" | "medium" | "high"
+  detector?: "rule" | "classifier" | "combined" | "system"
+  ruleIds?: string[]
+  evidenceCodes?: string[]
+  modelVersion?: string
+  ruleSetVersion?: string
+  incompleteScan?: boolean
 }
 
 export type ActivityLog = {

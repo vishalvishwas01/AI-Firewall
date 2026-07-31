@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+# Raw/generated rows are regenerated from reviewed definitions. M1 must
+# explicitly allowlist any small synthetic fixture intended for version control.
+datasets/synthetic/*
+!datasets/synthetic/.gitkeep
+
+# Artifacts and reports require M3/M4 review before selected files are committed.
+artifacts/*
+!artifacts/.gitkeep
+reports/*
+!reports/.gitkeep

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "rules-2026.08.01-v1-baseline",
+  "ruleSetVersion": "2026.08.01-v1",
+  "distribution": "bundled-extension",
+  "remoteUpdatesEnabled": false,
+  "executablePayloadAllowed": false,
+  "remoteRegexAllowed": false,
+  "futureSignedUpdates": "not-enabled-v1",
+  "entries": [
+    { "ruleId": "secret-assignment-v1", "ruleVersion": 1, "status": "active", "origin": "baseline", "approvalIds": [] },
+    { "ruleId": "service-url-assignment-v1", "ruleVersion": 1, "status": "active", "origin": "baseline", "approvalIds": [] },
+    { "ruleId": "known-api-token-v1", "ruleVersion": 1, "status": "active", "origin": "baseline", "approvalIds": [] },
+    { "ruleId": "personal-data-v1", "ruleVersion": 1, "status": "active", "origin": "baseline", "approvalIds": [] },
+    { "ruleId": "prompt-injection-v1", "ruleVersion": 1, "status": "active", "origin": "baseline", "approvalIds": [] },
+    { "ruleId": "scam-fraud-context-v1", "ruleVersion": 1, "status": "active", "origin": "baseline", "approvalIds": [] },
+    { "ruleId": "risky-upload-metadata-v1", "ruleVersion": 1, "status": "active", "origin": "baseline", "approvalIds": [] }
+  ],
+  "approvals": []
+}

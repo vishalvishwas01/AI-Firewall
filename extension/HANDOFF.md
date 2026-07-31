@@ -1,1106 +1,479 @@
-# AI Permission Firewall Handoff
+# HallGuard Extension Handoff
 
-This file is the continuity source for future Codex windows. Keep it updated whenever implementation state or next steps change.
+This is the source of truth for the Chrome MV3 extension. Execute one roadmap step at a time. Do not mark a step complete until code, tests, build, privacy review, and browser smoke verification pass.
 
-## Product Brief
+## 1. Boundary
 
-Build an individual-focused browser extension for AI chat safety. It should protect users on ChatGPT, Claude, and Gemini by detecting sensitive prompts, risky uploads, prompt injection, and scam/fraud language. The original MVP was local-first with no backend. As of 2026-06-20, the user wants to add account-backed MongoDB log sync and a website report dashboard while keeping the existing local extension history visible.
+The extension inspects text and upload metadata locally, warns before risky paste/send/upload actions, redacts before storage, and optionally synchronizes redacted records. Raw prompts, secrets, candidate strings, file contents, screenshots, and exact classifier inputs never leave the browser.
 
-## Current Architecture
+The website owns account/report surfaces. The server owns persistence and authorization. The ML workspace trains artifacts offline and is never imported into the extension runtime.
 
-- Plasmo + React + TypeScript Chrome-compatible extension.
-- Content script is declared for HTTPS pages and self-gates by the saved protected-site list.
-- Default protected sites are ChatGPT, Claude, and Gemini, but users can remove them from the report dashboard.
-- Custom report domains become protected extension targets after the website pushes the active site list to extension storage.
-- Local rule-based detection lives in `src/firewall/detectors.ts`.
-- Redaction lives in `src/firewall/redact.ts`.
-- Browser-local settings and activity history live in `src/firewall/storage.ts`.
-- Extension popup is `popup.tsx` with styles in `src/styles/popup.css`.
-- Content script guard is `contents/ai-firewall.ts`.
-- Popup current-page status now shows only the active protected site instead of listing all default sites.
-- On unsupported pages, the popup offers `Add this domain`, which opens the website report page add-domain modal with the current hostname prefilled.
-- Backend/API now lives under the separate `server/` package.
-- Client website now lives under `client/`.
-- MongoDB connection string and auth/session secrets come from environment variables; never commit real secrets.
+## 2. Stack and scalable structure
 
-## Phase Plan
-
-### Phase 1: Project Scaffold
-
-Status: Done
-
-- Added `package.json`, `tsconfig.json`, `vitest.config.ts`, `.gitignore`, and `README.md`.
-- Added Plasmo, React, TypeScript, Vitest, Chrome types, and lucide icon dependencies.
-- Added manifest host permissions for ChatGPT, Claude, and Gemini.
-
-### Phase 2: Local Firewall Core
-
-Status: Done
-
-- Added types for detections, severities, settings, logs, upload summaries, and decisions.
-- Added local detectors for sensitive data, prompt injection, risky uploads, and scam/fraud language.
-- Added redaction for secrets, tokens, emails, phone numbers, and card-like values.
-- Added local storage helpers with browser `chrome.storage.local` and test fallback.
-
-### Phase 3: Browser Extension Surfaces
-
-Status: Done
-
-- Added content script to intercept paste, submit, Enter-send, send-button clicks, file uploads, and newly rendered page text.
-- Added popup with protection status, four toggles, recent warnings, and clear-history action.
-- Added generated extension icon at `assets/icon.png`.
-- Moved Plasmo entrypoints under `src` so the build packages popup and content scripts correctly.
-- Tuned content-script warning behavior so blocking decisions happen synchronously from cached settings; this avoids sends/pastes slipping through while async storage/logging is still pending.
-- Added repeat suppression for duplicate send checks fired by the same message across click/submit/keydown chains.
-- Cleaned popup recent-warning separators to plain ASCII.
-- Polished popup loading/empty behavior so the status band does not briefly show `0 of 4 protections active` before settings load, and clear-history is disabled when there are no logs.
-- Improved composer selection so send checks prefer the focused visible composer or latest non-empty visible composer after a canceled send.
-
-### Phase 4: Tests
-
-Status: Done
-
-- Added unit tests for:
-  - sensitive-data detection
-  - prompt-injection detection
-  - risky-upload detection
-  - scam/fraud detection
-  - redaction behavior
-- Tests also caught and fixed a redaction-order issue where phone redaction could mask card-like numbers first.
-- Added coverage for service URL assignments such as `supabase_url=2334`.
-
-### Phase 5: Verification
-
-Status: Done
-
-- `npm install`: completed and generated `package-lock.json`.
-- `npm test`: passed, 12 tests. Last run: 2026-06-20 after real-time composer badge changes.
-- `npm run typecheck`: passed. Last run: 2026-06-20 after real-time composer badge changes.
-- `npm run build`: passed. Last run: 2026-06-20 after real-time composer badge changes.
-- Generated manifest includes `popup.html` and `content_scripts` for ChatGPT, Claude, and Gemini.
-- npm audit currently reports dependency vulnerabilities from the installed toolchain; no automatic audit fix was applied because that can introduce breaking dependency churn.
-- Current build output exists at `build/chrome-mv3-prod`.
-- `npm run build` finished successfully on 2026-06-20 without blocking errors.
-- Packaged content bundle smoke test was run in a local browser harness against `build/chrome-mv3-prod/ai-firewall.9d787780.js`:
-  - secret/password text produced a high-severity confirmation, was blocked, and logged as blocked
-  - prompt-injection text produced a warning, could be allowed, submitted, and logged as allowed
-  - toast rendering was visible and non-blocking after the decision
-- User manually loaded `build/chrome-mv3-prod` in Chrome and reported the extension is working correctly in live smoke testing as of 2026-05-26.
-
-### Phase 6: Release Materials
-
-Status: Done
-
-- Expanded `README.md` with local-first privacy notes, build/install steps, expected behavior, verification commands, and current limitations.
-- Added `QA.md` with a manual checklist for build verification, Chrome install, popup checks, supported-site smoke tests, upload checks, and regression notes.
-- Added `RELEASE.md` with release-readiness steps, expected package contents, public-sharing screenshot guidance, and the known Plasmo network-warning note.
-- Added `FIELD_TEST.md` with a normal-use warning-fatigue protocol, capture template, tuning rules, and pass criteria.
-- Reviewed README/QA wording for shareability: generic build paths are now used first, while the current workspace path is still documented for local convenience.
-
-### Phase 7: Field-Test Fixes
-
-Status: Done
-
-- User reported that after canceling a blocked `api_key` send, later sends were not consistently blocked.
-- User also reported `supabase_url=2334` did not block.
-- Added high-severity detection for service URL assignments such as Supabase, Firebase, database, API, webhook, callback, redirect, site, and service URLs.
-- Added redaction for those URL assignments before storing local log snippets.
-- Improved content-script composer lookup to avoid checking the wrong/empty textbox on supported AI chat pages.
-
-### Phase 8: Standout Product Roadmap
-
-Status: Superseded By Account-Backed Reporting Plan
-
-Build these one at a time. The user will explicitly instruct when to move to the next item after the previous item is marked done. Completed items below remain part of the product. Pending local-only reporting/import/export items are deferred because the user now wants account-backed reporting through the website and MongoDB.
-
-1. Better warning details - Status: Done
-   - Show clear `Why flagged` details in confirmation dialogs, warning toasts, and recent-warning history.
-   - Use user-readable evidence labels such as `secret assignment`, `sensitive service URL assignment`, `API token pattern`, and `ignore-instructions phrase`.
-   - Avoid exposing raw regex strings in the UI.
-2. One-click safe copy - Status: Done
-   - Add a safe action that copies or prepares a redacted version of risky text.
-   - Keep `Cancel` and `Send anyway` available, but make the safer path easy.
-3. Custom warning modal - Status: Done
-   - Replace native Chrome confirm dialogs with an in-page review modal.
-   - Use clear action labels: `Cancel message`, `Copy redacted`, `Use redacted`, and `Send anyway`.
-   - Preserve high-severity blocking behavior while making override intent explicit.
-4. Per-site protection status - Status: Done
-   - Show whether the current page is protected or unsupported.
-   - List supported targets: ChatGPT, Claude, and Gemini.
-5. Real-time composer badge - Status: Done
-   - Add a small non-intrusive protected/status badge near the active AI chat composer.
-   - Keep it subtle and avoid covering native site controls.
-6. Local safety report - Status: Deferred
-   - Originally planned as local-only summary counts.
-   - Deferred because user now wants website report dashboard backed by MongoDB.
-7. Import/export settings - Status: Deferred
-   - Add JSON export/import for settings and optionally redacted logs.
-   - Never export raw secrets.
-8. Website + extension polish loop - Status: Pending
-   - Capture real screenshots after UI improvements land.
-   - Update the website demo and copy to match actual extension behavior.
-9. Options page with sensitivity levels - Status: Deferred
-   - User asked to skip this for now and do it last.
-   - Add simple modes later: Relaxed, Balanced, Strict.
-   - Strict should catch secrets, tokens, service URLs, risky files, and confidential phrases more aggressively.
-
-### Phase 9: Account-Backed Reporting Plan
-
-Status: In Progress
-
-Scope shift requested by user on 2026-06-20:
-
-- Connect the product to MongoDB using a URL from environment variables.
-- Add website signup/login.
-- Add a website report page where all synced logs are stored and displayed from the database.
-- Keep the current extension temporary/local recent-warning data as-is.
-- Extension should ask the user to sign up or log in first when they are not authenticated.
-- If not logged in, extension should redirect/open the website login flow.
-- Website should clearly tell users where the report page is and that logs can be viewed there.
-- Website report page should support date search/filter and dynamic website/domain filters.
-- Proceed step by step. Mark each item Done only after implementation and verification, then wait for user instruction before starting the next item.
-
-Important privacy/security decisions for this plan:
-
-- Continue redacting sensitive snippets before storing logs locally or sending logs to MongoDB.
-- Do not store raw secrets, raw prompt text, passwords, tokens, API keys, or service URLs.
-- MongoDB URI and auth/session secrets must come from environment variables.
-- Do not commit `.env` files or real credentials.
-- Prefer secure password hashing and signed sessions/JWTs rather than storing plain passwords.
-- Extension should keep protection behavior available locally where possible, but cloud log sync/report viewing requires login.
-
-Proposed implementation phases:
-
-1. Backend foundation in `server/` - Status: Done
-   - Chosen architecture is `client/` Vite React frontend plus separate `server/` TypeScript Express API.
-   - Added server TypeScript config, scripts, and dependencies for Express, MongoDB, CORS, cookies, JWTs, and password hashing.
-   - Added environment variable contract in `server/src/config/env.ts`: `MONGODB_URI`, `MONGODB_DB_NAME`, `JWT_SECRET`, `CLIENT_ORIGIN`, `EXTENSION_ORIGIN`, `PORT`, and `NODE_ENV`.
-   - Added MongoDB connection helper in `server/src/db/mongo.ts`.
-   - Added user schema and unique email index in `server/src/models/user.ts`.
-   - Added synced redacted log schema and user/log indexes in `server/src/models/syncedLog.ts`.
-   - Added Express bootstrap and `/health` route in `server/src/index.ts`.
-   - Added `server/.env.example`; real `.env` values must stay uncommitted.
-2. Website auth UI and API - Status: Done
-   - Added server auth routes for signup, login, logout, and session check.
-   - Added secure password hashing with `bcryptjs`.
-   - Added signed HTTP-only JWT session cookie handling.
-   - Added client signup and login pages at `/signup` and `/login`.
-   - Added logout/session check and auth-aware navigation.
-   - Updated website copy to describe local detection plus redacted account-backed reporting.
-   - Build verification passed for both `server/` and `client/`.
-3. Report page and filters - Status: Done
-   - Added authenticated client report page at `/reports`.
-   - Added server `/logs` list endpoint scoped by authenticated `userId`.
-   - Added server `/logs` create endpoint for future extension sync.
-   - Show synced logs with dates, site/tool, severity, decision, title, redacted snippet, and evidence.
-   - Added date filters and initial tool filters: ChatGPT, Claude, Gemini, Other.
-   - Added empty/loading/error states.
-   - Build verification passed for both `server/` and `client/`.
-4. Extension auth gate - Status: Done
-   - Added extension auth helper in `src/firewall/auth.ts`.
-   - Popup checks website/server auth session state.
-   - If unauthenticated, popup shows login and signup call-to-action buttons and opens the client login/signup flow.
-   - If authenticated, popup shows signed-in account email and an `Open reports` action.
-   - Current local recent-warning display remains visible regardless of auth state.
-   - Added bearer-token auth bridge because extension popup requests cannot reliably share the website's localhost session cookie.
-   - Added `src/background.ts` external message listener to store the website-issued auth token.
-   - Added local client origins to `externally_connectable` and localhost API host permissions.
-   - Client must be configured with `VITE_EXTENSION_ID` so it can send the token back to the loaded extension after login/signup.
-   - User verified extension login/signup and signed-in popup state on 2026-06-28.
-5. Extension log sync - Status: Done
-   - Added redacted log sync helper in `src/firewall/sync.ts`.
-   - `addActivityLog` now saves local history, queues the redacted log, and asks the background context to sync.
-   - Sync runs only when the website/server auth session is authenticated through cookie or stored bearer token.
-   - Failed or unauthenticated sync attempts are queued locally under `ai-firewall-sync-queue`.
-   - Popup shows queued redacted log count and a manual retry action.
-   - Duplicate synced logs are avoided server-side through stable `extensionLogId` plus user ID.
-   - Background sync now flushes queued logs automatically without requiring the popup retry button.
-   - Queued logs also flush on extension background startup/reload and after auth token receipt.
-   - User verified MongoDB storage and frontend `/reports` display on 2026-06-28.
-6. Env-style secret detection and redaction - Status: Done
-   - Sensitive-data detection now catches env-style assignments such as `JWT_SECRET=...`.
-   - Connection detection now catches URI assignments such as `MONGODB_URI=...`.
-   - Redaction masks matching values before local history and synced reporting.
-   - Added tests covering env-style detection and redaction.
-7. Report website/domain management - Status: Done
-   - Popup no longer lists ChatGPT, Claude, and Gemini together; it shows only the current protected site when applicable.
-   - Unsupported pages show an `Add this domain` action.
-   - `Add this domain` opens `/reports?source=extension&addSite=1&domain=<hostname>`.
-   - Website `/reports` handles that redirect with an add-domain modal and prefilled domain.
-   - Added report-site persistence on the server for dynamic website filters.
-8. Dynamic extension coverage - Status: Done
-   - Content script now matches HTTPS pages and self-gates by saved protected sites.
-   - Website sends the authenticated active site list to the extension through external messaging.
-   - Popup checks saved protected sites instead of a hardcoded three-site list.
-   - Popup shows only the current protected site, or `Add this domain` on unsupported pages.
-   - Matching supports exact hostnames and subdomains, so a saved parent domain protects matching subdomains.
-   - Protected pages show the composer badge attached to the bottom-right edge.
-   - Popup clear-history action is styled as destructive and clears directly.
-9. Verification and QA - Status: Pending
-   - Test signup/login/logout.
-   - Test extension unauthenticated redirect.
-   - Test log sync from ChatGPT/Claude/Gemini.
-   - Test report filters by date and website/domain.
-   - Test unsupported-page Add domain redirect.
-   - Test that only redacted snippets are stored.
-   - Update README/QA/release materials and both handoffs.
-
-### Phase 10: VC-Review Business Defensibility Plan
-
-Status: In Progress
-
-Source/context:
-
-- A VC-style review validated the core problem and developer wedge but flagged that the plan reads more like a product roadmap than a defensible business.
-- Main concerns to address before investor-facing review:
-  - Weak moat if the product is only regex/pattern matching.
-  - Platform risk if OpenAI, Anthropic, Google, or browser vendors ship native AI data-leak warnings.
-  - Trust paradox: asking users to install a broad-permission extension to protect sensitive AI conversations.
-  - Warning fatigue from over-triggering security UX.
-  - Monetization sequence delays the market with real budget: teams and organizations.
-  - Missing named competitive landscape.
-  - Missing TAM/SAM/SOM and benchmark methodology.
-  - Missing precise redaction/storage specification.
-- User explicitly said to ignore certification/compliance and mobile for now.
-
-Business direction change:
-
-- Keep individual/freemium as acquisition and trust-building, not the main revenue engine.
-- Move team/org readiness forward in parallel with MVP stabilization.
-- Position the product as a neutral, cross-platform browser safety layer rather than a feature that one AI platform can fully replace.
-- Treat provable trust, benchmarks, redaction guarantees, and warning-fatigue controls as product features, not marketing afterthoughts.
-
-#### Phase 10.1: Implementation Reset - Trust Controls, Warning Sensitivity, And Benchmark Baseline
-
-Status: Done
-
-Completed on 2026-07-09:
-
-- Corrected Phase 10 direction from pitch-writing to product implementation that directly addresses VC objections.
-- Added product-level trust control:
-  - `ProtectionSettings.redactedSync`.
-  - Popup `Redacted report sync` toggle.
-  - When disabled, new warnings stay local and are not queued for dashboard sync.
-  - Existing queued logs are not retried while sync is disabled.
-- Added warning-fatigue control:
-  - `ProtectionSettings.sensitivityMode`.
-  - Popup sensitivity selector: `Relaxed`, `Balanced`, `Strict`.
-  - Relaxed mode only interrupts on high-confidence/high-severity detections.
-  - Balanced mode keeps current default behavior.
-  - Strict mode escalates low sensitive-data detections to review-level.
-  - Text, paste, send, assistant-output scan, and risky-upload flows now respect sensitivity mode.
-- Added benchmark foundation:
-  - `src/firewall/benchmarkFixtures.ts`.
-  - `src/firewall/detectors.benchmark.test.ts`.
-  - Fixtures cover obvious secrets, connection strings, prompt injection, scam/fraud language, benign developer questions, and normal AI requests.
-
-Goal:
-
-- Make the actual product start addressing VC objections before any new pitch:
-  - Trust paradox.
-  - Warning fatigue.
-  - Weak/no benchmark discipline.
-  - Over-reliance on claims instead of measurable behavior.
-
-Deliverables:
-
-- Extension trust controls in popup.
-- Redacted sync opt-out enforced before queuing sync records.
-- Sensitivity modes stored locally and used by detection paths.
-- Benchmark fixtures and Vitest benchmark regression test.
-
-Acceptance criteria:
-
-- User can turn off redacted dashboard sync from the extension popup.
-- User can reduce warning fatigue without disabling all protection.
-- Detection behavior has a baseline fixture set that can grow into an accuracy benchmark.
-- Any future investor pitch can point to product mechanics, not only positioning language.
-
-#### Phase 10.2: Competitive Landscape And Differentiation
-
-Status: Done
-
-Completed on 2026-07-09:
-
-- Added `../docs/COMPETITIVE_LANDSCAPE.md` as the Phase 10.2 competitive landscape draft.
-- Named the real competitive categories:
-  - Developer secret scanning.
-  - Enterprise DLP / AI data security.
-  - AI governance and control.
-  - AI security platforms.
-  - Platform-native controls.
-- Added named competitors and adjacent platform risks:
-  - GitGuardian.
-  - TruffleHog / Truffle Security.
-  - Nightfall AI.
-  - Harmonic Security.
-  - Prompt Security.
-  - Lakera.
-  - OpenAI, Anthropic, Google, Microsoft, and browser vendors as platform-native risks.
-- Added competitor table covering:
-  - What each company/category does.
-  - Primary customer.
-  - Deployment model.
-  - Strength.
-  - Gap/opening for AI Permission Firewall.
-  - Differentiation.
-- Clarified where AI Permission Firewall should not compete head-on yet:
-  - Full enterprise DLP breadth.
-  - Endpoint fleet coverage.
-  - SIEM/SOAR integrations.
-  - Certification/compliance claims.
-  - Mature ML classifier superiority.
-  - AI agent/MCP gateway depth.
-- Clarified where the product can compete now:
-  - Developer secret leakage into AI tools.
-  - Browser pre-send/paste/upload intervention.
-  - Local-first detection.
-  - Redacted-only reporting.
-  - Lightweight individual and small-team adoption.
-  - Custom protected domains.
-  - Trust-through-transparency.
-- Added a stronger "Why not the platforms themselves?" answer using the password-manager analogy.
-
-Goal:
-
-- Build an honest competitor map before writing another VC-facing document.
-
-Competitors/categories to research and summarize:
-
-- Secret scanning/dev security:
-  - GitGuardian
-  - TruffleHog
-- AI DLP / shadow AI governance:
-  - Nightfall AI
-  - Harmonic Security
-  - Prompt Security
-- AI security / prompt-injection protection:
-  - Lakera
-- Platform-native controls:
-  - OpenAI
-  - Anthropic
-  - Google/Gemini
-  - Browser-native privacy/security features
-
-Differentiation to test, not assume:
-
-- Browser-native and user-facing rather than admin-only.
-- Local-first detection and redacted-only reporting.
-- Individual-to-team adoption path.
-- Custom protected domains beyond the default AI tools.
-- In-context warning UX at the moment before send/upload.
-- Potential open-source detection core for trust and distribution.
-
-Deliverables:
-
-- Add a competitor table to the business/pitch material:
-  - Company/category
-  - Primary customer
-  - Deployment model
-  - Data handled
-  - Strength
-  - Weakness/gap
-  - AI Permission Firewall differentiation
-- Add a short "Why not the AI platforms themselves?" section.
-
-Acceptance criteria:
-
-- No investor-facing plan should claim a blank market.
-- Competitors are named directly.
-- Differentiation is specific, falsifiable, and not just "better UX."
-
-#### Phase 10.3: Trust Architecture And Transparency Plan
-
-Status: Done
-
-Completed on 2026-07-27:
-
-- Added `../docs/TRUST_ARCHITECTURE.md` as the internal/public architecture source of truth.
-- Added `../docs/TRUST_FEATURE_CHECKLIST.md` for every new detector, model, storage, sync, export, reporting, or organization-policy change.
-- Added public website route `/trust` that explains:
-  - what is inspected locally
-  - what is stored locally
-  - what is synced when enabled
-  - what is never stored by design
-  - local-only mode and user controls
-  - independent browser/server enforcement points
-  - current limitations
-- Confirmed the existing `Redacted report sync` toggle is the optional local-only mode: when disabled, new warnings stay local and are not queued.
-- Existing warning review modals show a redacted preview before the user chooses redacted use/copy or allows the action, providing the practical pre-sync preview requested by this phase.
-- Added extension-local redacted JSON export for activity logs, queued redacted records, and metadata-only feedback.
-- Existing popup clear-history control remains the local warning-history deletion mechanism.
-- Added account-backed redacted JSON export through `GET /logs/export` and the `/reports` UI.
-- Added sanitized authenticated benchmark access:
-  - `GET /admin/benchmark`
-  - active organization owner/admin authorization
-  - `/trust` admin benchmark panel
-  - raw fixture text, expected snippets, forbidden raw values, customer data, and production prompts are excluded from the API payload
-- Benchmark UI clearly describes the 18-case fixture set as a synthetic regression baseline, not production-world accuracy.
-- Updated the extension README to remove obsolete no-backend/no-dashboard claims and link the trust/redaction specifications.
-- Reconfirmed `../docs/OPEN_SOURCE_CORE_BOUNDARY.md` as the evaluated candidate detector/redactor boundary; the license/publishing decision remains Phase 10.8 work.
-- Permanent account-wide deletion was evaluated and deferred: it needs a separately reviewed confirmation, organization membership, retention, audit, and recoverability lifecycle before a destructive endpoint is exposed.
-
-Acceptance outcome:
-
-- Privacy-conscious users can understand the architecture from `/trust` without reading source code.
-- The answer to “why trust the extension?” is now grounded in local detection, pre-storage redaction, optional sync, independent server validation, bounded storage, exports, and aggregate-only team reporting.
-- Trust is now a concrete product/documentation surface suitable for later investor material.
-
-Goal:
-
-- Reduce the trust paradox of a browser extension reading sensitive AI interactions.
-
-Product decisions to evaluate:
-
-- Publish a clear local-first architecture page.
-- Show exactly what is inspected locally, what is stored locally, what is synced, and what is never stored.
-- Add a redacted-log preview in product UX before sync where practical.
-- Consider open-sourcing the detector/redaction core while keeping account/dashboard code proprietary.
-- Add an optional "local-only mode" for users who do not want cloud reporting.
-- Add export/delete controls for local and account-backed report data.
-
-Deliverables:
-
-- Trust architecture document.
-- Public-facing privacy/trust page draft.
-- Internal checklist for any new detector or sync feature:
-  - Does it inspect locally?
-  - Does it store raw text?
-  - What exactly is redacted?
-  - What leaves the browser?
-  - Can the user disable or delete it?
-
-Acceptance criteria:
-
-- A privacy-conscious user can understand the product without needing to read source code.
-- The product can answer "why should I trust this extension?" with concrete mechanisms, not vibes.
-- Future investor material includes trust as a moat component.
-
-#### Phase 10.4: Redaction And Storage Technical Spec
-
-Status: Done
-
-Completed on 2026-07-10:
-
-- Added `../docs/REDACTION_STORAGE_SPEC.md` as the reviewable redacted-only reporting contract.
-- Defined the current redaction placeholders:
-  - `[REDACTED]`
-  - `[REDACTED_URL]`
-  - `[REDACTED_TOKEN]`
-  - `[REDACTED_EMAIL]`
-  - `[REDACTED_CARD]`
-  - `[REDACTED_PHONE]`
-- Documented local extension storage fields and limits:
-  - activity log cap: 50 records
-  - queued sync cap: 100 records
-  - redacted snippet cap: 240 characters
-  - missed-risk feedback remains metadata-only
-- Documented server storage fields and guarantees:
-  - authenticated user scoping
-  - duplicate handling by `userId + extensionLogId`
-  - no raw values in `redactedSnippet`
-  - evidence labels only, not raw regex matches
-- Added `src/firewall/redactionPolicy.test.ts` to lock the extension redaction/storage contract:
-  - secret assignment redaction
-  - service URI redaction
-  - generic token redaction
-  - email redaction
-  - card-like number redaction
-  - phone-like number redaction
-  - 240-character snippet cap
-- Added server-side policy helper:
-  - `../server/src/utils/redactionPolicy.ts`
-  - centralizes max snippet length and unredacted reportable text detection
-- Updated `../server/src/routes/logs.ts` to use the shared server-side snippet policy before saving synced logs.
-
-Goal:
-
-- Convert "redacted-only reporting" from a principle into a precise technical spec.
-
-Spec must define:
-
-- Categories detected:
-  - API keys
-  - tokens
-  - passwords
-  - JWT secrets
-  - service URLs/URIs
-  - connection strings
-  - email/phone/card-like values
-  - risky upload metadata
-  - prompt-injection/scam evidence
-- For each category:
-  - What pattern or method detects it.
-  - What value is masked.
-  - What placeholder is used.
-  - Whether any hash/fingerprint is stored.
-  - Whether evidence labels are stored.
-  - Whether raw text is ever retained.
-- Local storage:
-  - Activity log fields.
-  - Maximum log count.
-  - Retention behavior.
-- Server storage:
-  - Synced log fields.
-  - Redacted snippet length.
-  - User scoping.
-  - Duplicate handling.
-  - Server-side rejection of unredacted secret-like snippets.
-
-Deliverables:
-
-- `docs/REDACTION_SPEC.md` or equivalent.
-- Update README/QA to point to the spec.
-- Add examples:
-  - Input: `JWT_SECRET=abc123...`
-  - Stored snippet: `JWT_SECRET=[REDACTED]`
-  - Evidence: `secret assignment`
-
-Acceptance criteria:
-
-- Redaction behavior is reviewable by an external advisor.
-- QA can test the spec with fixtures.
-- Investor material can truthfully say redacted reporting is technically specified and enforced.
-
-#### Phase 10.5: Detection Benchmark And Accuracy Program
-
-Status: In Progress
-
-Completed on 2026-07-10:
-
-- Added benchmark report builder:
-  - `src/firewall/benchmarkReport.ts`
-  - Produces per-fixture outcomes:
-    - true positive
-    - true negative
-    - false positive
-    - false negative
-    - detected categories
-    - highest severity
-    - severity correctness
-    - redaction correctness
-    - redacted snippet
-- Extended benchmark fixtures:
-  - Added expected redacted snippets for secret, MongoDB URI, and GitHub token cases.
-- Updated benchmark regression test:
-  - Uses `buildDetectionBenchmarkReport()`.
-  - Fails on false positives, false negatives, severity mismatches, or redaction mismatches.
-- Added CLI-style benchmark report test:
-  - `src/firewall/benchmarkReport.cli.test.ts`
-  - Prints totals, rates, and per-case rows.
-- Added npm script:
-  - `npm run benchmark:report`
-  - Runs the report through Vitest without adding a new TS runtime dependency.
-
-Follow-up completed on 2026-07-10:
-
-- Expanded benchmark fixtures beyond the first baseline:
-  - OpenAI-style token.
-  - Password assignment.
-  - Confidential pricing text with email redaction.
-  - Restricted acquisition/business note.
-  - Customer phone number.
-  - Card-like billing number.
-  - Additional benign developer examples around env vars, API key references, redaction implementation, and database URL documentation.
-  - Additional scam/fraud impersonation example.
-- Added `forbiddenRedactedValues` to benchmark fixtures so tests can verify raw sensitive values do not survive redaction.
-- Updated benchmark report output:
-  - Adds `rawLeakFree` per fixture.
-  - Adds `rawLeakChecked` and `rawLeakFree` totals.
-  - Adds `rawLeakFreeRate`.
-- Updated benchmark regression test so raw leak checks must pass for every fixture that declares forbidden raw values.
-- Updated CLI-style benchmark table output to show raw-leak status.
-
-Goal:
-
-- Replace vague "improve detection" claims with measurable accuracy targets.
-
-Benchmark plan:
-
-- Create fixture sets for:
-  - Secrets and credentials.
-  - Environment files.
-  - Service URLs and connection strings.
-  - Benign developer text.
-  - Confidential business text.
-  - Prompt-injection examples.
-  - Scam/fraud examples.
-  - Non-English scam/injection examples later in Phase 10.9.
-- Track:
-  - True positives.
-  - False positives.
-  - False negatives.
-  - Severity correctness.
-  - Redaction correctness.
-  - User-decision outcomes in field testing.
-
-Initial target metrics:
-
-- Secret/credential detection:
-  - High recall target for common credential formats.
-  - Very low tolerance for missed obvious secrets.
-- Benign developer text:
-  - Low false-positive target so developers do not disable the tool.
-- Prompt-injection/scam:
-  - Treat current rules as baseline only; semantic detection needs improvement.
-
-Deliverables:
-
-- Benchmark fixture directory.
-- Test runner/report script.
-- Baseline benchmark report.
-- Field-test feedback form focused on false positives and warning fatigue.
-
-Acceptance criteria:
-
-- Future claims include numbers, not only adjectives.
-- False positives and false negatives are tracked over time.
-- Benchmarks become a trust and differentiation asset.
-
-#### Phase 10.6: Warning-Fatigue Reduction Program
-
-Status: In Progress
-
-Completed on 2026-07-09:
-
-- Added explicit warning feedback capture without raw prompt storage.
-- In content warning modal:
-  - Added `Correct` and `False alarm` feedback buttons.
-  - Selected feedback is stored with the redacted warning log when the user cancels, allows, copies redacted text, or uses redacted text.
-- In warning toast:
-  - Added `Correct` and `False alarm` feedback buttons for non-blocking warnings.
-  - Feedback updates the existing local redacted log by id.
-- In popup recent-warning history:
-  - Added feedback controls for each warning log.
-  - Feedback is saved locally and queued for redacted sync when report sync is enabled.
-- Added metadata-only missed-risk feedback:
-  - Popup `Missed risk` button stores timestamp, site, and `missed-risk`.
-  - It does not ask for or store raw prompt text.
-- Extended data model:
-  - `WarningFeedback = correct-warning | false-alarm | missed-risk`.
-  - `ActivityLog.feedback`.
-  - `WarningFeedbackRecord` for missed-risk metadata.
-  - Synced logs now accept and return optional `feedback`.
-  - Client report dashboard displays feedback labels beside decisions.
-
-Completed on 2026-07-10:
-
-- Added account-backed feedback summary reporting:
-  - `GET /logs/summary` on the server.
-  - Same authenticated user scope and filters as `/logs`.
-  - Counts total redacted logs, feedback totals, false-alarm rate, missed-risk rate, severity mix, warning type mix, decision mix, and hostname mix.
-- Added client API support:
-  - `ReportSummary`.
-  - `getLogSummary()`.
-- Updated the `/reports` dashboard:
-  - Summary cards for synced warnings, marked-correct warnings, false alarms, and missed risks.
-  - Secondary panels for severity mix, warning type, and user decisions.
-  - Summary respects the selected website/domain and date filters.
-- This makes warning fatigue measurable from the product dashboard instead of only visible per individual row.
-
-Goal:
-
-- Make warnings useful enough that users do not habituate and click through blindly.
-
-Product changes to evaluate:
-
-- Sensitivity levels:
-  - Relaxed
-  - Balanced
-  - Strict
-- Adaptive warning behavior:
-  - High severity: block/review modal.
-  - Medium severity: review modal only when action risk is meaningful.
-  - Low severity: subtle badge/logging, not repeated blocking.
-- Cooldowns and duplicate suppression beyond current same-message repeat guard.
-- "Why this matters" copy that is short and specific.
-- User feedback buttons:
-  - Correct warning
-  - False alarm
-  - Missed risk
-- Do-not-warn-again scoped carefully by domain/category, not globally.
-
-Deliverables:
-
-- Warning fatigue design spec.
-- UI changes for feedback and sensitivity.
-- Metrics tracked in local/report logs without storing raw content.
-
-Acceptance criteria:
-
-- Users can tune warning intensity.
-- Product can measure which warning categories are noisy.
-- Field testers report fewer unnecessary interruptions.
-
-#### Phase 10.7: Teams-First Business And Product Track
-
-Status: Done
-
-Completed on 2026-07-10:
-
-- Added backend organization foundations:
-  - `../server/src/models/organization.ts`.
-  - `organizations` collection.
-  - `organization_members` collection.
-  - roles: `owner`, `admin`, `member`.
-  - member statuses: `active`, `invited`.
-  - startup indexes through `ensureOrganizationIndexes()`.
-- Added authenticated organization API:
-  - `GET /orgs`.
-  - `POST /orgs`.
-  - `GET /orgs/:id`.
-  - `POST /orgs/:id/members`.
-- Added aggregate-only team reporting:
-  - total redacted logs across active member accounts.
-  - active/invited member counts.
-  - false-alarm and missed-risk rates.
-  - severity mix.
-  - warning type mix.
-  - decision mix.
-  - hostname mix.
-- Kept team reporting privacy-preserving:
-  - no raw snippets in team summary.
-  - no per-user prompt detail.
-  - team membership is required before reading org summary.
-  - only owners/admins can add members.
-- Added client `/team` dashboard:
-  - create organization.
-  - select organization.
-  - add member by email and role.
-  - see member statuses.
-  - see aggregate metadata-only risk summary.
-- Added a `Team` nav link for authenticated users.
-
-Follow-up completed on 2026-07-10:
-
-- Hardened team member management:
-  - Added `PATCH /orgs/:id/members/:memberId` for role updates.
-  - Added `DELETE /orgs/:id/members/:memberId` for member removal.
-  - Owners/admins can manage members.
-  - Owners cannot be removed or role-changed through these endpoints.
-  - Admins cannot change or remove other admins.
-- Updated client `/team` member list:
-  - role selector for manageable members.
-  - remove action for manageable members.
-  - in-app remove-member confirmation modal with blurred backdrop.
-- Team summary remains aggregate-only and redacted-risk metadata-only.
-
-Organization protected-site policy follow-up completed on 2026-07-19:
-
-- Added organization-managed protected-domain policy storage and API support in the server.
-- The client merges personal and inherited organization domains before syncing to the extension.
-- Extension protected-site records now preserve optional ownership metadata:
-  - `source`
-  - `managed`
-  - `organizationId`
-  - `organizationName`
-- Both internal and external background message listeners validate policy metadata before storage.
-- Existing exact-domain and subdomain matching behavior is unchanged.
-- Existing locally stored protected sites remain compatible because ownership fields are optional.
-- Detection stays local and organization reporting remains redacted and aggregate-only.
-
-Organization trends and invitation lifecycle follow-up completed on 2026-07-27:
-
-- Server and client now provide 7, 30, and 90-day aggregate organization warning trends without raw snippets or per-user prompt detail.
-- Pending organization invitations can be durably revoked and cannot activate after revocation.
-- Matching pending invitations activate on signup/login only when the normalized email matches and the invitation is still unclaimed.
-- Re-inviting a revoked email restores the existing membership lifecycle record safely.
-- Extension protected-site behavior did not change in this slice and passed its regression build/tests.
-
-Benchmark regression follow-up completed on 2026-07-27:
-
-- Phone-number-like PII now receives medium severity, matching the existing benchmark requirement.
-- Updated the disabled-settings detector test fixture for the current `ProtectionSettings` contract.
-- Full benchmark results returned to 100% severity correctness for the current 18-case fixture set.
-- `npm run typecheck`, all 41 extension tests, and `npm run build` passed on 2026-07-27.
-
-Goal:
-
-- Move team/org monetization earlier because that is where budget exists.
-
-Team MVP scope:
-
-- Organization/workspace entity.
-- Invite or add team members.
-- Admin view of redacted risk events.
-- Protected domain policy defaults for the team.
-- Team-level summary metrics:
-  - Count by severity.
-  - Count by category.
-  - Count by protected domain.
-  - Trend over time.
-- No raw prompt storage.
-- User-level visibility should be handled carefully:
-  - Default to privacy-preserving aggregate views where possible.
-  - Make any user-level reporting explicit and admin-configured.
-
-Business deliverables:
-
-- Team pricing hypothesis.
-- ICP definition:
-  - AI-heavy startup teams.
-  - dev agencies.
-  - consulting teams.
-  - small companies without enterprise DLP.
-- Pilot plan:
-  - 3 to 5 design partners.
-  - Clear success criteria.
-  - Feedback on deployment friction and reporting value.
-
-Acceptance criteria:
-
-- Roadmap includes team revenue before deep individual monetization.
-- Pitch can explain who pays and why.
-- Product can support a small team pilot without pretending to be enterprise-complete.
-
-#### Phase 10.8: Open-Source Core Evaluation
-
-Status: In Progress
-
-Completed on 2026-07-10:
-
-- Added an initial core export boundary:
-  - `src/firewall/core.ts`.
-  - Exports detector helpers, redaction helpers, settings defaults, and relevant types.
-- Added `../docs/OPEN_SOURCE_CORE_BOUNDARY.md`.
-- Documented what can become public:
-  - text detection.
-  - risky-upload detection.
-  - highest-severity helper.
-  - default settings.
-  - redaction helpers.
-  - detection/settings types.
-- Documented what stays private:
-  - extension UI.
-  - content-script DOM interception.
-  - popup auth/reporting UI.
-  - account auth.
-  - MongoDB-backed reporting.
-  - organization/team management.
-  - customer-specific policy data.
-- This is a code boundary and review artifact only; no license or publishing decision has been made.
-
-Goal:
-
-- Decide whether to open-source the detection/redaction core to address trust and distribution.
-
-Options:
-
-- Open-source only detector/redactor package.
-- Open-source extension core but keep dashboard/server proprietary.
-- Keep closed-source for now but publish detailed specs and benchmarks.
-
-Evaluation criteria:
-
-- Trust benefit.
-- Competitive risk.
-- Community contribution potential.
-- Maintenance burden.
-- Investor narrative value.
-- Ability to build a proprietary moat around team workflows, reporting, policy, and benchmarks.
-
-Deliverables:
-
-- Decision memo.
-- If approved, package boundary plan:
-  - What code moves into the public core.
-  - What stays private.
-  - License recommendation.
-  - Contribution policy.
-
-Acceptance criteria:
-
-- Open-source is treated as a strategic choice, not a vague future idea.
-- Trust strategy is stronger whether or not the core is opened.
-
-#### Phase 10.9: Cross-Browser And Non-English Expansion
-
-Status: Planned, after core MVP/team plan stabilizes
-
-Goal:
-
-- Strengthen "neutral browser layer" positioning beyond Chrome-only and English-centric rules.
-
-Cross-browser direction:
-
-- Edge should be first because Chromium support may be closest to current implementation.
-- Firefox should be evaluated next.
-- Safari should be evaluated later due to extension model differences.
-
-Non-English direction:
-
-- Secrets are mostly language-agnostic.
-- Scam/fraud and prompt-injection detection are currently English-centric.
-- Add fixture sets for major non-English languages based on target market priorities.
-- Evaluate whether rules, lightweight local models, or hybrid approaches are needed.
-
-Deliverables:
-
-- Browser compatibility research note.
-- Non-English detection research note.
-- Fixture plan for non-English scam/injection examples.
-
-Acceptance criteria:
-
-- The plan no longer claims "browser-native" while implicitly meaning Chrome forever.
-- Non-English risk is acknowledged as product scope, not ignored.
-
-#### Phase 10.10: On-Device Semantic Detection Research
-
-Status: Planned
-
-Goal:
-
-- Build a more defensible detection layer beyond regex/pattern matching.
-
-Research areas:
-
-- Lightweight local model for semantic prompt-injection/scam detection.
-- Browser-compatible model size/performance constraints.
-- Hybrid architecture:
-  - Rules for secrets/credentials.
-  - Semantic model for scam, coercion, prompt injection, and confidential business context.
-- Privacy-preserving inference:
-  - Runs locally.
-  - No raw prompt sent to the server.
-
-Deliverables:
-
-- Research memo on feasible local model options.
-- Prototype plan for a local semantic classifier.
-- Benchmark comparison:
-  - Rules-only baseline.
-  - Hybrid rules plus local model.
-
-Acceptance criteria:
-
-- Moat narrative improves from "regex extension" to "privacy-preserving AI interaction risk engine."
-- Any model work remains local-first unless the user explicitly approves another architecture.
-
-#### Phase 10.11: Self-Hosted And Data-Residency Option
-
-Status: Planned
-
-Goal:
-
-- Prepare for regulated or privacy-sensitive teams that cannot use a shared cloud backend.
-
-Scope:
-
-- Self-hosted server/API option.
-- Customer-owned MongoDB or compatible database.
-- Configurable retention.
-- Clear deployment docs.
-- No certification work in this phase.
-
-Deliverables:
-
-- Self-hosted architecture note.
-- Environment variable matrix.
-- Deployment outline for a single organization.
-
-Acceptance criteria:
-
-- Enterprise/regulatory objection "where is my data stored?" has an answer.
-- This remains a planning track until team MVP proves demand.
-
-#### Phase 10.12: VC-Ready Business Document Refresh
-
-Status: Pending, after Phases 10.1 through 10.7 have draft outputs
-
-Goal:
-
-- Rewrite the shareable investor document using the strengthened plan.
-
-Required sections:
-
-- Executive summary.
-- Problem and wedge.
-- Why now.
-- Product architecture.
-- Trust and privacy architecture.
-- Redaction/storage spec summary.
-- Competitive landscape.
-- Platform-risk answer.
-- Moat thesis.
-- Detection benchmark plan and early metrics.
-- Warning-fatigue strategy.
-- Team-first business model.
-- GTM and design-partner plan.
-- Roadmap.
-- Risks and mitigations.
-
-Acceptance criteria:
-
-- The document should read like a defensible business plan, not only a product description.
-- It should proactively answer the strongest VC objections.
-- It should not include certification or mobile roadmap details until the user brings those back into scope.
-
-### Phase 8.1: Better Warning Details
-
-Status: Done
-
-- Confirmation dialogs now include a `Why flagged:` line when evidence is available.
-- Toast warnings now include a short evidence list.
-- Recent warnings in the popup now store and display evidence labels.
-- Prompt-injection evidence now uses readable labels instead of raw regex source strings.
-
-### Phase 8.2: One-Click Safe Copy
-
-Status: Done
-
-- Warning toasts now show `Copy redacted` when the redacted text differs from the original source text.
-- Clicking `Copy redacted` copies a full-length redacted version to the clipboard.
-- Activity history records a local-only `redacted-copied` decision when the action succeeds.
-- Log snippets still stay capped at 240 characters, while safe-copy output preserves the full prompt length.
-
-### Phase 8.3: Custom Warning Modal
-
-Status: Done
-
-- Replaced native Chrome `confirm()` dialogs with an in-page review modal for risky sends, high-risk pastes, and risky uploads.
-- Modal includes severity badge, explanation, `Why flagged` list, and redacted preview when available.
-- Modal actions are explicit: cancel the action, copy redacted text, use redacted text where applicable, or send/paste/keep anyway.
-- High-severity sends are prevented first, then only resumed after the user clicks `Send anyway`.
-
-### Phase 8.4: Per-Site Protection Status
-
-Status: Done
-
-- Popup now checks the active tab and shows whether the current page is protected or unsupported.
-- Supported protected targets are ChatGPT (`chatgpt.com`), Claude (`claude.ai`), and Gemini (`gemini.google.com`).
-- Popup now shows only the active protected site instead of listing every default site.
-- Added `tabs` permission so the popup can read the active tab URL reliably.
-
-### Phase 8.5: Real-Time Composer Badge
-
-Status: Done
-
-- Content script now adds a small fixed-position badge near the active visible AI chat composer.
-- Badge updates as the user focuses, types, scrolls, resizes, or the page layout changes.
-- Badge states:
-  - `AI Firewall protected` when no current composer risk is detected.
-  - `AI Firewall review` when medium/low detections are present.
-  - `AI Firewall will block` when high-severity detections are present.
-- Badge is non-interactive (`pointer-events: none`) so it does not block native AI chat controls.
-
-## Important Defaults
-
-- Keep detection local in the extension; account-backed reporting syncs only redacted log records.
-- Never store raw secrets in activity logs.
-- High severity blocks by default but allows user override.
-- Medium severity asks for confirmation.
-- Low severity logs/warns only.
-- Backend scope is now explicitly requested for auth, MongoDB log storage, and website reports.
-
-## Next Immediate Steps
-
-1. Expand Phase 10.5 beyond the small synthetic baseline with larger reviewed fixtures and field-validation methodology.
-2. Continue Phase 10.6 warning-fatigue implementation, including duplicate suppression and scoped do-not-warn controls.
-3. Complete the Phase 10.8 open-source-core decision memo; no publishing or license decision has been made.
-4. Keep investor-document rewriting, certification/compliance, and mobile out of scope until explicitly resumed.
-
-## Related Handoffs
-
-- `../client/WEBSITE_HANDOFF.md` tracks the Vite + React + Tailwind + Framer Motion client website, deployment approach, SEO requirements, and client next steps.
-- `../server/HANDOFF.md` tracks the TypeScript Express API, MongoDB foundation, auth API, and redacted log storage work.
+- Plasmo, Chrome MV3, React, TypeScript, Vitest.
+- Entrypoints: `src/contents/ai-firewall.ts`, `src/popup.tsx`, `src/background.ts`.
+
+Target structure:
+
+```text
+extension/src/
+  features/
+    detection/         # engine, rules, schemas, normalization, candidates, features, classifier, policy
+    warnings/          # modal, toast, feedback
+    storage/           # settings, activity, queue, migrations
+    auth/              # API, token, types
+    protectedSites/    # API, storage, matching
+  platform/chrome/     # storage, tabs, runtime adapters
+  firewall/            # compatibility exports/public core boundary
+  contents/            # thin DOM adapters only
+  popup/               # thin UI composition only
+```
+
+Feature services own logic; content scripts translate DOM events into feature calls. No detector, storage mutation, auth request, or redaction rule belongs inside a DOM handler.
+
+## 3. Completed baseline
+
+Status: **Complete and verified**
+
+- Deterministic detectors for sensitive data, prompt injection, risky uploads, and scam/fraud.
+- Redaction before local history and optional dashboard sync.
+- Local settings, protected domains, capped history/queue, export, clear-history, and feedback.
+- Paste, send, upload-metadata, composer badge, warning modal, safe-copy, and repeat suppression.
+- Authentication bridge, queued redacted sync, dynamic protected domains, and organization-managed sites.
+- Current benchmark and raw-leak regression suite.
+
+## 4. Ordered execution plan
+
+### E0 — Handoff and compatibility baseline
+
+Status: **Complete**
+
+- Existing `analyzeText`, detector types, storage keys, and warning behavior are compatibility contracts.
+- The layered engine is introduced behind these contracts before old modules are removed.
+
+### E1 — Feature-boundary migration
+
+Status: **Complete**
+
+Completed: **2026-07-31**
+
+- Moved detector/redactor implementations to `features/detection`, auth to `features/auth`, and storage/sync to `features/storage`.
+- Added feature boundaries for protected sites and warning contracts.
+- Updated popup, background, and content-script imports to consume feature APIs rather than implementation files.
+- Preserved `firewall/core.ts` and the old `firewall/auth`, `detectors`, `redact`, `storage`, and `sync` paths as deprecated compatibility facades.
+- Preserved settings/storage keys, API payloads, manifest permissions, detector behavior, and warning behavior; no storage migration was required.
+
+Verification:
+
+- `npm run typecheck`: passed.
+- `npm test`: passed, 4 files and 41 tests.
+- Benchmark: 18/18 expected outcomes, zero false positives, zero false negatives, 8/8 redaction checks, and 8/8 raw-leak checks.
+- `npm run build`: passed with Plasmo 0.90.5 for Chrome MV3.
+- Built-manifest smoke check: popup, background service worker, HTTPS content script, permissions, host permissions, and externally-connectable origins remained present.
+
+Privacy review:
+
+- No data fields, network requests, storage values, logging behavior, permissions, or redaction behavior changed.
+- Raw prompt handling remains local.
+
+Known limitation:
+
+- This was a structural migration, so warning rendering remains in the existing content-script adapter. Moving presentation implementation into `features/warnings` will occur alongside the warning integration step, where DOM behavior can be tested as a focused unit.
+
+Next step: **E2 — Layered engine contracts**.
+
+### E2 — Layered engine contracts
+
+Status: **Complete**
+
+Completed: **2026-08-01**
+
+- Added the public `analyze(input, context)` result contract with detections, rule results, candidate signals, inspection metadata, rule-set version, and final action.
+- Added NFKC/zero-width normalization and a UTF-8-aware 256 KiB bounded path for `analyze()`. Oversized analysis reports `incompleteScan` and `confirm`.
+- Kept legacy `analyzeText()` full-length until E4 adopts incomplete-scan UI, preventing risk after the limit from being silently skipped.
+- Added bundled rule set `2026.08.01-v1` and a strict fail-closed validator with exact-field allowlists, source metadata, unique ids, and bounded constraints.
+- Added bounded candidate extraction (8–256 characters, maximum 32 candidates) and numerical/bucketed features. Candidate values are not returned.
+- Added benign UUID/hash/version/timestamp recognition, structural-support signals, and the rule/classifier/combined result types.
+- Added risk/action fusion and the agreed Relaxed/Balanced/Strict classifier thresholds without performing classifier inference.
+- Kept exact deterministic high-risk detections authoritative and retained all existing warning behavior.
+
+Public contracts added:
+
+- `analyze`, `AnalyzeInput`, `AnalyzeContext`, and `AnalysisResult`.
+- `DetectionRule`, `RuleConstraints`, `DetectionResult`, and `DetectionAction`.
+- `CandidateFeatures` and `CandidateSignal`.
+- `MAX_INSPECTION_BYTES`, `RULE_SET_VERSION`, validation helpers, and threshold helpers.
+
+Verification:
+
+- `npm run typecheck`: passed.
+- `npm test`: passed, 5 files and 52 tests.
+- E2 tests: 11 passed for rule validation, Unicode/zero-width normalization, UTF-8 limit, full-length compatibility, candidate privacy, benign shapes, entropy-only non-enforcement, uploads, and thresholds.
+- Existing benchmark: 18/18 expected outcomes, zero false positives, zero false negatives, 8/8 redaction checks, and 8/8 raw-leak checks.
+- `npm run build`: passed with Plasmo 0.90.5 for Chrome MV3.
+
+Privacy review:
+
+- Candidate outputs contain an index and derived numerical/bucketed features only; no value, substring, prefix, hash, or surrounding text is returned.
+- No network request, storage field, telemetry, permission, authentication, or report payload changed.
+- The failed optional Zod install changed neither `package.json` nor `package-lock.json`; E2 uses a strict dependency-free validator.
+
+Known limitations:
+
+- Declarative rules describe and map current authoritative detectors; they do not yet replace detector implementations with arbitrary data-driven matching.
+- Candidate features are prepared locally but are not classified or enforced in E2.
+- The content script continues using `analyzeText()` until E4 integrates `analyze()` and the incomplete-scan warning flow.
+
+Next step: **E3 — Local classifier artifact**.
+
+### E3 — Local classifier artifact
+
+Status: **Complete**
+
+Completed: **2026-08-01**
+
+- Added bundled `secret-logistic-bootstrap-v1` JSON artifact with exact feature order, normalization arrays, coefficients, intercept, status, and training metadata.
+- Marked the bootstrap artifact `shadow`; it produces classification metadata but cannot create detections, warnings, or enforcement actions.
+- Added strict fail-closed artifact validation for exact fields, supported schema/classifier/feature versions, ordered features, finite parameters, positive scales, and training metadata.
+- Added numerically stable deterministic logistic inference in TypeScript with no runtime ML library.
+- Added safe fallback states for malformed, incompatible, or disabled artifacts. Deterministic rules continue normally when the classifier is unavailable.
+- Added `CandidateClassification`, `ClassifierState`, `LogisticClassifierArtifact`, and fixed `CANDIDATE_FEATURE_NAMES` contracts.
+- Extended `analyze()` with classifier availability/version and candidate classifications while leaving rule `detections`, `results`, and `action` unchanged.
+- Kept structurally unsupported/entropy-only candidates below the configured medium threshold.
+- Exported validation, loading, scoring, and classification helpers through the public core boundary.
+
+Artifact status:
+
+- Model version: `secret-logistic-bootstrap-v1`.
+- Artifact status: `shadow`.
+- Training kind: `bootstrap-reviewed`; this is a contract/inference bootstrap, not a production accuracy claim or offline-trained model.
+- Artifact size: 1,011 bytes.
+- Built content-script bundle after E3: 50,507 bytes.
+- Runtime dependencies added: none.
+
+Verification:
+
+- `npm run typecheck`: passed.
+- `npm test`: passed, 6 files and 60 tests.
+- E3 tests: 8 passed for exact feature contract, invalid/disabled artifacts, deterministic probability bounds, privacy-safe output, shadow non-enforcement, entropy-only capping, deterministic fallback, and sensitivity bands.
+- Existing benchmark: 18/18 expected outcomes, zero false positives, zero false negatives, 8/8 redaction checks, and 8/8 raw-leak checks.
+- `npm run build`: passed with Plasmo 0.90.5 for Chrome MV3.
+- `git diff --check`: passed.
+
+Privacy review:
+
+- Classifier input and inference remain entirely local.
+- Classification output contains candidate index, confidence, band, structural-support flag, and model version only.
+- No candidate value, literal prefix, substring, surrounding text, or hash is returned or stored.
+- No network request, telemetry, storage schema, report payload, permission, popup, warning, or content-script behavior changed.
+
+Known limitations:
+
+- Bootstrap coefficients are present to validate the artifact and inference architecture; accuracy claims require the separate ML dataset/training/evaluation workflow.
+- The artifact remains shadow-only. User-visible classifier enforcement is not enabled.
+- Malformed bundled artifacts fall back safely at runtime, while the build/test suite separately fails if the committed artifact contract is invalid.
+
+Next step: **E4 — Warning/interception integration**.
+
+### E4 — Warning/interception integration
+
+Status: **Complete**
+
+Completed: **2026-08-01**
+
+- Added a testable warning-analysis adapter that converts layered rule results into UI-safe warnings.
+- Switched composer badge, paste, send/submit/Enter/click, upload metadata, and assistant-output observation from legacy detector calls to the layered `analyze()` path.
+- Kept high-risk paste/send/upload actions confirmation-gated and explicitly user-overridable.
+- Kept medium-risk behavior compatible: paste remains a warning toast and send remains a review modal.
+- Added high/medium/low confidence labels and safe evidence codes to warning UI and evidence logs.
+- Added a system-generated high-risk warning for text over the 256 KiB inspection limit. User paste/send actions require confirmation when scanning is incomplete.
+- Bounded modal redacted previews to 1,200 characters while preserving the full redacted value for safe-copy/use-redacted actions.
+- Kept assistant-output monitoring limited to prompt-injection and scam/fraud categories.
+- Preserved Relaxed upload behavior as high-risk-only through the layered engine.
+- Kept the bootstrap classifier shadow-only: classifications do not enter warning detections or actions.
+
+Contracts and behavior:
+
+- Extended local `Detection` with optional confidence, detector, rule/evidence codes, versions, and incomplete-scan metadata.
+- These optional fields are local UI contracts; `ActivityLog` and server report schemas did not gain new fields.
+- Logged evidence may include bounded, non-sensitive `Code: <evidence-code>` labels in the existing evidence array.
+
+Verification:
+
+- `npm run typecheck`: passed.
+- `npm test`: passed, 7 files and 66 tests.
+- E4 tests: 6 passed for rule confidence/codes, oversized confirmation, classifier non-enforcement, bounded preview, Relaxed uploads, and bounded evidence.
+- Existing benchmark: 18/18 expected outcomes, zero false positives, zero false negatives, 8/8 redaction checks, and 8/8 raw-leak checks.
+- `npm run build`: passed with Plasmo 0.90.5 for Chrome MV3.
+- Packaged-content inspection found the incomplete-scan and confidence UI and no E5 consent/telemetry code.
+- Built content-script bundle after E4: 53,053 bytes.
+- `git diff --check`: passed.
+
+Privacy review:
+
+- Warning metadata contains confidence bands, detector kind, rule ids, and evidence codes only; it never contains classifier candidate values.
+- Original text remains local and is redacted before existing activity-log storage/sync.
+- No new network request, permission, storage key, telemetry queue, server field, or report endpoint was added.
+
+Known limitations:
+
+- The classifier remains shadow-only and cannot warn; user-visible classifier activation requires the later benchmark/shadow-rollout gate.
+- Live Chrome smoke testing across ChatGPT, Claude, Gemini, and custom protected domains remains part of release QA; E4 verification covered the packaged content script and pure warning-decision layer.
+- The content script still owns DOM presentation code; its decision logic is now isolated behind `features/warnings` for future presenter extraction.
+
+Next step: **E5 — Separate improvement consent and telemetry**.
+
+### E5 — Separate improvement consent and telemetry
+
+Status: **Complete**
+
+Completed: **2026-08-01**
+
+- Added an off-by-default `Improve HallGuard detection` setting independent of `Redacted report sync`.
+- Added a dedicated `features/improvementTelemetry` module for contracts, event creation, queue storage, synchronization, and tests.
+- Emits at most four classifier events per analyzed action. Each event contains only a random id, UTC-hour timestamp, the exact 16 bounded numerical features, predicted category, confidence band, optional feedback, rule/model versions, and action outcome.
+- Does not collect prompt text, redacted snippets, candidate values, literal prefixes, hashes, surrounding context, hostnames, files, screenshots, or behavior history.
+- Added a separate queue (`ai-firewall-improvement-queue`) capped at 100 events. Collection and retry stop when consent is disabled; report synchronization remains independent.
+- Added authenticated background retry without delaying local detection or interception.
+- Added queue visibility, local export, and a clear control that clears the local queue and attempts deletion of the authenticated account's server telemetry. Local deletion still succeeds offline.
+- Added the authenticated create, export, and deletion server contract through server S3.
+
+Verification:
+
+- `npm run typecheck`: passed.
+- `npm test`: passed, 8 files and 69 tests.
+- E5 extension tests passed for bounded/coarsened content-free events, disabled consent, independent opt-in collection, feedback, and local clearing.
+- Existing benchmark: 18/18 expected outcomes, zero false positives, zero false negatives, 8/8 redaction checks, and 8/8 raw-leak checks.
+- `npm run build`: passed with Plasmo 0.90.5 for Chrome MV3.
+- Packaged popup/background/content inspection confirmed the separate consent UI, queue/retry path, and improvement endpoint in the production bundle.
+- Production zip size after E5: 183,691 bytes; content-script bundle: 57,987 bytes.
+- `git diff --check`: passed.
+
+Privacy review:
+
+- Consent is separate, explicit, and off by default. Disabling it does not disable local protection or redacted report sync.
+- The telemetry schema has no free-form text field and contains no raw/redacted snippet or candidate identifier/hash.
+- Local and server retention, export, deletion, authentication, allowlist validation, and failure behavior are documented in the trust/storage specifications.
+- Server/network failures never delay local analysis and leave eligible events in the separate bounded queue.
+
+Known limitations:
+
+- The popup exports locally queued events; authenticated server-held events use `GET /improvement-events/export` until a future account UI consumes that endpoint.
+- Disabling consent stops new collection and retry but does not silently delete previously collected data; the adjacent clear control performs explicit deletion.
+- E5 does not activate classifier warnings. The bundled classifier remains shadow-only.
+
+Next step: **E6 — Classifier shadow rollout**.
+
+### E6 — Classifier shadow rollout
+
+Status: **Complete — shadow only; activation blocked by gates**
+
+Completed: **2026-08-01**
+
+- Added a privacy-safe `ShadowComparison` to `analyze()` with rule-only action, classifier-only hypothetical action, agreement direction, bounded candidate counts, and model version.
+- Shadow comparison contains no candidate values, substrings, literal prefixes, hashes, surrounding text, fixture content, or evidence text.
+- Kept `analysis.action`, `detections`, `results`, warning UI, interception, and redacted logging deterministic-only. Classifier output still cannot warn, confirm, redact, or block.
+- Added a grouped synthetic shadow fixture corpus covering critical known formats, unknown formats, JSON, YAML, multiline config, Unicode/zero-width context, benign developer code, UUIDs, hashes, timestamps, paths, placeholders, and ordinary constants.
+- Added a sanitized shadow benchmark and fail-closed activation evaluator. Reports contain fixture ids/tags and numerical outcomes only, never fixture text or candidate values.
+- Added an isolated `npm run benchmark:shadow` command for metrics and P95 latency, plus malformed-artifact fallback and oversized-input tests.
+- Added explicit activation prerequisites for critical recall, full layered benign false-positive rate, unknown-format recall improvement, shadow raw-leak safety, redaction readiness, offline-trained provenance, published calibration, latency, and bundle growth.
+- Preserved rollback behavior: a disabled/malformed artifact reports unavailable shadow metadata while deterministic protection remains active.
+
+Verification:
+
+- `npm run typecheck`: passed.
+- `npm test`: passed, 10 files and 76 tests; the isolated performance test is intentionally skipped in the parallel suite and executed by the dedicated benchmark command.
+- `npm run benchmark:shadow`: passed, 2 tests.
+- Existing deterministic benchmark remained 18/18 with zero false positives, zero false negatives, 8/8 redaction checks, and 8/8 raw-leak checks.
+- E6 shadow fixtures: critical rule recall 100%; unknown rule recall 0%; hypothetical layered unknown recall 25%; classifier-only benign false-positive rate 0%; full hypothetical layered benign false-positive rate 40% on the small targeted edge-case set.
+- Shadow-output raw-leak gate: 100% passing.
+- Isolated P95 on this machine: 2.10 ms for 10 KiB and 5.43 ms for 100 KiB.
+- `npm run build`: passed with Plasmo 0.90.5 for Chrome MV3.
+- Production zip: 183,691 bytes, unchanged from E5. Content-script bundle: 59,100 bytes, an uncompressed increase of 1,113 bytes and below the 100 KiB growth gate.
+- Packaged inspection confirmed shadow comparison code is present while test fixture ids/candidate values are absent.
+- `git diff --check`: passed.
+
+Activation decision:
+
+- `activationEligible`: **false**.
+- Passed: critical rule recall, unknown recall improvement, shadow raw-leak safety, latency, and bundle growth.
+- Blocked: the targeted full-layer benign false-positive gate, unknown-format redaction coverage, offline-trained artifact provenance, and published calibration metrics.
+- Therefore no classifier warning or enforcement path was enabled. Resolving blockers requires separately authorized detector/redaction work and ML M0–M4; it is not silently folded into E6.
+
+Privacy review:
+
+- Shadow comparison is local, synchronous, bounded metadata and is not added to activity logs, report sync, organization reporting, improvement telemetry, or server DTOs.
+- The synthetic fixture corpus and benchmark modules are test-only and are absent from the production bundle.
+- No storage key, network request, endpoint, permission, consent, retention rule, or server collection changed.
+
+Known limitations:
+
+- The 11-case E6 fixture set is a targeted architecture/regression set, not a production accuracy claim.
+- The measured 40% full-layer benign false-positive rate comes from two existing deterministic false positives in a deliberately small edge-case set; classifier-only false positives were 0%.
+- Three of four unknown-format fixtures remained clean in shadow, and unknown-format redaction is not yet safe. These are activation blockers, not enforced outcomes.
+- Latency is the isolated result from the current machine, not proof for every minimum-supported device.
+
+Benchmark snapshot: `../docs/E6_SHADOW_BENCHMARK.md`.
+
+Next step: **E7 — Future rule knowledge workflow** (requires explicit authorization).
+
+### E7 — Future rule knowledge workflow
+
+Status: **Complete — reviewed bundled workflow; no autonomous activation**
+
+Completed: **2026-08-01**
+
+- Added a versioned bundled rule-release manifest with exact rule id/version/status coverage.
+- Manifest validation is fail-closed and restricts distribution to Chrome extension releases. Remote updates, executable payloads, and remote regex are explicitly disabled.
+- Existing pre-E7 rules are marked honestly as `baseline` with no fabricated approval claims.
+- Future proposal-origin rules require approval records tied to the same proposal from three distinct reviewers covering security, privacy, and maintainer roles.
+- Exposed release-manifest contracts and validation through the auditable core boundary.
+- Added server-side coarsened structural-signature aggregation for separately consented improvement events, with fixed 20-event and 5-contributor minimums and no public route.
+- Added exact-field official-source proposal schemas and fail-closed benchmark/privacy/human-approval eligibility checks.
+- Added the full state, privacy, release, and future signed-update design in `docs/RULE_KNOWLEDGE_WORKFLOW.md`.
+- Did not add or activate a rule, model, research agent, remote update mechanism, worker, Redis/BullMQ, LLM, LangGraph, or vector database.
+
+Verification:
+
+- Extension `npm run typecheck`: passed.
+- Extension `npm test`: 11 files and 80 tests passed; the isolated E6 performance test remains intentionally skipped in the parallel suite.
+- E7 extension tests: 4 passed for baseline honesty, exact coverage, non-executable/remote rejection, proposal approval matching, required roles, and distinct reviewers.
+- Server `npm run typecheck`: passed.
+- Server `npm test`: 12/12 passed, including 4 rule-knowledge aggregation/proposal tests.
+- Extension and server `npm run build`: passed.
+- Existing deterministic benchmark remained 18/18 with zero false positives, zero false negatives, 8/8 redaction checks, and 8/8 raw-leak checks.
+- Production zip remained 183,691 bytes. Content-script bundle became 63,518 bytes, 4,418 bytes larger than E6 uncompressed and below the 100 KiB growth gate.
+- Packaged inspection confirmed the bundled-only/non-executable policy is present and test proposal content is absent.
+- `git diff --check`: passed.
+
+Privacy review:
+
+- Structural output excludes user/event ids, timestamps, exact counts, prompt/snippet/candidate content, hashes, prefixes, context text, hostnames, files, screenshots, outcomes, and per-user histories.
+- Only support/contributor bands and coarsened feature/context fields survive aggregation.
+- Customer data is forbidden as a proposal research source. Proposals accept official HTTPS documentation/advisories and bounded structured facts only.
+- No new collection, endpoint, database collection, storage key, network request, permission, consent, report field, or organization response was added.
+
+Known limitations:
+
+- The aggregation/proposal service is internal-only and has no scheduler, persistence repository, admin UI, or API in E7.
+- No real proposal has been approved or converted; tests use synthetic schema fixtures only.
+- Existing baseline rules were not retroactively presented as human-approved. A future migration may independently review them.
+- Signed updates are a documented future design boundary only and remain disabled.
+- At the E7 stop boundary, model release governance still required separately authorized ML M0–M4 work. M0/M1 completed later; M2 was authorized but remains dependency-blocked, and M3–M4 remain planned.
+
+Workflow specification: `../docs/RULE_KNOWLEDGE_WORKFLOW.md`.
+
+E7 is the final extension roadmap step in this handoff. Stop and obtain a new explicitly scoped plan before further architecture or activation work.
+
+### AR1 — Deterministic benign-shape hardening
+
+Status: **Complete**
+
+Completed: **2026-08-01**
+
+- Added a shared benign-shape policy for UUIDs, standalone 32/40/64-character hexadecimal hashes, ISO timestamps, semantic versions, explicit placeholders, example-domain URL assignments, and ordinary identifiers.
+- Applied benign masking before deterministic secret detection without changing the user's original text.
+- Kept real prefixed credentials detectable; hexadecimal-looking bodies inside supported token prefixes are not treated as standalone benign hashes.
+- Reused the benign policy during private classifier-candidate extraction.
+- Added regression cases for every supported benign family and credential-shaped counterexamples.
+
+Verification:
+
+- Targeted layered benign false-positive rate improved from 40% to 0% on the E6 edge-case set.
+- Existing deterministic benchmark remained 18/18; supported critical known-secret recall remained 100%.
+- Redaction and raw-leak assertions remained 100% passing.
+- No storage, network, permission, server, consent, or model-artifact contract changed.
+
+### AR2 — Classifier-safe unknown-format redaction
+
+Status: **Complete — classifier remains shadow-only**
+
+Completed: **2026-08-01**
+
+- Added private candidate-span extraction that returns original-text offsets and derived features, never candidate values.
+- Added normalization source mapping so candidates found after NFKC normalization or zero-width removal can be redacted at the correct positions in unchanged original text.
+- Kept deterministic redaction first, then applies `[REDACTED_CANDIDATE]` only to structurally supported classifier candidates whose confidence band could surface under the active sensitivity mode.
+- Preserved benign shapes, placeholders, paths, and ordinary identifiers.
+- Passed current settings into safe-copy and stored-snippet redaction so Relaxed, Balanced, and Strict remain consistent.
+- Added deterministic mutation invariants plus full-width and zero-width regression coverage.
+
+Verification:
+
+- Extension `npm run typecheck`: passed.
+- Extension `npm test`: 95 passed; the isolated performance test remains intentionally skipped in the parallel suite.
+- Extension `npm run benchmark:shadow`: passed.
+- Extension `npm run build`: passed with Plasmo 0.90.5 for Chrome MV3.
+- Shadow redaction readiness passes for every classifier candidate that could currently be surfaced or recorded.
+- Critical recall, benign FPR, unknown recall improvement, raw-leak, redaction, latency, and bundle-growth gates pass.
+- Isolated P95 on this machine: 2.65 ms for 10 KiB and 14.40 ms for 100 KiB.
+- Production zip: 183,691 bytes; content-script bundle: 66,744 bytes. Test fixture ids are absent from the packaged content script, while the bundled artifact remains `shadow` / `bootstrap-reviewed`.
+- Activation remains blocked only by the missing reviewed offline-trained artifact and published calibration metrics.
+- No classifier warning/enforcement path, server/storage field, network request, or ML step was enabled.
+
+Known limitation:
+
+- Automated and packaged-build verification is complete. Live manual Chrome smoke coverage across ChatGPT, Claude, Gemini, and custom protected domains remains part of release QA.
+
+Historical AR stop boundary: **AR1 and AR2 completed and stopped before ML M0. M0 was authorized separately afterward.**
+
+### M0 dependency handoff — ML workspace and governance
+
+Status: **Complete in `../ml/`; no extension runtime change**
+
+Completed: **2026-08-01**
+
+- ML M0 defined the future `hallguard-logistic-artifact-v2` offline export contract, the exact existing 16-feature order, deterministic seed, dataset manifest contract, dependency pins, and privacy governance.
+- The extension continues bundling schema-v1 `secret-logistic-bootstrap-v1` with `shadow` / `bootstrap-reviewed` status.
+- Schema-v2 consumption, artifact copying, activation eligibility, and runtime compatibility are explicitly deferred to M4.
+- No extension source, package, build output, model coefficients, warning behavior, storage, telemetry, or network contract changed in M0.
+
+Historical M0 stop boundary: **M0 completed and stopped before M1. M1 was authorized separately afterward.**
+
+### M1 dependency handoff — reproducible generators
+
+Status: **Complete in `../ml/`; no extension runtime change**
+
+Completed: **2026-08-01**
+
+- ML M1 added deterministic, balanced synthetic/benign generator definitions, grouped mutations, catalog/output contracts, and a local JSONL CLI.
+- The M1 check-only snapshot contains 256 explicitly synthetic rows across 64 template groups and is not committed or used by the extension.
+- The catalog remains pending human review and release-ineligible. No trained model or artifact was produced.
+- The extension continues using unchanged schema-v1 `secret-logistic-bootstrap-v1` in shadow mode.
+- No extension package, source, feature contract, coefficient, bundle, warning, redaction, storage, telemetry, or network behavior changed.
+
+Historical M1 stop boundary: **M1 completed and stopped before M2. M2 was authorized separately afterward.**
+
+### M2 dependency handoff — logistic training
+
+Status: **Blocked in `../ml/`; no extension runtime change**
+
+Started: **2026-08-01**
+
+- ML M2 feature extraction, grouped splitting, scikit-learn service, draft-state contract, governance, and non-fit tests are implemented.
+- The runtime contract now targets user-installed CPython 3.14.6 with NumPy 2.5.1, pandas 3.0.5, and scikit-learn 1.9.0. Compatible Windows wheels are available, but the packages are not installed yet.
+- The real fit has not run; M2 remains blocked and M3 has not started.
+- No coefficients, normalization statistics, convergence result, state, metrics report, or artifact was generated or copied.
+- The extension continues using unchanged schema-v1 `secret-logistic-bootstrap-v1` in shadow mode.
+- M2 draft state is deliberately not an extension artifact and remains release-ineligible.
+
+Stop boundary: **Resolve and complete M2 before authorizing M3.**
+
+## 5. Detection defaults
+
+- Exact critical match: high risk.
+- Model below 0.65: clean; 0.65–0.89: medium; 0.90+: high.
+- Relaxed: high only. Balanced: medium/high. Strict: medium boundary may be 0.50.
+- Entropy without structural/context support never warns.
+- Filename/type metadata may contribute to upload risk; file contents are not inspected.
+
+## 6. Completion protocol
+
+After each step, record status, changed contracts, tests, benchmark results, and limitations here. If storage/API/website/model contracts change, update the corresponding handoff in the same change. Never leave stale “In Progress” history.
+
+## 7. Related sources
+
+- `../client/WEBSITE_HANDOFF.md`
+- `../server/HANDOFF.md`
+- `../ml/HANDOFF.md`
+- `../docs/TRUST_ARCHITECTURE.md`
+- `../docs/REDACTION_STORAGE_SPEC.md`

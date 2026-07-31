@@ -58,4 +58,9 @@ describe("redaction storage policy", () => {
     expect(redacted).toContain("JWT_SECRET=[REDACTED]")
     expect(redacted).not.toContain("super-secret-value-12345")
   })
+
+  it("does not corrupt benign UUIDs, hashes, versions, or timestamps", () => {
+    const source = "v3.14.2 550e8400-e29b-41d4-a716-446655440000 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef 2026-08-01T12:00:00Z"
+    expect(redactSensitiveText(source)).toBe(source)
+  })
 })

@@ -1,26 +1,33 @@
 import type { PlasmoCSConfig } from "plasmo"
 
 import {
-  analyzeText,
   defaultSettings,
-  detectPromptInjection,
-  detectRiskyUploads,
-  detectScamFraud,
   highestSeverity
-} from "../firewall/detectors"
-import { redactSensitiveText, redactSnippet } from "../firewall/redact"
+} from "../features/detection"
+import { redactSensitiveText, redactSnippet } from "../features/detection"
+import type { Detection } from "../features/detection"
+import {
+  analyzeForWarning,
+  safeWarningEvidence,
+  warningConfidenceLabel,
+  warningPreview
+} from "../features/warnings"
+import type { WarningAnalysis } from "../features/warnings"
+import {
+  improvementEventsFromAnalysis,
+  queueImprovementEvents
+} from "../features/improvementTelemetry"
 import {
   addActivityLog,
   getProtectedSites,
   getSettings,
   updateActivityLogFeedback
-} from "../firewall/storage"
+} from "../features/storage"
 import type {
-  Detection,
   ProtectionSettings,
   UserDecision,
   WarningFeedback
-} from "../firewall/types"
+} from "../features/storage"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://*/*"],
@@ -115,6 +122,15 @@ const ensureStyles = () => {
     .ai-firewall-toast span {
       display: block;
       font-size: 13px;
+    }
+    .ai-firewall-detection-meta {
+      display: block;
+      margin-top: 7px;
+      color: #6b5200;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
     .ai-firewall-toast ul {
       margin: 8px 0 0;
@@ -370,7 +386,14 @@ const escapeHtml = (value: string) =>
     return replacements[char]
   })
 
-const formatEvidence = (detection: Detection) => detection.evidence.slice(0, 4)
+const formatEvidence = (detection: Detection) => safeWarningEvidence(detection, 6)
+
+const confidenceMarkup = (detection: Detection) => {
+  const label = warningConfidenceLabel(detection)
+  if (!label) return ""
+  const source = detection.detector === "system" ? "inspection guard" : detection.detector ?? "detector"
+  return `<small class="ai-firewall-detection-meta">${escapeHtml(label)} · ${escapeHtml(source)}</small>`
+}
 
 const topDetection = (detections: Detection[]) =>
   detections.find((item) => item.severity === highestSeverity(detections)) ?? detections[0]
@@ -447,12 +470,12 @@ const getComposerBadge = () => {
   return composerBadge
 }
 
-const badgeTextForDetections = (detections: Detection[]) => {
-  if (detections.some((detection) => detection.severity === "high")) {
+const badgeTextForAnalysis = (analysis: ReturnType<typeof analyzeForWarning>) => {
+  if (analysis.action === "confirm") {
     return { state: "block", label: "HallGuard will block" }
   }
 
-  if (detections.length > 0) {
+  if (analysis.warningDetections.length > 0) {
     return { state: "review", label: "HallGuard review" }
   }
 
@@ -486,8 +509,8 @@ const updateComposerBadge = () => {
   }
 
   badgeTarget = composer
-  const detections = analyzeText(getElementText(composer), cachedSettings)
-  const { state, label } = badgeTextForDetections(detections)
+  const analysis = analyzeForWarning({ text: getElementText(composer) }, cachedSettings)
+  const { state, label } = badgeTextForAnalysis(analysis)
 
   badge.dataset.hidden = "false"
   badge.dataset.state = state
@@ -506,7 +529,8 @@ const showToast = (
   detection: Detection,
   decision: UserDecision = "warned",
   sourceText = "",
-  logId?: string
+  logId?: string,
+  analysis?: WarningAnalysis
 ) => {
   ensureStyles()
   document.querySelector(".ai-firewall-toast")?.remove()
@@ -514,13 +538,14 @@ const showToast = (
   const toast = document.createElement("div")
   toast.className = "ai-firewall-toast"
   const evidence = formatEvidence(detection)
-  const redactedText = sourceText ? redactSensitiveText(sourceText) : ""
+  const redactedText = sourceText ? redactSensitiveText(sourceText, cachedSettings) : ""
   const canCopyRedacted = Boolean(
     sourceText.trim() && redactedText.trim() && redactedText !== sourceText
   )
   toast.innerHTML = `
     <strong>${escapeHtml(detection.title)}</strong>
     <span>${escapeHtml(detection.message)}</span>
+    ${confidenceMarkup(detection)}
     ${
       evidence.length > 0
         ? `<ul aria-label="Why this was flagged">${evidence
@@ -556,7 +581,7 @@ const showToast = (
     void copyToClipboard(redactedText)
       .then(() => {
         button.textContent = "Copied redacted"
-        queueDetectionLog(detection, sourceText, "redacted-copied")
+        queueDetectionLog(detection, sourceText, "redacted-copied", undefined, analysis)
       })
       .catch(() => {
         button.textContent = "Copy failed"
@@ -590,7 +615,8 @@ const showReviewModal = ({
   actionLabel,
   onAllow,
   onCancel,
-  onUseRedacted
+  onUseRedacted,
+  analysis
 }: {
   detection: Detection
   sourceText: string
@@ -598,11 +624,13 @@ const showReviewModal = ({
   onAllow?: () => void
   onCancel?: () => void
   onUseRedacted?: (redactedText: string) => void
+  analysis: WarningAnalysis
 }) => {
   ensureStyles()
   document.querySelector(".ai-firewall-modal-backdrop")?.remove()
 
-  const redactedText = redactSensitiveText(sourceText)
+  const redactedText = redactSensitiveText(sourceText, cachedSettings)
+  const preview = warningPreview(redactedText)
   const canUseRedacted = Boolean(
     sourceText.trim() && redactedText.trim() && redactedText !== sourceText
   )
@@ -618,6 +646,7 @@ const showReviewModal = ({
         <div>
           <h2 class="ai-firewall-modal-title" id="ai-firewall-modal-title">${escapeHtml(detection.title)}</h2>
           <p>${escapeHtml(detection.message)}</p>
+          ${confidenceMarkup(detection)}
         </div>
         <span class="ai-firewall-modal-badge" data-severity="${escapeHtml(detection.severity)}">${escapeHtml(detection.severity)} risk</span>
       </header>
@@ -636,7 +665,7 @@ const showReviewModal = ({
         }
         ${
           canUseRedacted
-            ? `<div class="ai-firewall-modal-section"><strong>Redacted preview</strong><pre class="ai-firewall-modal-preview">${escapeHtml(redactedText)}</pre></div>`
+            ? `<div class="ai-firewall-modal-section"><strong>Redacted preview${preview.truncated ? " (first 1,200 characters)" : ""}</strong><pre class="ai-firewall-modal-preview">${escapeHtml(preview.text)}</pre></div>`
             : ""
         }
         <div class="ai-firewall-modal-section ai-firewall-feedback" aria-label="Warning feedback">
@@ -687,16 +716,17 @@ const showReviewModal = ({
       detection,
       sourceText,
       isHigh ? "blocked" : "ignored",
-      selectedFeedback
+      selectedFeedback,
+      analysis
     )
-    showToast(detection, isHigh ? "blocked" : "ignored", sourceText, logId)
+    showToast(detection, isHigh ? "blocked" : "ignored", sourceText, logId, analysis)
     close()
     onCancel?.()
   })
 
   backdrop.querySelector('[data-action="send-anyway"]')?.addEventListener("click", () => {
-    const logId = queueDetectionLog(detection, sourceText, "allowed", selectedFeedback)
-    showToast(detection, "allowed", sourceText, logId)
+    const logId = queueDetectionLog(detection, sourceText, "allowed", selectedFeedback, analysis)
+    showToast(detection, "allowed", sourceText, logId, analysis)
     close()
     onAllow?.()
   })
@@ -708,7 +738,7 @@ const showReviewModal = ({
     void copyToClipboard(redactedText)
       .then(() => {
         button.textContent = "Copied redacted"
-        queueDetectionLog(detection, sourceText, "redacted-copied", selectedFeedback)
+        queueDetectionLog(detection, sourceText, "redacted-copied", selectedFeedback, analysis)
       })
       .catch(() => {
         button.textContent = "Copy failed"
@@ -716,7 +746,7 @@ const showReviewModal = ({
   })
 
   backdrop.querySelector('[data-action="use-redacted"]')?.addEventListener("click", () => {
-    queueDetectionLog(detection, sourceText, "redacted-copied", selectedFeedback)
+    queueDetectionLog(detection, sourceText, "redacted-copied", selectedFeedback, analysis)
     close()
     onUseRedacted?.(redactedText)
   })
@@ -724,7 +754,7 @@ const showReviewModal = ({
   backdrop.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       event.preventDefault()
-      queueDetectionLog(detection, sourceText, isHigh ? "blocked" : "ignored", selectedFeedback)
+      queueDetectionLog(detection, sourceText, isHigh ? "blocked" : "ignored", selectedFeedback, analysis)
       close()
       onCancel?.()
     }
@@ -750,7 +780,7 @@ const logDetection = async (
     site: siteName(),
     eventType: detection.category,
     severity: detection.severity,
-    redactedSnippet: redactSnippet(sourceText),
+    redactedSnippet: redactSnippet(sourceText, cachedSettings),
     decision,
     feedback,
     title: detection.title,
@@ -762,10 +792,16 @@ const queueDetectionLog = (
   detection: Detection,
   sourceText: string,
   decision: UserDecision,
-  feedback?: WarningFeedback
+  feedback?: WarningFeedback,
+  analysis?: WarningAnalysis
 ) => {
   const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`
   void logDetection(detection, sourceText, decision, feedback, id).catch(() => undefined)
+  if (analysis) {
+    void queueImprovementEvents(
+      improvementEventsFromAnalysis(analysis, decision, feedback)
+    ).catch(() => undefined)
+  }
   return id
 }
 
@@ -806,8 +842,10 @@ const handleComposerReview = (
     return repeatAllowed
   }
 
-  const detections = analyzeText(text, cachedSettings)
+  const analysis = analyzeForWarning({ text }, cachedSettings)
+  const detections = analysis.warningDetections
   if (detections.length === 0) {
+    void queueImprovementEvents(improvementEventsFromAnalysis(analysis, "allowed")).catch(() => undefined)
     rememberDecision(actionLabel, text, true)
     return true
   }
@@ -823,6 +861,7 @@ const handleComposerReview = (
     detection: top,
     sourceText: text,
     actionLabel,
+    analysis,
     onAllow: () => {
       rememberDecision(actionLabel, text, true)
       resumeAction?.()
@@ -841,7 +880,8 @@ document.addEventListener(
   (event) => {
     if (!siteEnabled) return
     const text = event.clipboardData?.getData("text") ?? ""
-    const detections = analyzeText(text, cachedSettings)
+    const analysis = analyzeForWarning({ text }, cachedSettings)
+    const detections = analysis.warningDetections
     const top = detections.length > 0 ? topDetection(detections) : undefined
 
     if (top?.severity === "high") {
@@ -851,6 +891,7 @@ document.addEventListener(
         detection: top,
         sourceText: text,
         actionLabel: "paste",
+        analysis,
         onAllow: () => {
           setComposerText(target, `${getElementText(target)}${text}`)
         },
@@ -859,8 +900,10 @@ document.addEventListener(
         }
       })
     } else if (detections.length > 0) {
-      const logId = queueDetectionLog(detections[0], text, "warned")
-      showToast(detections[0], "warned", text, logId)
+      const logId = queueDetectionLog(detections[0], text, "warned", undefined, analysis)
+      showToast(detections[0], "warned", text, logId, analysis)
+    } else {
+      void queueImprovementEvents(improvementEventsFromAnalysis(analysis, "allowed")).catch(() => undefined)
     }
   },
   true
@@ -937,10 +980,8 @@ document.addEventListener(
       size: file.size,
       type: file.type
     }))
-    const detections =
-      cachedSettings.sensitivityMode === "relaxed"
-        ? detectRiskyUploads(files).filter((detection) => detection.severity === "high")
-        : detectRiskyUploads(files)
+    const analysis = analyzeForWarning({ files }, cachedSettings)
+    const detections = analysis.warningDetections
     if (detections.length === 0) return
 
     const top = topDetection(detections)
@@ -950,6 +991,7 @@ document.addEventListener(
       detection: top,
       sourceText: files.map((file) => file.name).join(", "),
       actionLabel: "upload",
+      analysis,
       onCancel: () => {
         input.value = ""
       }
@@ -982,18 +1024,16 @@ const observeAssistantContent = () => {
     if (observedOutput.has(key)) return
     observedOutput.add(key)
 
-    const detections = [
-      ...(settings.promptInjection ? detectPromptInjection(text) : []),
-      ...(settings.scamDetection ? detectScamFraud(text) : [])
-    ].filter((detection) =>
-      settings.sensitivityMode === "relaxed" ? detection.severity === "high" : true
+    const analysis = analyzeForWarning({ text }, settings)
+    const detections = analysis.warningDetections.filter(
+      (detection) => detection.category === "prompt-injection" || detection.category === "scam-fraud"
     )
 
     if (detections.length === 0) return
 
     const top = detections[0]
-    const logId = queueDetectionLog(top, text, "warned")
-    showToast(top, "warned", text, logId)
+    const logId = queueDetectionLog(top, text, "warned", undefined, analysis)
+    showToast(top, "warned", text, logId, analysis)
   }
 
   const observer = new MutationObserver((mutations) => {

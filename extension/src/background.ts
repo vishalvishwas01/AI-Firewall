@@ -1,11 +1,13 @@
-import { saveAuthToken } from "./firewall/auth"
+import { saveAuthToken } from "./features/auth"
 import {
   retryQueuedSyncLogs,
   saveProtectedSites
-} from "./firewall/storage"
-import type { ProtectedSite } from "./firewall/types"
+} from "./features/storage"
+import type { ProtectedSite } from "./features/storage"
+import { retryQueuedImprovementEvents } from "./features/improvementTelemetry"
 
 void retryQueuedSyncLogs().catch(() => undefined)
+void retryQueuedImprovementEvents().catch(() => undefined)
 
 const hostnameMatchesSite = (hostname: string, siteHostname: string) =>
   hostname === siteHostname || hostname.endsWith(`.${siteHostname}`)
@@ -82,6 +84,16 @@ if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
       typeof message === "object" &&
       message !== null &&
       "type" in message &&
+      message.type === "AI_FIREWALL_SYNC_IMPROVEMENT_EVENTS"
+    ) {
+      void retryQueuedImprovementEvents().then(() => sendResponse({ ok: true }))
+      return true
+    }
+
+    if (
+      typeof message === "object" &&
+      message !== null &&
+      "type" in message &&
       message.type === "AI_FIREWALL_PROTECTED_SITES" &&
       "sites" in message &&
       Array.isArray(message.sites)
@@ -110,7 +122,7 @@ if (typeof chrome !== "undefined" && chrome.runtime?.onMessageExternal) {
       "token" in message &&
       typeof message.token === "string"
     ) {
-      void saveAuthToken(message.token).then(() => retryQueuedSyncLogs()).then(() => {
+      void saveAuthToken(message.token).then(() => Promise.all([retryQueuedSyncLogs(), retryQueuedImprovementEvents()])).then(() => {
         sendResponse({ ok: true })
       })
       return true

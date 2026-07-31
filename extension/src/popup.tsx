@@ -12,7 +12,7 @@ import {
   openReportsPage,
   openSignupPage,
   type AuthStatus
-} from "./firewall/auth"
+} from "./features/auth"
 import {
   addWarningFeedbackRecord,
   clearActivityLogs,
@@ -24,14 +24,19 @@ import {
   retryQueuedSyncLogs,
   setSetting,
   updateActivityLogFeedback
-} from "./firewall/storage"
+} from "./features/storage"
 import type {
   ActivityLog,
   ProtectedSite,
   ProtectionSettings,
   SensitivityMode,
   WarningFeedback
-} from "./firewall/types"
+} from "./features/storage"
+import {
+  clearImprovementTelemetry,
+  getQueuedImprovementEvents,
+  retryQueuedImprovementEvents
+} from "./features/improvementTelemetry"
 
 type ToggleSettingKey =
   | "sensitiveData"
@@ -142,6 +147,7 @@ const Popup = () => {
   const [settings, setSettings] = useState<ProtectionSettings | null>(null)
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [queuedSyncCount, setQueuedSyncCount] = useState(0)
+  const [queuedImprovementCount, setQueuedImprovementCount] = useState(0)
   const [siteStatus, setSiteStatus] = useState<CurrentSiteStatus | null>(null)
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -152,12 +158,14 @@ const Popup = () => {
       getSettings(),
       getActivityLogs(),
       getQueuedSyncLogs(),
+      getQueuedImprovementEvents(),
       getProtectedSites().then((sites) => getCurrentSiteStatus(sites)),
       getAuthStatus()
-    ]).then(([nextSettings, nextLogs, nextQueuedSyncLogs, nextSiteStatus, nextAuthStatus]) => {
+    ]).then(([nextSettings, nextLogs, nextQueuedSyncLogs, nextImprovementEvents, nextSiteStatus, nextAuthStatus]) => {
       setSettings(nextSettings)
       setLogs(nextLogs)
       setQueuedSyncCount(nextQueuedSyncLogs.length)
+      setQueuedImprovementCount(nextImprovementEvents.length)
       setSiteStatus(nextSiteStatus)
       setAuthStatus(nextAuthStatus)
       setIsLoading(false)
@@ -192,13 +200,31 @@ const Popup = () => {
     setSettings(next)
   }
 
+  const toggleImprovement = async () => {
+    if (!settings) return
+    const next = await setSetting("improveDetection", !settings.improveDetection)
+    setSettings(next)
+    if (next.improveDetection) {
+      await retryQueuedImprovementEvents()
+      setQueuedImprovementCount((await getQueuedImprovementEvents()).length)
+    }
+  }
+
+  const clearImprovementData = async () => {
+    await clearImprovementTelemetry()
+    setQueuedImprovementCount(0)
+  }
+
   const clearLogs = async () => {
     await clearActivityLogs()
     setLogs([])
   }
 
   const exportLocalData = async () => {
-    const exported = await getLocalReportExport()
+    const exported = {
+      ...(await getLocalReportExport()),
+      improvementTelemetryQueue: await getQueuedImprovementEvents()
+    }
     const blob = new Blob([JSON.stringify(exported, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement("a")
@@ -321,6 +347,27 @@ const Popup = () => {
             type="checkbox"
           />
         </label>
+        <label className="toggle-row sync-toggle">
+          <ShieldCheck size={18} aria-hidden="true" />
+          <span>
+            <strong>Improve HallGuard detection</strong>
+            <small>Off by default. Shares derived numeric features and feedback only, never prompt text.</small>
+          </span>
+          <input
+            checked={settings?.improveDetection ?? false}
+            disabled={!settings}
+            onChange={() => void toggleImprovement()}
+            type="checkbox"
+          />
+        </label>
+        <div className="sync-state">
+          <small>
+            {queuedImprovementCount > 0
+              ? `${queuedImprovementCount} privacy-safe improvement event${queuedImprovementCount === 1 ? "" : "s"} queued.`
+              : "No improvement events queued locally."}
+          </small>
+          <button className="text-button" onClick={() => void clearImprovementData()} type="button">Clear local and account improvement data</button>
+        </div>
       </section>
 
       <section className="panel account-panel">

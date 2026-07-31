@@ -1,449 +1,153 @@
-# AI Permission Firewall Server Handoff
+# HallGuard Server Handoff
 
-This file is the continuity source for future Codex windows working on the backend API. Keep it updated whenever server architecture, environment variables, auth, database models, API routes, or verification status changes.
+This is the source of truth for the TypeScript API and persistence layer. Execute the roadmap one step at a time and update this file in the same change as every server implementation or API-contract change.
 
-## Server Brief
+## 1. Boundary
 
-The `server/` package is the TypeScript Express API for account-backed reporting. It supports the `client/` website and, later, the `extension/` auth gate and redacted log sync.
+The server owns authentication, redacted account reporting, organization metadata, protected-site policies, and explicitly consented privacy-safe improvement telemetry. It must never receive or persist raw prompts, secrets, tokens, passwords, service URLs, file contents, screenshots, candidate strings, or literal secret prefixes. Detection and model inference remain local to the extension.
 
-Core backend responsibilities:
+## 2. Stack and scalable structure
 
-- Authenticate users for signup, login, logout, and session checks.
-- Connect to MongoDB using environment variables.
-- Store users with hashed passwords only.
-- Store synced extension activity as redacted log records only.
-- Serve authenticated report data scoped to the logged-in user.
-- Configure CORS for approved client and extension origins.
+- Node.js, TypeScript ESM, Express 5, MongoDB official driver.
+- bcryptjs, JWT, HTTP-only cookies, cookie-parser, CORS, dotenv.
+- Redis is reserved for a future asynchronous research worker, not synchronous detection.
 
-## Current Architecture
-
-- Runtime: Node.js with TypeScript ESM.
-- API framework: Express.
-- Database: MongoDB using the official `mongodb` driver.
-- Auth dependencies are installed: `bcryptjs`, `jsonwebtoken`, `cookie-parser`.
-- Environment loading uses `dotenv`.
-- The React client lives in `../client/`.
-- The Chrome extension lives in `../extension/`.
-
-Current server structure:
+Target structure:
 
 ```text
-server/
-  src/
-    config/
-      env.ts
-    db/
-      mongo.ts
-    middleware/
-      auth.ts
-    models/
-      organization.ts
-      reportSite.ts
-      syncedLog.ts
-      user.ts
-    routes/
-      auth.ts
-      logs.ts
-      orgs.ts
-      sites.ts
-    utils/
-      redactionPolicy.ts
-    index.ts
-  .env.example
-  package.json
-  tsconfig.json
+server/src/
+  app/                 # Express bootstrap, middleware, errors
+  modules/
+    auth/              # routes, controller, service, repository, schemas, DTOs, types
+    logs/              # routes, controller, service, repository, schemas, DTOs, types
+    organizations/     # routes, controller, service, repository, schemas, DTOs, types
+    sites/             # routes, controller, service, repository, schemas, DTOs, types
+    improvementTelemetry/
+                       # routes, controller, service, repository, schemas, DTOs
+  infrastructure/      # mongo, redis, config
+  shared/              # auth, errors, validation, privacy
 ```
 
-## Environment Contract
+Controllers translate HTTP to DTOs. Services own business rules. Repositories own Mongo queries. Schemas validate boundaries. No route/controller may contain persistence or cross-feature policy logic.
 
-Defined in `src/config/env.ts` and documented in `.env.example`:
+## 3. Completed baseline
 
-- `NODE_ENV`
-- `PORT`
-- `MONGODB_URI`
-- `MONGODB_DB_NAME`
-- `JWT_SECRET`
-- `CLIENT_ORIGIN`
-- `EXTENSION_ORIGIN`
+Status: **Complete and verified**
 
-Rules:
+- Environment contract, MongoDB connection, health endpoint, and startup indexes.
+- Signup, login, logout, session checks, password hashing, HTTP-only JWT cookies, and extension bearer-token support.
+- User-scoped redacted log create/list/summary/export with duplicate protection and server-side redaction validation.
+- Personal sites, organization sites, organizations, roles, invitations, revocation, aggregate summaries, trends, and sanitized benchmark access.
 
-- Never commit real `.env` values.
-- Keep `JWT_SECRET` long and random in real deployments.
-- Keep CORS restricted to the client origin and, when extension integration starts, the approved extension origin.
+## 4. Ordered execution plan
 
-## Phase 9.1: Backend Foundation
+### S0 — Handoff and privacy contract cleanup
 
-Status: Done
+Status: **Complete**
 
-Completed on 2026-06-27:
+- This file replaces duplicated historical phase notes with one baseline and one ordered plan.
+- Existing `/auth`, `/logs`, `/sites`, `/orgs`, and `/admin` URLs remain compatibility contracts until migration is verified.
 
-- Added TypeScript server config in `tsconfig.json`.
-- Added scripts in `package.json`: `dev`, `build`, `start`, and `typecheck`.
-- Added environment contract in `src/config/env.ts`.
-- Added MongoDB helper in `src/db/mongo.ts`.
-- Added user document type, users collection helper, and unique email index in `src/models/user.ts`.
-- Added synced log document type, synced logs collection helper, and indexes in `src/models/syncedLog.ts`.
-- Added Express bootstrap in `src/index.ts`.
-- Added `/health` route.
-- Added startup index initialization for users and synced logs.
-- Added `.env.example`.
+### S1 — Feature-module migration
 
-Verification:
+Status: **Planned**
 
-- `npm run typecheck`: passed on 2026-06-27 after running with approved filesystem permissions. The first sandboxed attempt failed because Node could not read a user-directory path.
+- Map current flat routes/models/helpers into `modules/auth`, `modules/logs`, `modules/organizations`, and `modules/sites`.
+- Move one feature at a time behind unchanged URLs.
+- Introduce controller/service/repository/schema/DTO boundaries.
+- Put authorization in services/policies, not controllers.
+- Add module tests before removing old flat files.
 
-## Data Model
+### S2 — Shared validation and error boundary
 
-User:
+Status: **Planned**
 
-- `_id`
-- `email`
-- `passwordHash`
-- `createdAt`
-- `updatedAt`
+- Add runtime schemas for every request and response DTO.
+- Add typed validation/authentication/authorization/conflict/not-found errors.
+- Enforce field allowlists and bounded strings/arrays at the edge.
+- Ensure errors and logs never contain rejected sensitive values.
 
-Synced log:
+### S3 — Improvement telemetry contract
 
-- `_id`
-- `extensionLogId`
-- `userId`
-- `timestamp`
-- `tool`: `ChatGPT`, `Claude`, `Gemini`, or `Other`
-- `hostname`
-- `eventType`: `sensitive-data`, `prompt-injection`, `risky-upload`, or `scam-fraud`
-- `severity`: `low`, `medium`, or `high`
-- `decision`: `warned`, `blocked`, `ignored`, `allowed`, or `redacted-copied`
-- `feedback`: optional `correct-warning`, `false-alarm`, or `missed-risk`
-- `title`
-- `redactedSnippet`
-- `evidence`
-- `createdAt`
+Status: **Complete (delivered with extension E5)**
 
-Report site:
+Completed: **2026-08-01**
 
-- `_id`
-- `userId`
-- `hostname`
-- `label`
-- `isDefault`
-- `createdAt`
-- `updatedAt`
-- `deletedAt` for soft-deleted/default-hidden sites
-
-Organization:
-
-- `_id`
-- `name`
-- `ownerUserId`
-- `createdAt`
-- `updatedAt`
-
-Organization member:
-
-- `_id`
-- `organizationId`
-- `userId` when the invited email belongs to an existing account
-- `email`
-- `role`: `owner`, `admin`, or `member`
-- `status`: `active` or `invited`
-- `createdAt`
-- `updatedAt`
-
-Organization site policy:
-
-- `_id`
-- `organizationId`
-- `hostname`
-- `label`
-- `createdAt`
-- `updatedAt`
-
-Privacy requirements:
-
-- Store redacted snippets only.
-- Do not store raw prompts, raw secrets, passwords, tokens, API keys, service URLs, or uploaded file contents.
-- Scope every report/log query by authenticated `userId`.
-- Use stable `extensionLogId` plus `userId` to avoid duplicate synced records.
-- Keep server-side redaction enforcement centralized in `src/utils/redactionPolicy.ts`.
-- Keep team/org reporting aggregate-only until user-level reporting is explicitly designed.
-
-## Phase 9.2: Auth UI/API
-
-Status: Done
-
-Completed on 2026-06-27:
-
-- Added auth middleware in `src/middleware/auth.ts`.
-- Added signed JWT session helpers using `jsonwebtoken`.
-- Added HTTP-only session cookie named `ai_firewall_session`.
-- Added password hashing with `bcryptjs`.
-- Added `POST /auth/signup`.
-- Added `POST /auth/login`.
-- Added `POST /auth/logout`.
-- Added `GET /auth/session`.
-- Mounted auth routes under `/auth` in `src/index.ts`.
-- Normalizes emails before persistence and lookup.
-- Returns public user data only: no password hashes.
-- Uses a generic login failure message for invalid credentials.
-
-Follow-up completed on 2026-06-28:
-
-- Auth middleware now accepts both the `ai_firewall_session` HTTP-only cookie and `Authorization: Bearer <token>`.
-- Signup/login responses return `{ user, token }` so the client can bridge auth into the loaded extension.
-- Added `authenticatedUserFromRequest(req)` for non-throwing session checks.
-- `GET /auth/session` now returns `{ user: null }` instead of `401` when no valid session/token exists, which avoids noisy expected 401s during logged-out client checks.
-
-Client work lives in `../client/WEBSITE_HANDOFF.md`:
-
-- Added client API helper in `../client/src/lib/api.ts`.
-- Added signup and login screens at `/signup` and `/login`.
-- Added logout/session check.
-- Added auth-aware navigation.
-- Kept landing content intact and updated stale no-backend copy.
+- Added the feature-isolated `modules/improvementTelemetry` route/controller/service/repository/schema/type structure.
+- Added authenticated `POST /improvement-events`, `GET /improvement-events/export`, and `DELETE /improvement-events` endpoints.
+- Added the separate `improvement_events` collection with unique `userId + eventId`, user/time, and TTL indexes.
+- Accepts only the exact allowlisted event fields and exact 16 bounded numerical/bucketed features. Unknown fields, free-form content, malformed versions, invalid enums, uncoarsened/out-of-window timestamps, and out-of-range features are rejected.
+- Stores events under the authenticated user, de-duplicates retries, expires records after 90 days, caps export at the latest 1,000 records, and scopes deletion to the authenticated user.
+- Kept improvement data separate from `synced_logs`, report APIs, and organization aggregates.
 
 Verification:
-
-- `npm run typecheck`: passed on 2026-06-27.
-- `npm run build`: passed on 2026-06-27.
-- Local signup/login and extension auth bridge were user-verified on 2026-06-28 with env configured outside the repo.
-
-## Later Phases
-
-## Phase 9.3: Report Dashboard/API
-
-Status: Done
-
-Completed on 2026-06-27:
-
-- Added authenticated log list endpoint: `GET /logs`.
-- Added authenticated log create endpoint for future extension sync: `POST /logs`.
-- Mounted log routes under `/logs` in `src/index.ts`.
-- Added date filters using `from` and `to` query parameters.
-- Added tool filter for ChatGPT, Claude, Gemini, and Other.
-- Added bounded result limit capped at 200 records.
-- Kept every query scoped to `req.user.id`.
-- Validates incoming log records and rejects secret-like unredacted snippets.
-
-Follow-up completed on 2026-06-28:
-
-- Log validation now allows safe redaction placeholders such as `[REDACTED]`, `[REDACTED_URL]`, and `[REDACTED_TOKEN]`.
-- Server still rejects unredacted assigned secrets, connection URLs/URIs, and known token formats.
-- This fixed extension sync for snippets like `JWT_SECRET=[REDACTED]` and `MONGODB_URI=[REDACTED_URL]`.
-
-Follow-up completed on 2026-07-10:
-
-- Added server redaction policy helper in `src/utils/redactionPolicy.ts`.
-- Synced log snippets are now capped at 240 characters server-side.
-- `POST /logs` rejects unredacted reportable text covered by the current redaction spec:
-  - assigned secrets/passwords/tokens
-  - service URLs/URIs
-  - generic tokens
-  - emails
-  - card-like values
-  - phone-like values
-- `POST /logs` accepts optional warning feedback and returns it in public log responses.
-- Added authenticated `GET /logs/summary`.
-- `GET /logs/summary` uses the same user scoping and filters as `GET /logs`.
-- Summary response includes total logs, feedback totals, false-alarm rate, missed-risk rate, severity mix, warning type mix, decision mix, and hostname mix.
-
-Client work lives in `../client/WEBSITE_HANDOFF.md`:
-
-- Added authenticated report page at `/reports`.
-- Added tool and date filters.
-- Added log table with severity, site/tool, decision, date, title, redacted snippet, and evidence.
-- Added feedback summary cards and breakdown panels to the report dashboard.
-- Added empty/loading/error states.
-
-Verification:
-
-- `npm run typecheck`: passed on 2026-06-27.
-- `npm run build`: passed on 2026-06-27.
-
-## Phase 9.4: Extension Auth Gate
-
-Status: Done
-
-- Extension popup checks auth state.
-- If unauthenticated, shows login/signup CTA and opens the client login/signup flow.
-- If authenticated, shows account email and an `Open reports` action.
-- Keeps existing local recent warnings visible.
-- Server auth middleware accepts both HTTP-only cookie sessions and `Authorization: Bearer` tokens.
-- Signup/login responses return a token for the extension auth bridge.
-- User verified extension login/signup bridge and signed-in popup state on 2026-06-28.
-
-## Phase 9.5: Extension Log Sync
-
-Status: Done
-
-- Extension sends redacted activity records to `POST /logs` only when authenticated.
-- Failed or unauthenticated sync attempts are queued locally without blocking protection.
-- Popup shows queued redacted log count and retry action.
-- Server avoids duplicates using stable `extensionLogId` plus authenticated user ID.
-- Automatic background queue flush now syncs records without requiring the popup retry button.
-- Existing queued records flush on extension background startup/reload and after auth token receipt.
-- User verified redacted logs save into MongoDB and appear on the client report dashboard on 2026-06-28.
-
-## Phase 9.6: Report Website/Domain Management
-
-Status: Done
-
-- Added `report_sites` collection model and indexes in `src/models/reportSite.ts`.
-- Added authenticated `/sites` routes in `src/routes/sites.ts`.
-- Default per-user report sites are ChatGPT, Claude, and Gemini.
-- Users can add or restore report domains through `POST /sites`.
-- Users can remove default and custom report domains through `DELETE /sites/:id`; removal is soft-delete so a later add can restore the site.
-- `GET /sites` hides soft-deleted sites.
-- `GET /logs` accepts a `hostname` filter for dynamic report-site filtering.
-- Hostname log filtering supports exact domains and subdomains, so `whatsapp.com` includes `web.whatsapp.com`.
-
-## Phase 9.7: Dynamic Extension Coverage
-
-Status: Done
-
-- The server provides authenticated report-site configuration through `/sites`.
-- The client sends active report sites to the loaded extension after load/add/delete.
-- Backend support is complete for custom domains becoming protected extension targets.
-
-## Phase 9.8: End-To-End QA And Release Docs
-
-Status: Planned
-
-Next verification/doc work:
-
-- Verify signup/login/logout/session across fresh browsers.
-- Verify extension auth bridge after extension reload and ID changes.
-- Verify ChatGPT, Claude, and Gemini redacted sync.
-- Verify report filters by website/domain and date.
-- Verify add-domain modal works from direct report-page usage and extension redirect.
-- Verify unredacted snippets are rejected by the server while redacted placeholders are accepted.
-- Update README/QA/release docs after the dynamic-domain behavior is stable.
-
-## Phase 10.7: Team/Organization Foundations
-
-Status: Done
-
-Completed on 2026-07-10:
-
-- Added `src/models/organization.ts`.
-- Added `organizations` and `organization_members` collections.
-- Added organization indexes during server startup.
-- Mounted authenticated organization routes under `/orgs`.
-- Added:
-  - `GET /orgs`
-  - `POST /orgs`
-  - `GET /orgs/:id`
-  - `POST /orgs/:id/members`
-- Creating an organization creates the current user as `owner`.
-- Owners/admins can add a member by email as `admin` or `member`.
-- If the email belongs to an existing user, the membership becomes `active`; otherwise it is stored as `invited`.
-- Organization summary aggregates synced redacted logs across active member accounts.
-- Team summary returns only metadata counts:
-  - total logs
-  - active/invited members
-  - feedback totals/rates
-  - severity counts
-  - event type counts
-  - decision counts
-  - hostname counts
-- Team summary does not return raw prompt text, raw snippets, or per-user prompt details.
-
-Follow-up completed on 2026-07-10:
-
-- Added member role-management endpoint:
-  - `PATCH /orgs/:id/members/:memberId`.
-- Added member removal endpoint:
-  - `DELETE /orgs/:id/members/:memberId`.
-- Guardrails:
-  - Owners/admins can manage members.
-  - Owners cannot be removed or role-changed through these endpoints.
-  - Admins cannot change or remove other admins.
-- These changes do not alter log storage; team reporting remains aggregate-only.
-
-Organization protected-site policy follow-up completed on 2026-07-19:
-
-- Added the `organization_site_policies` collection and unique organization/domain index.
-- Added organization policy endpoints:
-  - `GET /orgs/:id/sites` for active members.
-  - `POST /orgs/:id/sites` for owners/admins.
-  - `DELETE /orgs/:id/sites/:siteId` for owners/admins.
-- Domain and label values are normalized before persistence.
-- `GET /sites` now merges personal report sites with policies inherited through active organization memberships.
-- Merged sites expose `source`, `managed`, `organizationId`, and `organizationName`.
-- When a personal and organization site share a hostname, the personal label is retained and the result is marked managed.
-- `DELETE /sites/:id` rejects removal while the hostname is inherited from an active organization.
-- Team policies remain configuration metadata only and do not change redacted log storage.
-
-## Next Phase 10 Slice
-
-Status: Done
-
-Completed on 2026-07-27:
-
-- Added authenticated `GET /orgs/:id/trends` with supported `days=7`, `days=30`, and `days=90` ranges.
-- Trend results use UTC daily buckets and contain aggregate counts only:
-  - total warnings
-  - severity counts
-  - event-type counts
-  - feedback counts
-- Trend database reads project metadata fields only and never return raw snippets, prompt content, or per-user prompt detail.
-- Added durable organization member status `revoked` and optional `revokedAt`.
-- Added `POST /orgs/:id/invitations/:memberId/revoke` for pending invitations.
-- Revocation is atomic against `status: invited`; a concurrent activation returns a conflict instead of incorrectly reporting success.
-- Invitation activation on signup/login now targets only normalized-email, still-pending, unclaimed invitations.
-- Re-inviting a revoked email restores the existing membership record, clears revocation metadata, and safely activates it immediately when the user already exists.
-- Active-member deletion now rejects pending/revoked records so lifecycle actions remain explicit.
-- Organization summaries now include `revokedInvitations`.
-- Added focused Node tests for supported trend ranges, UTC bucket aggregation, aggregate-only response shape, and invitation activation filters.
-- Corrected Express 5 `string | string[]` route-parameter handling in organization and site routes.
-- Corrected the merged report-site response typing for organization ownership metadata.
-
-Verification on 2026-07-27:
 
 - `npm run typecheck`: passed.
-- `npm test`: passed, 3 tests.
+- `npm test`: passed, 8 tests including the new telemetry schema/repository suite.
 - `npm run build`: passed.
+- Schema tests accept the exact safe contract and reject raw-candidate/snippet fields, extra feature fields, invalid ranges, timestamps, enums, and versions.
+- Repository tests verified conflict-free idempotent upsert fields and 90-day TTL metadata.
+- `git diff --check`: passed.
 
-## Next Phase 10 Work
+Privacy review:
 
-Status: Planned
+- Authentication and authenticated-user scoping are mandatory for write, export, and delete.
+- No prompt, snippet, candidate, prefix, hostname, hash, file, screenshot, or free-form context field is accepted.
+- Improvement events are not exposed through customer reporting or organization APIs.
+- The server cannot enable extension collection; the extension's separate off-by-default consent is the collection gate.
 
-- Expand benchmark coverage and field-validation methodology beyond the current small synthetic baseline.
-- Continue warning-fatigue controls while keeping organization reporting aggregate-only by default.
-- Complete the open-source-core decision memo without publishing until license and maintenance choices are approved.
+Known limitation:
 
-## Phase 10.3: Trust Architecture And Authenticated Benchmark
+- The 90-day TTL relies on MongoDB's asynchronous TTL monitor, so physical deletion may occur shortly after `expiresAt`, not at the exact millisecond.
 
-Status: Done
+### S4 — Privacy-safe research intake
 
-Completed on 2026-07-27:
+Status: **Complete as an internal workflow contract (delivered with extension E7)**
 
-- Added authenticated `GET /admin/benchmark`.
-- Access requires an active organization membership with role `owner` or `admin`.
-- The server exposes a sanitized, versioned benchmark snapshot containing:
-  - fixture identifiers
-  - outcomes
-  - categories
-  - severity
-  - severity/redaction/raw-leak pass states
-  - aggregate totals and rates
-- The benchmark payload excludes raw fixture input, redacted snippets, forbidden raw values, customer content, and production prompts.
-- Added a server privacy regression test that verifies excluded raw fields are absent.
-- Added authenticated `GET /logs/export` for the current user's complete redacted account-backed warning history.
-- Export responses remain scoped by authenticated `userId` and use the existing public redacted-log shape.
-- Added `docs/TRUST_ARCHITECTURE.md` and `docs/TRUST_FEATURE_CHECKLIST.md`.
-- Permanent account-wide deletion was evaluated and deferred pending a separately reviewed destructive-action, membership, retention, audit, and recoverability design.
+Completed: **2026-08-01**
 
-Verification on 2026-07-27:
+- Added isolated `modules/ruleKnowledge` types, schemas, service, and tests; no route/controller/repository was added because E7 exposes no runtime API or new persistence.
+- Aggregates separately consented E5 improvement events into coarsened structural signatures only after at least 20 matching events from at least 5 contributors.
+- Returns support/contributor bands and aggregate feedback signal instead of exact counts, identities, events, or histories.
+- Added official-HTTPS-source proposal validation with bounded structured facts and no JavaScript, regex, prompt examples, credentials, or arbitrary fields.
+- Added a fail-closed eligibility service requiring approved state, no rejection, three distinct security/privacy/maintainer reviewers, minimum synthetic fixture counts, critical recall, benign FPR, redaction/raw-leak coverage, and latency gates.
+- Kept research intake separate from logs, organization reports, and synchronous detection.
+- Added no worker, Redis/BullMQ dependency, LLM, LangGraph, vector database, public endpoint, or automatic rule conversion.
+
+Verification:
 
 - `npm run typecheck`: passed.
-- `npm test`: passed, 4 tests.
+- `npm test`: 12/12 passed; 4 E7 tests cover aggregation privacy/minimums, proposal allowlists, official sources, executable-field rejection, and human-release gates.
 - `npm run build`: passed.
+- `git diff --check`: passed.
 
-## Important Defaults
+Privacy review:
 
-- Keep detection local in the extension.
-- Keep report sync redacted-only.
-- Keep auth and database secrets in env variables.
-- Keep server routes small and explicit until repeated patterns justify abstraction.
-- Update this file, `../client/WEBSITE_HANDOFF.md`, and `../extension/HANDOFF.md` after each completed phase.
+- Aggregated output excludes subject/event ids, timestamps, exact counts, candidates, hashes, literal prefixes, snippets, hostnames, files, screenshots, action outcomes, and per-user histories.
+- The module does not read `synced_logs`, report records, organization data, or customer content.
+- There is no API or database write path for signatures/proposals in E7.
+
+Known limitation:
+
+- Operational scheduling, persistence, reviewer UI, and any future research worker require a separately authorized step and new privacy/retention review.
+
+### S5 — Operational hardening
+
+Status: **Planned**
+
+- Add correlation ids, bounded rate limits, structured privacy-safe logs, health/readiness separation, retention jobs, and documented deletion/backup behavior.
+- Test tenant isolation, duplicate writes, malformed payloads, expired tokens, and concurrent invitation changes.
+
+## 5. Compatibility and completion rules
+
+- DTO changes are additive first; removals require a migration and client update.
+- Organization responses remain aggregate-only.
+- A step is **Complete** only after typecheck, tests, build, privacy checks, and affected client/extension smoke tests pass.
+- Update this file plus the relevant client, extension, and ML handoff in the same change.
+
+## 6. Related sources
+
+- `../client/WEBSITE_HANDOFF.md`
+- `../extension/HANDOFF.md`
+- `../ml/HANDOFF.md`
+- `../docs/REDACTION_STORAGE_SPEC.md`

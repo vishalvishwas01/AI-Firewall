@@ -13,6 +13,8 @@ import { logsRouter } from "./routes/logs.js"
 import { sitesRouter } from "./routes/sites.js"
 import { orgsRouter } from "./routes/orgs.js"
 import { adminRouter } from "./routes/admin.js"
+import { improvementTelemetryRouter } from "./modules/improvementTelemetry/telemetry.routes.js"
+import { ensureImprovementTelemetryIndexes } from "./modules/improvementTelemetry/telemetry.repository.js"
 
 const app = express()
 
@@ -54,6 +56,7 @@ app.use("/logs", logsRouter)
 app.use("/sites", sitesRouter)
 app.use("/orgs", orgsRouter)
 app.use("/admin", adminRouter)
+app.use("/improvement-events", improvementTelemetryRouter)
 
 app.use(
   (
@@ -72,6 +75,7 @@ await ensureUserIndexes(db)
 await ensureSyncedLogIndexes(db)
 await ensureReportSiteIndexes(db)
 await ensureOrganizationIndexes(db)
+await ensureImprovementTelemetryIndexes(db)
 
 app.listen(env.port, () => {
   console.log(`AI Firewall API listening on port ${env.port}`)

@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-generator-catalog-v1.schema.json",
+  "title": "HallGuard Synthetic Generator Catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "catalogVersion", "seed", "outputSchemaVersion", "reviewStatus",
+    "releaseEligible", "dataPolicy", "licenses", "generators"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "catalogVersion": { "const": "synthetic-generators-v1" },
+    "seed": { "const": 20260801 },
+    "outputSchemaVersion": { "const": 1 },
+    "reviewStatus": { "const": "pending-human-review" },
+    "releaseEligible": { "const": false },
+    "dataPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "containsCustomerContent", "containsReportSnippets", "containsTelemetryPayloads",
+        "containsProductionLogs", "containsRealSecrets", "containsPersonalData"
+      ],
+      "properties": {
+        "containsCustomerContent": { "const": false },
+        "containsReportSnippets": { "const": false },
+        "containsTelemetryPayloads": { "const": false },
+        "containsProductionLogs": { "const": false },
+        "containsRealSecrets": { "const": false },
+        "containsPersonalData": { "const": false }
+      }
+    },
+    "licenses": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["licenseId", "name", "reference"],
+        "properties": {
+          "licenseId": { "type": "string", "minLength": 3, "maxLength": 64 },
+          "name": { "type": "string", "minLength": 3, "maxLength": 120 },
+          "reference": { "type": "string", "minLength": 8, "maxLength": 300 }
+        }
+      }
+    },
+    "generators": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "generatorId", "version", "label", "family", "formats", "mutationIds", "source"
+        ],
+        "properties": {
+          "generatorId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{2,79}$" },
+          "version": { "type": "integer", "minimum": 1 },
+          "label": { "enum": ["sensitive", "benign"] },
+          "family": { "type": "string", "minLength": 3, "maxLength": 80 },
+          "formats": {
+            "type": "array", "minItems": 1,
+            "items": { "enum": ["raw", "env", "json", "yaml", "code", "prose"] }
+          },
+          "mutationIds": {
+            "type": "array", "minItems": 1,
+            "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{2,63}$" }
+          },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "reference", "licenseId"],
+            "properties": {
+              "kind": { "enum": ["synthetic-definition", "official-public-shape"] },
+              "reference": { "type": "string", "minLength": 8, "maxLength": 300 },
+              "licenseId": { "type": "string", "minLength": 3, "maxLength": 64 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

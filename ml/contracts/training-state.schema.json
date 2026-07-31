@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-m2-training-state-v1.schema.json",
+  "title": "HallGuard M2 Draft Logistic Training State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "stateVersion", "modelVersion", "featureVersion", "classifierType",
+    "status", "releaseEligible", "catalogVersion", "catalogReviewStatus", "datasetSha256",
+    "seed", "featureOrder", "split", "normalization", "coefficients", "intercept", "fit",
+    "dependencies"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "stateVersion": { "const": "m2-logistic-training-state-v1" },
+    "modelVersion": { "const": "secret-logistic-m2-synthetic-v1" },
+    "featureVersion": { "const": "candidate-features-v1" },
+    "classifierType": { "const": "logistic-regression" },
+    "status": { "const": "draft" },
+    "releaseEligible": { "const": false },
+    "catalogVersion": { "const": "synthetic-generators-v1" },
+    "catalogReviewStatus": { "const": "pending-human-review" },
+    "datasetSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "seed": { "const": 20260801 },
+    "featureOrder": {
+      "const": [
+        "length", "lengthBucket", "entropy", "letterRatio", "digitRatio",
+        "uppercaseRatio", "lowercaseRatio", "punctuationRatio", "separatorRatio",
+        "classTransitionRatio", "repeatedCharacterRatio", "safeShape",
+        "assignmentContext", "secretKeywordContext", "structuredConfigContext", "pathLike"
+      ]
+    },
+    "split": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "strategy", "trainGroups", "validationGroups", "testGroups",
+        "trainRecords", "validationRecords", "testRecords"
+      ],
+      "properties": {
+        "strategy": { "const": "label-stratified-template-group-60-20-20" },
+        "trainGroups": { "type": "integer", "minimum": 1 },
+        "validationGroups": { "type": "integer", "minimum": 1 },
+        "testGroups": { "type": "integer", "minimum": 1 },
+        "trainRecords": { "type": "integer", "minimum": 1 },
+        "validationRecords": { "type": "integer", "minimum": 1 },
+        "testRecords": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "normalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mean", "scale"],
+      "properties": {
+        "mean": { "$ref": "#/$defs/vector" },
+        "scale": {
+          "type": "array", "minItems": 16, "maxItems": 16,
+          "items": { "type": "number", "exclusiveMinimum": 0 }
+        }
+      }
+    },
+    "coefficients": { "$ref": "#/$defs/vector" },
+    "intercept": { "type": "number" },
+    "fit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["solver", "penalty", "c", "maxIterations", "tolerance", "iterations", "converged"],
+      "properties": {
+        "solver": { "const": "lbfgs" },
+        "penalty": { "const": "l2" },
+        "c": { "const": 1.0 },
+        "maxIterations": { "const": 2000 },
+        "tolerance": { "const": 1e-10 },
+        "iterations": { "type": "integer", "minimum": 1, "maximum": 2000 },
+        "converged": { "const": true }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["python", "numpy", "pandas", "scikitLearn"],
+      "properties": {
+        "python": { "type": "string" },
+        "numpy": { "const": "2.5.1" },
+        "pandas": { "const": "3.0.5" },
+        "scikitLearn": { "const": "1.9.0" }
+      }
+    }
+  },
+  "$defs": {
+    "vector": {
+      "type": "array", "minItems": 16, "maxItems": 16,
+      "items": { "type": "number" }
+    }
+  }
+}

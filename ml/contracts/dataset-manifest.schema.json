@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-dataset-manifest-v1.schema.json",
+  "title": "HallGuard Dataset Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "manifestId", "datasetVersion", "seed", "createdAt",
+    "featureVersion", "groupSplitKey", "dataPolicy", "licenses", "sources"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "manifestId": { "type": "string", "pattern": "^dataset-[a-z0-9][a-z0-9.-]{2,63}$" },
+    "datasetVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "seed": { "const": 20260801 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "featureVersion": { "const": "candidate-features-v1" },
+    "groupSplitKey": { "const": "templateGroupId" },
+    "dataPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "containsCustomerContent", "containsReportSnippets", "containsTelemetryPayloads",
+        "containsProductionLogs", "containsRealSecrets", "containsPersonalData"
+      ],
+      "properties": {
+        "containsCustomerContent": { "const": false },
+        "containsReportSnippets": { "const": false },
+        "containsTelemetryPayloads": { "const": false },
+        "containsProductionLogs": { "const": false },
+        "containsRealSecrets": { "const": false },
+        "containsPersonalData": { "const": false }
+      }
+    },
+    "licenses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["licenseId", "name", "spdxId", "reference"],
+        "properties": {
+          "licenseId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{2,63}$" },
+          "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "spdxId": { "type": "string", "minLength": 1, "maxLength": 60 },
+          "reference": { "type": "string", "pattern": "^https://" }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceId", "kind", "version", "reference", "licenseId", "groupStrategy",
+          "containsCustomerContent", "containsRealSecrets", "review"
+        ],
+        "properties": {
+          "sourceId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{2,63}$" },
+          "kind": {
+            "enum": ["synthetic-generator", "official-public-shape", "licensed-benign-corpus"]
+          },
+          "version": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "reference": { "type": "string", "pattern": "^https://" },
+          "licenseId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{2,63}$" },
+          "groupStrategy": { "const": "template-family" },
+          "containsCustomerContent": { "const": false },
+          "containsRealSecrets": { "const": false },
+          "review": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["privacyReviewer", "maintainerReviewer", "securityReviewer", "reviewedAt"],
+            "properties": {
+              "privacyReviewer": { "type": "string", "minLength": 3, "maxLength": 80 },
+              "maintainerReviewer": { "type": "string", "minLength": 3, "maxLength": 80 },
+              "securityReviewer": { "type": "string", "minLength": 3, "maxLength": 80 },
+              "reviewedAt": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+/** Storage feature boundary. Keep browser storage details behind this API. */
+export {
+  addActivityLog,
+  addWarningFeedbackRecord,
+  clearActivityLogs,
+  getActivityLogs,
+  getLocalReportExport,
+  getProtectedSites,
+  getQueuedSyncLogs,
+  getSettings,
+  retryQueuedSyncLogs,
+  saveProtectedSites,
+  setSetting,
+  updateActivityLogFeedback
+} from "./storage"
+export type {
+  ActivityLog,
+  ProtectedSite,
+  ProtectionSettings,
+  SensitivityMode,
+  UserDecision,
+  WarningFeedback,
+  WarningFeedbackRecord
+} from "../../firewall/types"

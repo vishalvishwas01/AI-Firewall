@@ -109,7 +109,8 @@ describe("combined analysis and redaction", () => {
       uploadWarnings: true,
       scamDetection: true,
       sensitivityMode: "balanced",
-      redactedSync: true
+      redactedSync: true,
+      improveDetection: false
     })
 
     expect(detections).toHaveLength(0)
@@ -126,6 +127,19 @@ describe("combined analysis and redaction", () => {
     expect(redacted).toContain("[REDACTED_CARD]")
     expect(redacted).not.toContain("hunter2token")
     expect(redacted).not.toContain("alex@example.com")
+  })
+
+  it.each([
+    ["UUID", "Release request 550e8400-e29b-41d4-a716-446655440000"],
+    ["SHA-256 hash", "Artifact 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"],
+    ["timestamp", "Created at 2026-08-01T12:00:00Z"],
+    ["semantic version", "Upgrade package to v3.14.2"],
+    ["placeholder", "JWT_SECRET=YOUR_SECRET_HERE"],
+    ["redacted placeholder", "api_key=[REDACTED]"],
+    ["example URL", "SERVICE_URL=https://example.invalid/api"],
+    ["ordinary identifier", "const CACHE_NAMESPACE = 'hallguard-development-cache'"]
+  ])("does not flag benign %s shapes", (_label, text) => {
+    expect(detectSensitiveData(text)).toEqual([])
   })
 
   it("redacts env-style secret and connection URI assignments", () => {
