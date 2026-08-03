@@ -75,4 +75,16 @@ Write the allowlisted content-free report:
 
 M3 does not export or activate an artifact. Its current release decision is false because human/corpus/application/performance/calibration gates remain incomplete. Chrome latency, bundle growth, compatibility, and artifact handoff belong only to separately authorized M4.
 
+## B1 corpus review package
+
+`datasets/manifests/b1-corpus-review-v1.review.json` is the machine-readable candidate-source and review package. `CORPUS_REVIEW.md` explains the required human evidence and B2 entry conditions.
+
+Validate the B1 boundary with:
+
+```powershell
+.venv\Scripts\python -m hallguard_ml.validate_workspace --root . --stage b1
+```
+
+B1 downloads no repository content and clears no M3 release blocker. Do not populate pins, hashes, reviewer identities, or approval states without real intake/review evidence and separate B2 authorization.
+
 See `DATA_GOVERNANCE.md` for the mandatory ingress and privacy policy.

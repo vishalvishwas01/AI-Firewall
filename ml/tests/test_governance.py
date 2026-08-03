@@ -12,8 +12,8 @@ WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
 
 class GovernanceTests(unittest.TestCase):
-    def test_current_m3_workspace_passes(self) -> None:
-        validate_workspace(WORKSPACE_ROOT, stage="m3")
+    def test_current_b1_workspace_passes(self) -> None:
+        validate_workspace(WORKSPACE_ROOT, stage="b1")
 
     def test_rejects_application_runtime_imports(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -65,6 +65,13 @@ class GovernanceTests(unittest.TestCase):
                 (reports / source.name).write_text(json.dumps(value), encoding="utf-8")
                 with self.assertRaisesRegex(GovernanceError, "fields mismatch"):
                     audit_workspace(root, stage="m3")
+
+    def test_b1_requires_the_exact_pending_review_package(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src").mkdir()
+            with self.assertRaisesRegex(GovernanceError, "requires review package"):
+                audit_workspace(root, stage="b1")
 
 
 if __name__ == "__main__":

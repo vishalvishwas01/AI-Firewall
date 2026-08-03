@@ -20,6 +20,8 @@ TRAINING_STATE_VERSION = "m2-logistic-training-state-v1"
 M2_MODEL_VERSION = "secret-logistic-m2-synthetic-v1"
 EVALUATION_REPORT_CONTRACT_ID = "hallguard-m3-evaluation-report-v1"
 EVALUATION_REPORT_VERSION = "m3-synthetic-evaluation-v1"
+CORPUS_REVIEW_CONTRACT_ID = "hallguard-b1-corpus-review-package-v1"
+CORPUS_REVIEW_PACKAGE_VERSION = "b1-corpus-review-v1"
 M3_GATE_NAMES = (
     "heldOutGroupIsolation",
     "deterministicTrainingState",
@@ -571,6 +573,186 @@ def _bounded_metric(value: Any, location: str, *, nullable: bool = False) -> Non
         return
     if not isinstance(value, (int, float)) or isinstance(value, bool) or not 0 <= value <= 1:
         raise ContractError(f"{location} must be between zero and one")
+
+
+def validate_corpus_review_package(value: dict[str, Any]) -> None:
+    """Validate a B1 content-free candidate package without fabricating approval or intake."""
+
+    _exact_fields(
+        value,
+        {
+            "schemaVersion", "packageVersion", "status", "releaseEligible", "purpose",
+            "dataPolicy", "selectionCriteria", "representativeSet", "sources",
+            "reviewChecklist", "gates", "nextStep",
+        },
+        "corpusReviewPackage",
+    )
+    if (
+        value["schemaVersion"] != 1
+        or value["packageVersion"] != CORPUS_REVIEW_PACKAGE_VERSION
+        or value["status"] != "pending-human-review"
+        or value["releaseEligible"] is not False
+        or value["nextStep"] != "b2-representative-evaluation-and-calibration"
+    ):
+        raise ContractError("B1 package identity or pending-review boundary is invalid")
+    if not isinstance(value["purpose"], str) or not value["purpose"]:
+        raise ContractError("B1 purpose is required")
+
+    policy = value["dataPolicy"]
+    if not isinstance(policy, dict):
+        raise ContractError("B1 dataPolicy must be an object")
+    _exact_fields(policy, set(DATA_POLICY_FIELDS), "corpusReviewPackage.dataPolicy")
+    if any(policy[field] is not False for field in DATA_POLICY_FIELDS):
+        raise ContractError("B1 package declares prohibited data")
+
+    criteria = value["selectionCriteria"]
+    if not isinstance(criteria, dict):
+        raise ContractError("B1 selectionCriteria must be an object")
+    _exact_fields(criteria, {"required", "excluded"}, "corpusReviewPackage.selectionCriteria")
+    for field in ("required", "excluded"):
+        items = criteria[field]
+        if not isinstance(items, list) or not items or any(not isinstance(item, str) or not item for item in items):
+            raise ContractError(f"B1 selectionCriteria.{field} requires string codes")
+
+    representative = value["representativeSet"]
+    if not isinstance(representative, dict):
+        raise ContractError("B1 representativeSet must be an object")
+    _exact_fields(
+        representative,
+        {"status", "requiredContentTypes", "requiredRiskStrata", "groupKey", "splitPolicy"},
+        "corpusReviewPackage.representativeSet",
+    )
+    if (
+        representative["status"] != "specified-not-built"
+        or representative["groupKey"] != "sourceId:pathFamily"
+        or representative["splitPolicy"] != "grouped-60-20-20-no-cross-split-leakage"
+    ):
+        raise ContractError("B1 representative-set boundary is invalid")
+    for field in ("requiredContentTypes", "requiredRiskStrata"):
+        items = representative[field]
+        if not isinstance(items, list) or not items or len(items) != len(set(items)):
+            raise ContractError(f"B1 representativeSet.{field} must contain unique values")
+
+    sources = value["sources"]
+    if not isinstance(sources, list) or len(sources) < 3:
+        raise ContractError("B1 requires at least three candidate benign sources")
+    source_ids: set[str] = set()
+    content_types: set[str] = set()
+    for index, source in enumerate(sources):
+        if not isinstance(source, dict):
+            raise ContractError(f"B1 source {index} must be an object")
+        _exact_fields(
+            source,
+            {
+                "sourceId", "name", "repository", "contentTypes", "intendedPaths",
+                "excludedPaths", "license", "pin", "groupStrategy", "ingestionStatus", "review",
+            },
+            f"corpusReviewPackage.sources[{index}]",
+        )
+        source_id = source["sourceId"]
+        if not isinstance(source_id, str) or not re.fullmatch(r"[a-z0-9][a-z0-9.-]{2,63}", source_id):
+            raise ContractError(f"B1 source {index} id is invalid")
+        if source_id in source_ids:
+            raise ContractError("B1 source ids must be unique")
+        source_ids.add(source_id)
+        if not isinstance(source["name"], str) or not source["name"]:
+            raise ContractError(f"B1 source {index} name is invalid")
+        if not isinstance(source["repository"], str) or not source["repository"].startswith("https://"):
+            raise ContractError(f"B1 source {index} repository must use HTTPS")
+        types = source["contentTypes"]
+        if (
+            not isinstance(types, list)
+            or not types
+            or any(item not in {"source-code", "configuration", "documentation"} for item in types)
+        ):
+            raise ContractError(f"B1 source {index} content types are invalid")
+        content_types.update(types)
+        for field in ("intendedPaths", "excludedPaths"):
+            paths = source[field]
+            if not isinstance(paths, list) or not paths or any(not isinstance(item, str) or not item for item in paths):
+                raise ContractError(f"B1 source {index} {field} is invalid")
+        license_value = source["license"]
+        if not isinstance(license_value, dict):
+            raise ContractError(f"B1 source {index} license must be an object")
+        _exact_fields(
+            license_value,
+            {"spdxId", "reference", "verificationStatus"},
+            f"corpusReviewPackage.sources[{index}].license",
+        )
+        if (
+            not isinstance(license_value["spdxId"], str)
+            or not license_value["spdxId"]
+            or not isinstance(license_value["reference"], str)
+            or not license_value["reference"].startswith("https://")
+            or license_value["verificationStatus"] != "pending-human-review"
+        ):
+            raise ContractError(f"B1 source {index} license is not pending verification")
+        pin = source["pin"]
+        if not isinstance(pin, dict):
+            raise ContractError(f"B1 source {index} pin must be an object")
+        _exact_fields(pin, {"status", "revision", "archiveSha256"}, f"corpusReviewPackage.sources[{index}].pin")
+        if pin != {"status": "required-during-b2-intake", "revision": None, "archiveSha256": None}:
+            raise ContractError(f"B1 source {index} must remain unpinned before approved intake")
+        review = source["review"]
+        if not isinstance(review, dict):
+            raise ContractError(f"B1 source {index} review must be an object")
+        _exact_fields(review, {"privacy", "security", "maintainer"}, f"corpusReviewPackage.sources[{index}].review")
+        if any(review[role] != {"status": "pending", "reviewer": None, "reviewedAt": None} for role in review):
+            raise ContractError(f"B1 source {index} must not claim human approval")
+        if source["groupStrategy"] != "repository-path-family" or source["ingestionStatus"] != "not-downloaded":
+            raise ContractError(f"B1 source {index} intake boundary is invalid")
+    if content_types != {"source-code", "configuration", "documentation"}:
+        raise ContractError("B1 sources must cover code, configuration, and documentation")
+
+    checklist = value["reviewChecklist"]
+    if not isinstance(checklist, dict):
+        raise ContractError("B1 reviewChecklist must be an object")
+    _exact_fields(
+        checklist,
+        {"requiredRoles", "distinctReviewersRequired", "items"},
+        "corpusReviewPackage.reviewChecklist",
+    )
+    if (
+        checklist["requiredRoles"] != ["privacy", "security", "maintainer"]
+        or checklist["distinctReviewersRequired"] is not True
+    ):
+        raise ContractError("B1 requires three distinct review roles")
+    items = checklist["items"]
+    if not isinstance(items, list) or not items:
+        raise ContractError("B1 review checklist is required")
+    item_ids: set[str] = set()
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            raise ContractError(f"B1 checklist item {index} must be an object")
+        _exact_fields(
+            item,
+            {"id", "ownerRole", "status", "evidenceRequired"},
+            f"corpusReviewPackage.reviewChecklist.items[{index}]",
+        )
+        if (
+            not isinstance(item["id"], str)
+            or item["id"] in item_ids
+            or item["ownerRole"] not in {"privacy", "security", "maintainer"}
+            or item["status"] != "pending"
+            or not isinstance(item["evidenceRequired"], str)
+            or not item["evidenceRequired"]
+        ):
+            raise ContractError(f"B1 checklist item {index} is invalid")
+        item_ids.add(item["id"])
+
+    gates = value["gates"]
+    expected_gates = {
+        "candidateSourcesDefined": True,
+        "representativeSetSpecified": True,
+        "sourcePinsVerified": False,
+        "licensesApproved": False,
+        "privacyApproved": False,
+        "securityApproved": False,
+        "maintainerApproved": False,
+        "corpusDownloaded": False,
+    }
+    if gates != expected_gates:
+        raise ContractError("B1 gates must preserve the pending intake/review boundary")
 
 
 def validate_evaluation_report(value: dict[str, Any]) -> None:

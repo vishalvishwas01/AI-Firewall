@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .contracts import (
     ContractError,
+    validate_corpus_review_package,
     validate_dataset_manifest,
     validate_evaluation_report,
     validate_generator_catalog,
@@ -26,6 +27,7 @@ M0_ALLOWED_DATA_FILES = {
 M1_STATIC_DATA_FILES = M0_ALLOWED_DATA_FILES | {
     Path("datasets/manifests/synthetic-generators-v1.catalog.json"),
 }
+B1_REVIEW_FILE = Path("datasets/manifests/b1-corpus-review-v1.review.json")
 
 
 class GovernanceError(RuntimeError):
@@ -67,10 +69,12 @@ def _audit_manifests(root: Path) -> list[str]:
                 raise ContractError("manifest root must be an object")
             if path.name.endswith(".catalog.json"):
                 validate_generator_catalog(value)
+            elif path.name.endswith(".review.json"):
+                validate_corpus_review_package(value)
             elif path.name.endswith(".manifest.json"):
                 validate_dataset_manifest(value)
             else:
-                raise ContractError("JSON metadata must use .catalog.json or .manifest.json")
+                raise ContractError("JSON metadata must use .catalog.json, .review.json, or .manifest.json")
         except (json.JSONDecodeError, ContractError) as error:
             errors.append(f"{path.relative_to(root)}: {error}")
     return errors
@@ -148,6 +152,20 @@ def _audit_m3_data_boundary(root: Path) -> list[str]:
     return errors
 
 
+def _audit_b1_data_boundary(root: Path) -> list[str]:
+    errors = _audit_m3_data_boundary(root)
+    review_suffix = str(B1_REVIEW_FILE)
+    errors = [
+        error
+        for error in errors
+        if not (error.startswith("M1 forbids undeclared data file:") and error.endswith(review_suffix))
+    ]
+    review_path = root / B1_REVIEW_FILE
+    if not review_path.is_file():
+        errors.append(f"B1 requires review package: {B1_REVIEW_FILE}")
+    return errors
+
+
 def audit_workspace(root: Path, *, stage: str = "m0") -> None:
     """Audit isolation, manifest privacy, and the current roadmap stop boundary."""
 
@@ -160,6 +178,8 @@ def audit_workspace(root: Path, *, stage: str = "m0") -> None:
         errors.extend(_audit_m2_data_boundary(root))
     elif stage == "m3":
         errors.extend(_audit_m3_data_boundary(root))
+    elif stage == "b1":
+        errors.extend(_audit_b1_data_boundary(root))
     else:
         raise ValueError(f"unsupported governance stage: {stage}")
     if errors:

@@ -230,6 +230,37 @@ Verification:
 
 Stop boundary: **M3 is complete with a failed release decision. Stop before M4; artifact handoff requires separate authorization.**
 
+### B1 — Corpus provenance and review package
+
+Status: **Complete — candidate package prepared; human and intake gates pending**
+
+Completed: **2026-08-01**
+
+- Added exact `hallguard-b1-corpus-review-package-v1` JSON/Python validation and B1 workspace governance.
+- Selected three metadata-only candidate sources: CPython for Python/code documentation, Kubernetes website for documentation/configuration examples, and Node.js for JavaScript/configuration/API documentation.
+- Recorded candidate repository and license references, intended path allowlists, excluded path families, grouping strategy, and required content/risk strata.
+- Defined immutable revision and archive SHA-256 requirements. These fields remain null until approved B2 intake; no corpus was downloaded or processed.
+- Added six evidence-bearing checklist items owned by three distinct real roles: privacy, security, and maintainer.
+- Added fail-closed checks that reject fabricated reviewers, approval status, downloaded state, release claims, prohibited data declarations, unknown/content-bearing fields, missing content-type coverage, and intake without pins.
+- Added `CORPUS_REVIEW.md` with review responsibilities and B2 entry conditions.
+
+B1 gate result:
+
+- `candidateSourcesDefined`: passed.
+- `representativeSetSpecified`: passed.
+- Source pins, archive hashes, license approval, privacy/security/maintainer approval, and corpus download: pending/false.
+- M3 release eligibility and all seven M3 blockers are unchanged. B1 prepares evidence; it does not truthfully clear a blocker by itself.
+
+Verification:
+
+- B1 contract/package validation passed.
+- B1 workspace governance passed.
+- Ruff, strict mypy, compilation, pytest, no-content/fabricated-review negative tests, and `git diff --check` passed.
+- Final suite: 37 passed and one expected missing-dependency-path skip.
+- No corpus row, archive, feature vector, retraining state, evaluation change, artifact, or application-runtime change was created.
+
+Stop boundary: **B1 is complete. Stop before B2; do not download or ingest candidate repositories without separate authorization and real review evidence.**
+
 ### M4 — Artifact handoff
 
 Status: **Planned**

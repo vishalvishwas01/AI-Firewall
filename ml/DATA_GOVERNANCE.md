@@ -37,6 +37,8 @@ M2 may fit only an experimental draft from explicitly synthetic rows. Feature ro
 
 M3 may evaluate only the deterministic held-out synthetic test partition. Its one allowlisted report contains aggregate counts, confusion/quality/calibration measures, confidence bands, per-family aggregates, version digests, limitations, and ordered gate decisions. It must not contain generated rows, prompts, snippets, candidate values or offsets, record ids, exact candidate hashes, surrounding text, per-record predictions, or probability arrays. Synthetic results cannot satisfy human review, licensed/representative corpus, application comparison, Chrome performance, or calibration-approval gates. A failed release decision is a valid M3 completion outcome and cannot authorize M4 artifact handoff.
 
+B1 permits one content-free corpus review package. Candidate repository and license references are planning metadata, not approval evidence. Each source must remain `not-downloaded` with null revision/archive hashes until separately authorized intake. Three distinct real reviewers must approve privacy, security, and maintenance evidence before download. During B2 intake and before processing, immutable revisions, archive SHA-256 values, attribution requirements, path allowlists, quarantine scanning, retention/deletion, and grouped-split rules are mandatory. Placeholder reviewers or automatic approval are forbidden. B1 cannot modify the M3 release decision.
+
 ## Enforcement and incident response
 
 - `hallguard_ml.governance` rejects undeclared data files, forbidden application imports, and manifests that fail the data-policy contract.

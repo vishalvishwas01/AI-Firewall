@@ -162,3 +162,16 @@ Complete this checklist for every new detector, model, storage field, synchroniz
 - [x] Ruff, strict mypy, compilation, pytest, M3 governance, and report/no-content validation pass.
 - [x] No extension artifact, source, bundle, runtime behavior, storage, telemetry, permission, or network path changed.
 - [x] M3 is complete with a failed release decision; M4 was not started.
+
+## B1 Review Record — 2026-08-01
+
+- [x] Candidate metadata covers source code, configuration, and developer documentation from three public HTTPS repositories.
+- [x] Repository/license references, intended paths, excluded paths, grouping, content types, and risk strata are exact-field validated.
+- [x] Immutable revisions and archive SHA-256 values are mandatory before B2 and remain null in B1.
+- [x] Every source remains not downloaded and pending license/privacy/security/maintainer review.
+- [x] Three distinct real review roles and six evidence requirements are documented; placeholder approval is rejected.
+- [x] Customer content, snippets, telemetry, production logs, real secrets, personal data, credentials/certificates, binaries, generated/vendor content, and repository history are excluded.
+- [x] Contract tests reject fabricated reviewers, approval/download state, release claims, prohibited-data declarations, and unknown/content-bearing fields.
+- [x] Ruff, strict mypy, compilation, pytest, B1 governance, and diff checks pass.
+- [x] No corpus, feature matrix, fit, calibration, report mutation, artifact, extension runtime, storage, permission, or network behavior changed.
+- [x] B1 is complete; B2 was not started and no M3 release blocker was falsely cleared.

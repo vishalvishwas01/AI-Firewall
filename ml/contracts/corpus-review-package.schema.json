@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-b1-corpus-review-package-v1.schema.json",
+  "title": "HallGuard B1 Corpus Review Package",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "packageVersion", "status", "releaseEligible", "purpose",
+    "dataPolicy", "selectionCriteria", "representativeSet", "sources",
+    "reviewChecklist", "gates", "nextStep"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "packageVersion": { "const": "b1-corpus-review-v1" },
+    "status": { "const": "pending-human-review" },
+    "releaseEligible": { "const": false },
+    "purpose": { "type": "string", "minLength": 1 },
+    "dataPolicy": { "type": "object" },
+    "selectionCriteria": { "type": "object" },
+    "representativeSet": { "type": "object" },
+    "sources": { "type": "array", "minItems": 3 },
+    "reviewChecklist": { "type": "object" },
+    "gates": { "type": "object" },
+    "nextStep": { "const": "b2-representative-evaluation-and-calibration" }
+  }
+}

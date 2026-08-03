@@ -473,6 +473,19 @@ Completed: **2026-08-01**
 
 Stop boundary: **M3 is complete. Stop before M4; do not copy or activate the M2 draft.**
 
+### B1 dependency handoff — corpus provenance and review package
+
+Status: **Complete in `../ml/`; metadata/review preparation only; no extension change**
+
+Completed: **2026-08-01**
+
+- ML B1 added a content-free candidate-source package, representative-set specification, and privacy/security/maintainer review checklist.
+- No candidate repository was downloaded or pinned; licenses and reviewers remain pending, and no M3 blocker was marked complete.
+- No retraining, recalibration, extension benchmark, artifact export/copy, package, source, bundle, storage, telemetry, permission, or network behavior changed.
+- The extension continues using unchanged schema-v1 `secret-logistic-bootstrap-v1` in shadow mode.
+
+Stop boundary: **B1 is complete. Stop before B2; application and extension work remain out of scope.**
+
 ## 5. Detection defaults
 
 - Exact critical match: high risk.

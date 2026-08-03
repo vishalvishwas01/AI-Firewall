@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "packageVersion": "b1-corpus-review-v1",
+  "status": "pending-human-review",
+  "releaseEligible": false,
+  "purpose": "Candidate licensed benign sources for a later representative offline evaluation; this package contains metadata only.",
+  "dataPolicy": {
+    "containsCustomerContent": false,
+    "containsReportSnippets": false,
+    "containsTelemetryPayloads": false,
+    "containsProductionLogs": false,
+    "containsRealSecrets": false,
+    "containsPersonalData": false
+  },
+  "selectionCriteria": {
+    "required": [
+      "public-https-repository",
+      "recognized-open-source-license",
+      "immutable-revision-before-intake",
+      "archive-sha256-before-processing",
+      "path-allowlist",
+      "secret-and-personal-data-quarantine-scan",
+      "grouped-split-compatible"
+    ],
+    "excluded": [
+      "customer-or-telemetry-content",
+      "production-logs",
+      "credential-or-certificate-fixtures",
+      "personal-data-fixtures",
+      "vendored-or-generated-content",
+      "binary-files",
+      "repository-history",
+      "network-download-during-training"
+    ]
+  },
+  "representativeSet": {
+    "status": "specified-not-built",
+    "requiredContentTypes": [
+      "source-code",
+      "configuration",
+      "documentation"
+    ],
+    "requiredRiskStrata": [
+      "ordinary-identifiers",
+      "paths-urls-and-versions",
+      "hashes-uuids-and-timestamps",
+      "placeholders-and-examples",
+      "secret-keyword-context-with-benign-values",
+      "high-entropy-benign-constants"
+    ],
+    "groupKey": "sourceId:pathFamily",
+    "splitPolicy": "grouped-60-20-20-no-cross-split-leakage"
+  },
+  "sources": [
+    {
+      "sourceId": "cpython-public-corpus",
+      "name": "CPython source and documentation",
+      "repository": "https://github.com/python/cpython",
+      "contentTypes": ["source-code", "documentation"],
+      "intendedPaths": ["Lib/**/*.py", "Doc/**/*.rst"],
+      "excludedPaths": ["Lib/test/**", "Tools/**", "Modules/_vendor/**", "**/certdata/**"],
+      "license": {
+        "spdxId": "PSF-2.0",
+        "reference": "https://github.com/python/cpython/blob/main/LICENSE",
+        "verificationStatus": "pending-human-review"
+      },
+      "pin": {
+        "status": "required-during-b2-intake",
+        "revision": null,
+        "archiveSha256": null
+      },
+      "groupStrategy": "repository-path-family",
+      "ingestionStatus": "not-downloaded",
+      "review": {
+        "privacy": {"status": "pending", "reviewer": null, "reviewedAt": null},
+        "security": {"status": "pending", "reviewer": null, "reviewedAt": null},
+        "maintainer": {"status": "pending", "reviewer": null, "reviewedAt": null}
+      }
+    },
+    {
+      "sourceId": "kubernetes-website-public-corpus",
+      "name": "Kubernetes documentation and configuration examples",
+      "repository": "https://github.com/kubernetes/website",
+      "contentTypes": ["configuration", "documentation"],
+      "intendedPaths": ["content/en/docs/**/*.md", "content/en/examples/**/*.{yaml,yml,json}"],
+      "excludedPaths": ["static/**", "data/**", "**/*secret*", "**/*credential*", "**/*certificate*"],
+      "license": {
+        "spdxId": "CC-BY-4.0",
+        "reference": "https://github.com/kubernetes/website/blob/main/LICENSE",
+        "verificationStatus": "pending-human-review"
+      },
+      "pin": {
+        "status": "required-during-b2-intake",
+        "revision": null,
+        "archiveSha256": null
+      },
+      "groupStrategy": "repository-path-family",
+      "ingestionStatus": "not-downloaded",
+      "review": {
+        "privacy": {"status": "pending", "reviewer": null, "reviewedAt": null},
+        "security": {"status": "pending", "reviewer": null, "reviewedAt": null},
+        "maintainer": {"status": "pending", "reviewer": null, "reviewedAt": null}
+      }
+    },
+    {
+      "sourceId": "nodejs-public-corpus",
+      "name": "Node.js source and API documentation",
+      "repository": "https://github.com/nodejs/node",
+      "contentTypes": ["source-code", "configuration", "documentation"],
+      "intendedPaths": ["lib/**/*.js", "doc/api/**/*.md", "*.json"],
+      "excludedPaths": ["test/**", "deps/**", "tools/**", "benchmark/**", "**/*credential*", "**/*certificate*"],
+      "license": {
+        "spdxId": "MIT",
+        "reference": "https://github.com/nodejs/node/blob/main/LICENSE",
+        "verificationStatus": "pending-human-review"
+      },
+      "pin": {
+        "status": "required-during-b2-intake",
+        "revision": null,
+        "archiveSha256": null
+      },
+      "groupStrategy": "repository-path-family",
+      "ingestionStatus": "not-downloaded",
+      "review": {
+        "privacy": {"status": "pending", "reviewer": null, "reviewedAt": null},
+        "security": {"status": "pending", "reviewer": null, "reviewedAt": null},
+        "maintainer": {"status": "pending", "reviewer": null, "reviewedAt": null}
+      }
+    }
+  ],
+  "reviewChecklist": {
+    "requiredRoles": ["privacy", "security", "maintainer"],
+    "distinctReviewersRequired": true,
+    "items": [
+      {
+        "id": "privacy-data-origin",
+        "ownerRole": "privacy",
+        "status": "pending",
+        "evidenceRequired": "Confirm sources are public project content and exclude customer, telemetry, logs, personal data, and behavioral histories."
+      },
+      {
+        "id": "privacy-retention-deletion",
+        "ownerRole": "privacy",
+        "status": "pending",
+        "evidenceRequired": "Approve local-only intake location, generated-row retention, and source removal procedure."
+      },
+      {
+        "id": "security-secret-quarantine",
+        "ownerRole": "security",
+        "status": "pending",
+        "evidenceRequired": "Approve pre-feature scanning and quarantine for credentials, private keys, certificates, personal data, and suspicious fixtures."
+      },
+      {
+        "id": "security-poisoning-and-groups",
+        "ownerRole": "security",
+        "status": "pending",
+        "evidenceRequired": "Confirm immutable pins, archive checksums, path allowlists, group isolation, and no network access during training."
+      },
+      {
+        "id": "maintainer-license-and-attribution",
+        "ownerRole": "maintainer",
+        "status": "pending",
+        "evidenceRequired": "Verify repository license, selected-path compatibility, attribution requirements, revision, and archive checksum."
+      },
+      {
+        "id": "maintainer-representativeness",
+        "ownerRole": "maintainer",
+        "status": "pending",
+        "evidenceRequired": "Approve content-type and risk-stratum coverage without claiming real-world distribution representativeness."
+      }
+    ]
+  },
+  "gates": {
+    "candidateSourcesDefined": true,
+    "representativeSetSpecified": true,
+    "sourcePinsVerified": false,
+    "licensesApproved": false,
+    "privacyApproved": false,
+    "securityApproved": false,
+    "maintainerApproved": false,
+    "corpusDownloaded": false
+  },
+  "nextStep": "b2-representative-evaluation-and-calibration"
+}
