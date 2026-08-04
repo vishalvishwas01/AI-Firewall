@@ -2,6 +2,12 @@
 
 Status: **Complete as a candidate package; all human and intake gates remain pending**
 
+Update **2026-08-04**: the user relayed conditional controlled-intake approvals from three
+distinct reviewers covering privacy, security, and maintainer roles. The content-free evidence record
+is `datasets/manifests/b2-intake-approval-v1.review.json`. This clears the pre-intake human-decision
+gate only. Pins, archive hashes, quarantine results, dataset approval, calibration approval, and release
+eligibility remain incomplete.
+
 The machine-readable source of truth is `datasets/manifests/b1-corpus-review-v1.review.json`. It contains metadata only. No repository archive, corpus row, candidate, feature vector, model state, or application artifact was downloaded or generated in B1.
 
 ## Candidate coverage
@@ -32,4 +38,10 @@ Candidate-intake approval requires all three review roles and evidence for the B
 - The ingestion command has network access separated from training; training itself remains offline.
 - Rejected/quarantined files cannot enter feature extraction.
 
-Until candidate-intake approval exists, B2 must not download repositories. Until B2 pins, scans, and validates the approved material, `licensedBenignCorpus`, `representativeBenignSet`, `catalogHumanReview`, and `calibrationApproved` remain false. B1 does not modify the M3 report because no blocker has yet been truthfully cleared.
+Candidate-intake approval is now recorded with conditions. The controlled-intake operation resolved
+immutable revisions, downloaded and hashed the archives, verified licence markers, applied allowlists,
+and scanned content without feature extraction. The aggregate evidence is complete; the reviewer gate
+for exact pins, hashes, licence/attribution records, and scan results remains open. Until that gate is
+accepted, `licensedBenignCorpus`,
+`representativeBenignSet`, `catalogHumanReview`, and `calibrationApproved` remain false. The approval
+record does not modify the M3 report or authorize M4.

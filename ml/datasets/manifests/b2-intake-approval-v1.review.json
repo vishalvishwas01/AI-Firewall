@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "packageVersion": "b2-intake-approval-v1",
+  "reviewType": "HUMAN_APPROVAL",
+  "reviewedOn": "2026-08-04",
+  "status": "approved-for-controlled-intake-with-conditions",
+  "releaseEligible": false,
+  "evidenceProvenance": "reviewer-decisions-relayed-by-user",
+  "operationalPolicy": {
+    "quarantinePath": ".b2-quarantine",
+    "retentionDays": 30,
+    "deleteEarlierAfterSuccessfulProcessing": true,
+    "rejectedFilePolicy": "delete-after-content-free-reason",
+    "incidentOwner": "Umang aggarwal",
+    "networkDuringIntake": "authorized-for-approved-sources-only",
+    "networkDuringTraining": "forbidden",
+    "quarantineFeedsFeatureExtraction": false,
+    "rawContentInGeneratedDatasets": false
+  },
+  "reviewers": [
+    {
+      "role": "privacy",
+      "identity": "vishal vishwas",
+      "decision": "approve-for-controlled-intake-with-conditions",
+      "conditions": [
+        "Local Git-ignored quarantine",
+        "Personal-data and credential scanning",
+        "No raw content in generated datasets",
+        "Defined retention and deletion procedure"
+      ]
+    },
+    {
+      "role": "security",
+      "identity": "Umang aggarwal",
+      "decision": "approve-for-controlled-intake-with-conditions",
+      "conditions": [
+        "Immutable commit pins and archive SHA-256",
+        "Path allowlists plus content scanning",
+        "Reject binaries, symlinks, generated/vendor/test content",
+        "No network access during training",
+        "Quarantine cannot feed feature extraction"
+      ]
+    },
+    {
+      "role": "maintainer",
+      "identity": "Tushar garg",
+      "decision": "approve-for-controlled-intake-with-conditions",
+      "conditions": [
+        "CPython composite/file-level licence handling",
+        "Kubernetes CC BY 4.0 attribution",
+        "Node.js third-party licence exclusions",
+        "Revision, source URL, licence and attribution records"
+      ]
+    }
+  ],
+  "sources": [
+    { "sourceId": "cpython-public-corpus", "decision": "conditional-approval" },
+    { "sourceId": "kubernetes-website-public-corpus", "decision": "conditional-approval" },
+    { "sourceId": "nodejs-public-corpus", "decision": "conditional-approval" }
+  ],
+  "gates": {
+    "humanApprovalRecorded": true,
+    "requiredRolesCovered": true,
+    "distinctReviewersConfirmed": true,
+    "allCandidateSourcesConditionallyApproved": true,
+    "sourcePinsVerified": false,
+    "archiveHashesVerified": false,
+    "quarantineScanPassed": false,
+    "corpusDownloaded": false,
+    "datasetApproved": false,
+    "calibrationApproved": false
+  },
+  "nextStep": "controlled-source-pinning-and-quarantine"
+}

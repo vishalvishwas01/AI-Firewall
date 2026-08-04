@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-b2-intake-evidence-v1.schema.json",
+  "title": "HallGuard B2 Controlled Intake Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "reportVersion", "status", "releaseEligible", "retrievedOn",
+    "retentionExpiresOn", "approvalPackageVersion", "rawContentCommitted",
+    "acceptedContentDeleted", "featureExtractionPerformed", "trainingPerformed", "sources", "gates", "nextStep"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reportVersion": { "const": "b2-intake-evidence-v1" },
+    "status": { "const": "sanitized-quarantine-awaiting-human-review" },
+    "releaseEligible": { "const": false },
+    "retrievedOn": { "type": "string", "format": "date" },
+    "retentionExpiresOn": { "type": "string", "format": "date" },
+    "approvalPackageVersion": { "const": "b2-intake-approval-v1" },
+    "rawContentCommitted": { "const": false },
+    "acceptedContentDeleted": { "type": "boolean" },
+    "featureExtractionPerformed": { "const": false },
+    "trainingPerformed": { "const": false },
+    "sources": { "type": "array", "minItems": 3, "maxItems": 3 },
+    "gates": { "type": "object" },
+    "nextStep": { "const": "post-intake-human-review" }
+  }
+}

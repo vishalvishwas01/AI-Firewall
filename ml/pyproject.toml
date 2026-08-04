@@ -25,6 +25,7 @@ hallguard-ml-validate = "hallguard_ml.validate_workspace:main"
 hallguard-ml-generate = "hallguard_ml.generate:main"
 hallguard-ml-train = "hallguard_ml.train:main"
 hallguard-ml-evaluate = "hallguard_ml.evaluate:main"
+hallguard-ml-intake = "hallguard_ml.intake:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

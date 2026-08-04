@@ -85,6 +85,49 @@ Validate the B1 boundary with:
 .venv\Scripts\python -m hallguard_ml.validate_workspace --root . --stage b1
 ```
 
-B1 downloads no repository content and clears no M3 release blocker. Do not populate pins, hashes, reviewer identities, or approval states without real intake/review evidence and separate B2 authorization.
+B1 downloads no repository content and clears no M3 release blocker. Do not populate its immutable pending-state document with later decisions.
+
+## B2 pre-intake approval
+
+`datasets/manifests/b2-intake-approval-v1.review.json` records the three distinct conditional human
+approvals relayed by the user on 2026-08-04. It authorizes controlled source pinning and
+quarantine only. It does not authorize raw content in generated datasets, network access during training,
+feature extraction from quarantine, model release, or extension activation.
+
+Validate the approval boundary with:
+
+```powershell
+.venv\Scripts\python -m hallguard_ml.validate_workspace --root . --stage b2
+```
+
+The next operation must define the ignored quarantine/retention policy and then separately obtain network
+authorization before downloading immutable archives. Pins, hashes, scans, attribution, final dataset review,
+evaluation, and calibration remain pending.
+
+## B2 controlled intake command
+
+The approved operational policy uses `ml/.b2-quarantine`, a 30-day maximum retention, early deletion after
+successful sanitized processing, deletion of rejected files after a content-free reason is recorded, and no
+network access during training. The intake command never runs feature extraction or training.
+
+Run the no-network preflight:
+
+```powershell
+.\venv\Scripts\python -m hallguard_ml.intake --root . --check-only
+```
+
+After the separate network authorization, run the controlled intake once:
+
+```powershell
+.\venv\Scripts\python -m hallguard_ml.intake --root . --network
+```
+
+This writes only the content-free `datasets/manifests/b2-intake-evidence-v1.intake.json`; accepted source
+files, if retained for post-intake review, stay under the ignored quarantine. They may be deleted earlier
+after successful sanitized processing under the approved policy. Validate the completed intake boundary with:
+
+```powershell
+.\venv\Scripts\python -m hallguard_ml.validate_workspace --root . --stage b2-intake
+```
 
 See `DATA_GOVERNANCE.md` for the mandatory ingress and privacy policy.

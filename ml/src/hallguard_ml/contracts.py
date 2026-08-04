@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 DETERMINISTIC_SEED = 20260801
@@ -22,6 +22,10 @@ EVALUATION_REPORT_CONTRACT_ID = "hallguard-m3-evaluation-report-v1"
 EVALUATION_REPORT_VERSION = "m3-synthetic-evaluation-v1"
 CORPUS_REVIEW_CONTRACT_ID = "hallguard-b1-corpus-review-package-v1"
 CORPUS_REVIEW_PACKAGE_VERSION = "b1-corpus-review-v1"
+INTAKE_APPROVAL_CONTRACT_ID = "hallguard-b2-intake-approval-v1"
+INTAKE_APPROVAL_PACKAGE_VERSION = "b2-intake-approval-v1"
+INTAKE_EVIDENCE_CONTRACT_ID = "hallguard-b2-intake-evidence-v1"
+INTAKE_EVIDENCE_REPORT_VERSION = "b2-intake-evidence-v1"
 M3_GATE_NAMES = (
     "heldOutGroupIsolation",
     "deterministicTrainingState",
@@ -127,6 +131,17 @@ def _date_time(value: Any, location: str) -> None:
         datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as error:
         raise ContractError(f"{location} must be an ISO-8601 string") from error
+
+
+def _date_only(value: Any, location: str) -> None:
+    if not isinstance(value, str):
+        raise ContractError(f"{location} must be an ISO-8601 date")
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError as error:
+        raise ContractError(f"{location} must be an ISO-8601 date") from error
+    if parsed.isoformat() != value:
+        raise ContractError(f"{location} must be an ISO-8601 date")
 
 
 def _feature_vector(value: Any, location: str, *, positive: bool = False) -> None:
@@ -753,6 +768,259 @@ def validate_corpus_review_package(value: dict[str, Any]) -> None:
     }
     if gates != expected_gates:
         raise ContractError("B1 gates must preserve the pending intake/review boundary")
+
+
+def validate_intake_approval_package(value: dict[str, Any]) -> None:
+    """Validate user-supplied human approval for controlled B2 intake only."""
+
+    _exact_fields(
+        value,
+        {
+            "schemaVersion", "packageVersion", "reviewType", "reviewedOn", "status",
+            "releaseEligible", "evidenceProvenance", "operationalPolicy", "reviewers", "sources",
+            "gates", "nextStep",
+        },
+        "intakeApprovalPackage",
+    )
+    if (
+        value["schemaVersion"] != 1
+        or value["packageVersion"] != INTAKE_APPROVAL_PACKAGE_VERSION
+        or value["reviewType"] != "HUMAN_APPROVAL"
+        or value["status"] != "approved-for-controlled-intake-with-conditions"
+        or value["releaseEligible"] is not False
+        or value["evidenceProvenance"] != "reviewer-decisions-relayed-by-user"
+        or value["nextStep"] != "controlled-source-pinning-and-quarantine"
+    ):
+        raise ContractError("B2 intake approval identity or stop boundary is invalid")
+    _date_only(value["reviewedOn"], "intakeApprovalPackage.reviewedOn")
+
+    policy = value["operationalPolicy"]
+    if not isinstance(policy, dict):
+        raise ContractError("B2 operational policy must be an object")
+    _exact_fields(
+        policy,
+        {
+            "quarantinePath", "retentionDays", "deleteEarlierAfterSuccessfulProcessing",
+            "rejectedFilePolicy", "incidentOwner", "networkDuringIntake", "networkDuringTraining",
+            "quarantineFeedsFeatureExtraction", "rawContentInGeneratedDatasets",
+        },
+        "intakeApprovalPackage.operationalPolicy",
+    )
+    if policy != {
+        "quarantinePath": ".b2-quarantine",
+        "retentionDays": 30,
+        "deleteEarlierAfterSuccessfulProcessing": True,
+        "rejectedFilePolicy": "delete-after-content-free-reason",
+        "incidentOwner": "Umang aggarwal",
+        "networkDuringIntake": "authorized-for-approved-sources-only",
+        "networkDuringTraining": "forbidden",
+        "quarantineFeedsFeatureExtraction": False,
+        "rawContentInGeneratedDatasets": False,
+    }:
+        raise ContractError("B2 operational policy does not match the human authorization")
+
+    reviewers = value["reviewers"]
+    if not isinstance(reviewers, list) or len(reviewers) != 3:
+        raise ContractError("B2 intake approval requires exactly three reviewers")
+    expected_roles = {"privacy", "security", "maintainer"}
+    roles: set[str] = set()
+    identities: set[str] = set()
+    for index, reviewer in enumerate(reviewers):
+        if not isinstance(reviewer, dict):
+            raise ContractError(f"B2 reviewer {index} must be an object")
+        _exact_fields(
+            reviewer,
+            {"role", "identity", "decision", "conditions"},
+            f"intakeApprovalPackage.reviewers[{index}]",
+        )
+        role = reviewer["role"]
+        identity = reviewer["identity"]
+        if role not in expected_roles or role in roles:
+            raise ContractError("B2 reviewer roles must be unique and complete")
+        if not isinstance(identity, str) or not 3 <= len(identity.strip()) <= 80:
+            raise ContractError(f"B2 reviewer {index} identity is invalid")
+        normalized_identity = " ".join(identity.lower().split())
+        if normalized_identity in {"placeholder", "reviewer", "test reviewer", "same reviewer"}:
+            raise ContractError(f"B2 reviewer {index} identity is a placeholder")
+        if normalized_identity in identities:
+            raise ContractError("B2 reviewers must be distinct real identities")
+        if reviewer["decision"] != "approve-for-controlled-intake-with-conditions":
+            raise ContractError(f"B2 reviewer {index} decision is not an approval")
+        conditions = reviewer["conditions"]
+        if (
+            not isinstance(conditions, list)
+            or not conditions
+            or len(conditions) != len(set(conditions))
+            or any(not isinstance(item, str) or not item.strip() for item in conditions)
+        ):
+            raise ContractError(f"B2 reviewer {index} conditions are invalid")
+        roles.add(role)
+        identities.add(normalized_identity)
+    if roles != expected_roles:
+        raise ContractError("B2 intake approval is missing a required reviewer role")
+
+    sources = value["sources"]
+    expected_source_ids = {
+        "cpython-public-corpus",
+        "kubernetes-website-public-corpus",
+        "nodejs-public-corpus",
+    }
+    if not isinstance(sources, list) or len(sources) != len(expected_source_ids):
+        raise ContractError("B2 intake approval must cover all B1 sources")
+    source_ids: set[str] = set()
+    for index, source in enumerate(sources):
+        if not isinstance(source, dict):
+            raise ContractError(f"B2 source approval {index} must be an object")
+        _exact_fields(source, {"sourceId", "decision"}, f"intakeApprovalPackage.sources[{index}]")
+        if source["decision"] != "conditional-approval":
+            raise ContractError(f"B2 source approval {index} must remain conditional")
+        if not isinstance(source["sourceId"], str) or source["sourceId"] in source_ids:
+            raise ContractError("B2 source approval ids must be unique strings")
+        source_ids.add(source["sourceId"])
+    if source_ids != expected_source_ids:
+        raise ContractError("B2 intake approval does not exactly cover the B1 sources")
+
+    expected_gates = {
+        "humanApprovalRecorded": True,
+        "requiredRolesCovered": True,
+        "distinctReviewersConfirmed": True,
+        "allCandidateSourcesConditionallyApproved": True,
+        "sourcePinsVerified": False,
+        "archiveHashesVerified": False,
+        "quarantineScanPassed": False,
+        "corpusDownloaded": False,
+        "datasetApproved": False,
+        "calibrationApproved": False,
+    }
+    if value["gates"] != expected_gates:
+        raise ContractError("B2 intake approval gates must preserve the pre-intake boundary")
+
+
+def validate_intake_evidence(value: dict[str, Any]) -> None:
+    """Validate aggregate B2 intake evidence without accepting corpus content or release claims."""
+
+    _exact_fields(
+        value,
+        {
+            "schemaVersion", "reportVersion", "status", "releaseEligible", "retrievedOn",
+            "retentionExpiresOn", "approvalPackageVersion", "rawContentCommitted",
+            "acceptedContentDeleted", "featureExtractionPerformed", "trainingPerformed", "sources",
+            "gates", "nextStep",
+        },
+        "intakeEvidence",
+    )
+    if (
+        value["schemaVersion"] != 1
+        or value["reportVersion"] != INTAKE_EVIDENCE_REPORT_VERSION
+        or value["status"] != "sanitized-quarantine-awaiting-human-review"
+        or value["releaseEligible"] is not False
+        or value["approvalPackageVersion"] != INTAKE_APPROVAL_PACKAGE_VERSION
+        or value["rawContentCommitted"] is not False
+        or not isinstance(value["acceptedContentDeleted"], bool)
+        or value["featureExtractionPerformed"] is not False
+        or value["trainingPerformed"] is not False
+        or value["nextStep"] != "post-intake-human-review"
+    ):
+        raise ContractError("B2 intake evidence identity or stop boundary is invalid")
+    _date_only(value["retrievedOn"], "intakeEvidence.retrievedOn")
+    _date_only(value["retentionExpiresOn"], "intakeEvidence.retentionExpiresOn")
+    retrieved = date.fromisoformat(value["retrievedOn"])
+    expires = date.fromisoformat(value["retentionExpiresOn"])
+    if (expires - retrieved).days != 30:
+        raise ContractError("B2 intake retention must be exactly the approved 30-day maximum")
+
+    sources = value["sources"]
+    expected_sources = {
+        "cpython-public-corpus": ("https://github.com/python/cpython", "PSF-2.0"),
+        "kubernetes-website-public-corpus": ("https://github.com/kubernetes/website", "CC-BY-4.0"),
+        "nodejs-public-corpus": ("https://github.com/nodejs/node", "MIT"),
+    }
+    if not isinstance(sources, list) or len(sources) != len(expected_sources):
+        raise ContractError("B2 intake evidence must cover all approved sources")
+    seen: set[str] = set()
+    allowed_rejection_reasons = {
+        "outside-allowlist", "excluded-path", "symlink", "oversized-file", "binary-or-non-utf8",
+        "pem-or-private-key", "known-token-shape", "credential-assignment", "email-address",
+        "phone-number",
+    }
+    for index, source in enumerate(sources):
+        if not isinstance(source, dict):
+            raise ContractError(f"B2 intake source {index} must be an object")
+        _exact_fields(
+            source,
+            {
+                "sourceId", "repository", "revision", "archiveSha256", "archiveDeleted",
+                "acceptedFileCount", "acceptedByteCount", "rejectedEntryCount",
+                "rejectionReasonCounts", "acceptedTreeSha256", "scanStatus", "license",
+            },
+            f"intakeEvidence.sources[{index}]",
+        )
+        source_id = source["sourceId"]
+        if source_id not in expected_sources or source_id in seen:
+            raise ContractError("B2 intake source ids must be exact and unique")
+        expected_repository, expected_spdx = expected_sources[source_id]
+        if (
+            source["repository"] != expected_repository
+            or not isinstance(source["revision"], str)
+            or re.fullmatch(r"[0-9a-f]{40}", source["revision"]) is None
+            or not isinstance(source["archiveSha256"], str)
+            or re.fullmatch(r"[0-9a-f]{64}", source["archiveSha256"]) is None
+            or not isinstance(source["acceptedTreeSha256"], str)
+            or re.fullmatch(r"[0-9a-f]{64}", source["acceptedTreeSha256"]) is None
+            or source["archiveDeleted"] is not True
+            or source["scanStatus"] != "passed-with-rejections-filtered"
+        ):
+            raise ContractError(f"B2 intake source {index} provenance or scan state is invalid")
+        for field in ("acceptedFileCount", "acceptedByteCount", "rejectedEntryCount"):
+            if not isinstance(source[field], int) or isinstance(source[field], bool) or source[field] < 0:
+                raise ContractError(f"B2 intake source {index} {field} is invalid")
+        if source["acceptedFileCount"] == 0 or source["acceptedByteCount"] == 0:
+            raise ContractError(f"B2 intake source {index} accepted no usable text")
+        reasons = source["rejectionReasonCounts"]
+        if (
+            not isinstance(reasons, dict)
+            or not set(reasons).issubset(allowed_rejection_reasons)
+            or any(not isinstance(count, int) or isinstance(count, bool) or count <= 0 for count in reasons.values())
+            or sum(reasons.values()) != source["rejectedEntryCount"]
+        ):
+            raise ContractError(f"B2 intake source {index} rejection counts are invalid")
+        license_value = source["license"]
+        if not isinstance(license_value, dict):
+            raise ContractError(f"B2 intake source {index} license must be an object")
+        _exact_fields(
+            license_value,
+            {"spdxId", "sourcePath", "sha256", "markerVerified", "attribution", "verificationStatus"},
+            f"intakeEvidence.sources[{index}].license",
+        )
+        if (
+            license_value["spdxId"] != expected_spdx
+            or license_value["sourcePath"] != "LICENSE"
+            or not isinstance(license_value["sha256"], str)
+            or re.fullmatch(r"[0-9a-f]{64}", license_value["sha256"]) is None
+            or license_value["markerVerified"] is not True
+            or not isinstance(license_value["attribution"], str)
+            or not license_value["attribution"]
+            or license_value["verificationStatus"] != "pending-post-intake-human-review"
+        ):
+            raise ContractError(f"B2 intake source {index} license evidence is invalid")
+        seen.add(source_id)
+    if seen != set(expected_sources):
+        raise ContractError("B2 intake evidence is missing an approved source")
+
+    expected_gates = {
+        "humanApprovalRecorded": True,
+        "sourcePinsVerified": True,
+        "archiveHashesVerified": True,
+        "pathAllowlistApplied": True,
+        "quarantineScanPassed": True,
+        "originalArchivesDeleted": True,
+        "postIntakeHumanReview": False,
+        "datasetApproved": False,
+        "representativeEvaluationComplete": False,
+        "calibrationApproved": False,
+    }
+    if value["gates"] != expected_gates:
+        raise ContractError("B2 intake evidence gates overclaim the completed boundary")
 
 
 def validate_evaluation_report(value: dict[str, Any]) -> None:

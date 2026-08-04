@@ -15,9 +15,13 @@ from .contracts import (
     EVALUATION_REPORT_CONTRACT_ID,
     FEATURE_NAMES,
     GENERATOR_CATALOG_CONTRACT_ID,
+    INTAKE_APPROVAL_CONTRACT_ID,
+    INTAKE_EVIDENCE_CONTRACT_ID,
     TRAINING_STATE_CONTRACT_ID,
     validate_corpus_review_package,
     validate_generator_catalog,
+    validate_intake_approval_package,
+    validate_intake_evidence,
 )
 from .generators import GENERATOR_DEFINITIONS
 from .governance import audit_workspace
@@ -63,6 +67,12 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
     corpus_review_schema = json.loads(
         (root / "contracts" / "corpus-review-package.schema.json").read_text(encoding="utf-8")
     )
+    intake_approval_schema = json.loads(
+        (root / "contracts" / "intake-approval.schema.json").read_text(encoding="utf-8")
+    )
+    intake_evidence_schema = json.loads(
+        (root / "contracts" / "intake-evidence.schema.json").read_text(encoding="utf-8")
+    )
     catalog = json.loads(
         (root / "datasets" / "manifests" / "synthetic-generators-v1.catalog.json").read_text(
             encoding="utf-8"
@@ -70,6 +80,11 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
     )
     corpus_review = json.loads(
         (root / "datasets" / "manifests" / "b1-corpus-review-v1.review.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    intake_approval = json.loads(
+        (root / "datasets" / "manifests" / "b2-intake-approval-v1.review.json").read_text(
             encoding="utf-8"
         )
     )
@@ -85,12 +100,24 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
         raise ValueError("evaluation report contract id mismatch")
     if CORPUS_REVIEW_CONTRACT_ID not in corpus_review_schema["$id"]:
         raise ValueError("corpus review contract id mismatch")
+    if INTAKE_APPROVAL_CONTRACT_ID not in intake_approval_schema["$id"]:
+        raise ValueError("intake approval contract id mismatch")
+    if INTAKE_EVIDENCE_CONTRACT_ID not in intake_evidence_schema["$id"]:
+        raise ValueError("intake evidence contract id mismatch")
     if artifact_schema["properties"]["featureOrder"]["const"] != list(FEATURE_NAMES):
         raise ValueError("artifact JSON schema feature order mismatch")
     if manifest_schema["properties"]["seed"]["const"] != DETERMINISTIC_SEED:
         raise ValueError("dataset JSON schema seed mismatch")
     validate_generator_catalog(catalog)
     validate_corpus_review_package(corpus_review)
+    validate_intake_approval_package(intake_approval)
+    if stage == "b2-intake":
+        intake_evidence = json.loads(
+            (root / "datasets" / "manifests" / "b2-intake-evidence-v1.intake.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        validate_intake_evidence(intake_evidence)
     catalog_definitions = {
         item["generatorId"]: (item["version"], item["label"], item["family"], tuple(item["mutationIds"]))
         for item in catalog["generators"]
@@ -108,7 +135,11 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Validate the staged HallGuard ML workspace")
     parser.add_argument("--root", type=Path, default=Path.cwd())
-    parser.add_argument("--stage", choices=("m0", "m1", "m2", "m3", "b1"), default="b1")
+    parser.add_argument(
+        "--stage",
+        choices=("m0", "m1", "m2", "m3", "b1", "b2", "b2-intake"),
+        default="b2",
+    )
     args = parser.parse_args()
     validate_workspace(args.root.resolve(), stage=args.stage)
     print(f"HallGuard {args.stage.upper()} workspace validation passed")

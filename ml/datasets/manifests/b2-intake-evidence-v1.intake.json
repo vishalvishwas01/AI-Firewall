@@ -1,0 +1,114 @@
+{
+  "approvalPackageVersion": "b2-intake-approval-v1",
+  "acceptedContentDeleted": true,
+  "featureExtractionPerformed": false,
+  "gates": {
+    "archiveHashesVerified": true,
+    "calibrationApproved": false,
+    "datasetApproved": false,
+    "humanApprovalRecorded": true,
+    "originalArchivesDeleted": true,
+    "pathAllowlistApplied": true,
+    "postIntakeHumanReview": false,
+    "quarantineScanPassed": true,
+    "representativeEvaluationComplete": false,
+    "sourcePinsVerified": true
+  },
+  "nextStep": "post-intake-human-review",
+  "rawContentCommitted": false,
+  "releaseEligible": false,
+  "reportVersion": "b2-intake-evidence-v1",
+  "retentionExpiresOn": "2026-09-03",
+  "retrievedOn": "2026-08-04",
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "acceptedByteCount": 15406461,
+      "acceptedFileCount": 1062,
+      "acceptedTreeSha256": "3ed40b570b8b9bf03d6628956789229b0e1323a9c94af82641fed995f0e1a30e",
+      "archiveDeleted": true,
+      "archiveSha256": "ee53a24cf590635ff26039c5f37ae64f9c7d9762c38f0ae5cb084f49a9d8b9e9",
+      "license": {
+        "attribution": "Python Software Foundation; PSF-2.0 and applicable file-level notices",
+        "markerVerified": true,
+        "sha256": "b0e25a78cffb43f4d92de8b61ccfa1f1f98ecbc22330b54b5251e7b6ba010231",
+        "sourcePath": "LICENSE",
+        "spdxId": "PSF-2.0",
+        "verificationStatus": "pending-post-intake-human-review"
+      },
+      "rejectedEntryCount": 4931,
+      "rejectionReasonCounts": {
+        "credential-assignment": 17,
+        "email-address": 148,
+        "excluded-path": 1292,
+        "outside-allowlist": 3377,
+        "pem-or-private-key": 2,
+        "phone-number": 91,
+        "symlink": 4
+      },
+      "repository": "https://github.com/python/cpython",
+      "revision": "ef0affbf7c1cb8bbc136b65cc0f02985f8c568b5",
+      "scanStatus": "passed-with-rejections-filtered",
+      "sourceId": "cpython-public-corpus"
+    },
+    {
+      "acceptedByteCount": 11245072,
+      "acceptedFileCount": 1651,
+      "acceptedTreeSha256": "3f5b04dd1c78824e76f6e2cee30a2e8f49f411532e10bca963715ae2a0c6f9c0",
+      "archiveDeleted": true,
+      "archiveSha256": "eb25d270d604a1334d5ddd5d07335f2146dfaaf3171a02b41ec5473b1312722f",
+      "license": {
+        "attribution": "The Kubernetes Authors; Creative Commons Attribution 4.0 International",
+        "markerVerified": true,
+        "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
+        "sourcePath": "LICENSE",
+        "spdxId": "CC-BY-4.0",
+        "verificationStatus": "pending-post-intake-human-review"
+      },
+      "rejectedEntryCount": 11469,
+      "rejectionReasonCounts": {
+        "credential-assignment": 18,
+        "email-address": 12,
+        "excluded-path": 329,
+        "outside-allowlist": 11047,
+        "pem-or-private-key": 1,
+        "phone-number": 62
+      },
+      "repository": "https://github.com/kubernetes/website",
+      "revision": "3281a6a4f4c1505e18040f3915eb226cc41987c3",
+      "scanStatus": "passed-with-rejections-filtered",
+      "sourceId": "kubernetes-website-public-corpus"
+    },
+    {
+      "acceptedByteCount": 6573978,
+      "acceptedFileCount": 421,
+      "acceptedTreeSha256": "da458ac029114e2dffc04b9efa12917d5736947b4a60b4b939448fb3b4401128",
+      "archiveDeleted": true,
+      "archiveSha256": "d1bbf0b2cd7c672c691c6ae11241670c69113066a82f6c7c289ffbcbdfab6b7e",
+      "license": {
+        "attribution": "Node.js contributors; MIT; dependencies and third-party content excluded",
+        "markerVerified": true,
+        "sha256": "5888dbb9a1d2b18f2c3e6c5f6af1b39de658372b402a0577b002777f14c62ace",
+        "sourcePath": "LICENSE",
+        "spdxId": "MIT",
+        "verificationStatus": "pending-post-intake-human-review"
+      },
+      "rejectedEntryCount": 49544,
+      "rejectionReasonCounts": {
+        "credential-assignment": 14,
+        "email-address": 6,
+        "excluded-path": 4,
+        "outside-allowlist": 49482,
+        "pem-or-private-key": 1,
+        "phone-number": 31,
+        "symlink": 6
+      },
+      "repository": "https://github.com/nodejs/node",
+      "revision": "15495a069fc8eaec8c70ea88781ae241a87fd25d",
+      "scanStatus": "passed-with-rejections-filtered",
+      "sourceId": "nodejs-public-corpus"
+    }
+  ],
+  "status": "sanitized-quarantine-awaiting-human-review",
+  "trainingPerformed": false
+}

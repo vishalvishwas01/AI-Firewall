@@ -261,6 +261,64 @@ Verification:
 
 Stop boundary: **B1 is complete. Stop before B2; do not download or ingest candidate repositories without separate authorization and real review evidence.**
 
+### B2 — Controlled corpus intake and representative evaluation
+
+Status: **In progress — controlled intake evidence complete; post-intake human review pending**
+
+Pre-intake approval recorded: **2026-08-04**
+
+- The user relayed `HUMAN_APPROVAL` decisions from three distinct real identities covering
+  privacy, security, and maintainer roles.
+- CPython, Kubernetes website, and Node.js received conditional approval for controlled intake.
+- The conditions require a Git-ignored local quarantine; credential/personal-data scanning; immutable
+  commit pins and archive SHA-256; path allowlists; binary, symlink, generated, vendor, test, and
+  third-party exclusions; offline training; quarantine isolation from feature extraction; source-specific
+  license handling; attribution; and a defined retention/deletion procedure.
+- Added exact `hallguard-b2-intake-approval-v1` JSON/Python validation and governance checks.
+- Kept the original B1 package immutable and pending so the history does not falsely claim that approval
+  existed during B1.
+- The approval package is content-free and explicitly `releaseEligible: false`.
+
+Completed intake evidence:
+
+- Resolved immutable revisions and downloaded all three approved archives.
+- Verified archive SHA-256 values and source licence markers.
+- Applied path allowlists and rejected binaries, symlinks, generated/vendor/test/third-party paths,
+  credential-like content, emails, phone-like content, and key/token shapes.
+- Produced `datasets/manifests/b2-intake-evidence-v1.intake.json` with aggregate counts only.
+- Deleted original archives and accepted quarantine content after successful scanning/evidence generation
+  under the approved early-deletion policy; no raw corpus content is committed.
+
+Still pending:
+
+1. Privacy, security, and maintainer post-intake review of the exact revisions, hashes, licence handling,
+   attribution, and aggregate scan results.
+2. If reviewers require retained source files, rehydrate only the exact pinned revisions into the ignored
+   quarantine under the 30-day policy; no feature extraction happens during rehydration.
+3. Build and review the representative benign set, evaluate, and calibrate.
+
+Operational record:
+
+- Quarantine: `ml/.b2-quarantine` (Git-ignored).
+- Retention: maximum 30 days; earlier deletion after successful sanitized processing.
+- Rejected files: not processed; deleted after a content-free rejection reason is recorded.
+- Incident owner: Umang aggarwal.
+- Training network: forbidden.
+
+The controlled intake command is `hallguard-ml-intake`. It requires `--network`, never runs feature
+extraction/training, and writes only aggregate evidence to `datasets/manifests/b2-intake-evidence-v1.intake.json`.
+In this run, accepted quarantine content was deleted after successful scanning and evidence generation;
+the content-free evidence preserves the exact pins/hashes and scan aggregates for post-intake review.
+
+Evidence limitation:
+
+- The repository records reviewer identities, decisions, conditions, date, and that the decisions were
+  relayed by the user. It does not contain external emails, signatures, or private contact data.
+
+Stop boundary: **Controlled intake evidence is complete. Stop before feature extraction, evaluation, or
+calibration until post-intake human review accepts the exact pins, hashes, licence/attribution records,
+and scan aggregates.**
+
 ### M4 — Artifact handoff
 
 Status: **Planned**

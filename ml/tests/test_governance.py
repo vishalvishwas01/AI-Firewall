@@ -12,8 +12,8 @@ WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
 
 class GovernanceTests(unittest.TestCase):
-    def test_current_b1_workspace_passes(self) -> None:
-        validate_workspace(WORKSPACE_ROOT, stage="b1")
+    def test_current_b2_pre_intake_workspace_passes(self) -> None:
+        validate_workspace(WORKSPACE_ROOT, stage="b2")
 
     def test_rejects_application_runtime_imports(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -72,6 +72,20 @@ class GovernanceTests(unittest.TestCase):
             (root / "src").mkdir()
             with self.assertRaisesRegex(GovernanceError, "requires review package"):
                 audit_workspace(root, stage="b1")
+
+    def test_b2_requires_the_human_approval_package(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src").mkdir()
+            with self.assertRaisesRegex(GovernanceError, "requires approval package"):
+                audit_workspace(root, stage="b2")
+
+    def test_b2_intake_requires_content_free_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src").mkdir()
+            with self.assertRaisesRegex(GovernanceError, "requires content-free evidence"):
+                audit_workspace(root, stage="b2-intake")
 
 
 if __name__ == "__main__":

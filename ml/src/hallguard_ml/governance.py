@@ -14,6 +14,8 @@ from .contracts import (
     validate_generator_catalog,
     validate_generator_record,
     validate_generator_summary,
+    validate_intake_approval_package,
+    validate_intake_evidence,
     validate_training_state,
 )
 
@@ -28,6 +30,8 @@ M1_STATIC_DATA_FILES = M0_ALLOWED_DATA_FILES | {
     Path("datasets/manifests/synthetic-generators-v1.catalog.json"),
 }
 B1_REVIEW_FILE = Path("datasets/manifests/b1-corpus-review-v1.review.json")
+B2_APPROVAL_FILE = Path("datasets/manifests/b2-intake-approval-v1.review.json")
+B2_EVIDENCE_FILE = Path("datasets/manifests/b2-intake-evidence-v1.intake.json")
 
 
 class GovernanceError(RuntimeError):
@@ -69,8 +73,12 @@ def _audit_manifests(root: Path) -> list[str]:
                 raise ContractError("manifest root must be an object")
             if path.name.endswith(".catalog.json"):
                 validate_generator_catalog(value)
-            elif path.name.endswith(".review.json"):
+            elif path.name == B1_REVIEW_FILE.name:
                 validate_corpus_review_package(value)
+            elif path.name == B2_APPROVAL_FILE.name:
+                validate_intake_approval_package(value)
+            elif path.name == B2_EVIDENCE_FILE.name:
+                validate_intake_evidence(value)
             elif path.name.endswith(".manifest.json"):
                 validate_dataset_manifest(value)
             else:
@@ -166,6 +174,36 @@ def _audit_b1_data_boundary(root: Path) -> list[str]:
     return errors
 
 
+def _audit_b2_pre_intake_boundary(root: Path) -> list[str]:
+    errors = _audit_b1_data_boundary(root)
+    approval_suffix = str(B2_APPROVAL_FILE)
+    errors = [
+        error
+        for error in errors
+        if not (
+            error.startswith("M1 forbids undeclared data file:")
+            and (error.endswith(approval_suffix) or error.endswith(str(B2_EVIDENCE_FILE)))
+        )
+    ]
+    approval_path = root / B2_APPROVAL_FILE
+    if not approval_path.is_file():
+        errors.append(f"B2 pre-intake requires approval package: {B2_APPROVAL_FILE}")
+    return errors
+
+
+def _audit_b2_intake_boundary(root: Path) -> list[str]:
+    errors = _audit_b2_pre_intake_boundary(root)
+    evidence_suffix = str(B2_EVIDENCE_FILE)
+    errors = [
+        error
+        for error in errors
+        if not (error.startswith("M1 forbids undeclared data file:") and error.endswith(evidence_suffix))
+    ]
+    if not (root / B2_EVIDENCE_FILE).is_file():
+        errors.append(f"B2 intake requires content-free evidence: {B2_EVIDENCE_FILE}")
+    return errors
+
+
 def audit_workspace(root: Path, *, stage: str = "m0") -> None:
     """Audit isolation, manifest privacy, and the current roadmap stop boundary."""
 
@@ -180,6 +218,10 @@ def audit_workspace(root: Path, *, stage: str = "m0") -> None:
         errors.extend(_audit_m3_data_boundary(root))
     elif stage == "b1":
         errors.extend(_audit_b1_data_boundary(root))
+    elif stage == "b2":
+        errors.extend(_audit_b2_pre_intake_boundary(root))
+    elif stage == "b2-intake":
+        errors.extend(_audit_b2_intake_boundary(root))
     else:
         raise ValueError(f"unsupported governance stage: {stage}")
     if errors:
