@@ -4,10 +4,12 @@ import { detectionBenchmarkSnapshot } from "../data/detectionBenchmarkSnapshot.j
 import { getDb } from "../db/mongo.js"
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js"
 import { organizationMembersCollection } from "../models/organization.js"
+import { sendJson, validateNoQuery } from "../shared/validation.js"
 
 const router = Router()
 
 router.use(requireAuth)
+router.use(validateNoQuery)
 
 router.get("/benchmark", async (req: AuthenticatedRequest, res, next) => {
   try {
@@ -28,7 +30,7 @@ router.get("/benchmark", async (req: AuthenticatedRequest, res, next) => {
       return
     }
 
-    res.json({ benchmark: detectionBenchmarkSnapshot })
+    sendJson(res, ["benchmark"], { benchmark: detectionBenchmarkSnapshot })
   } catch (error) {
     next(error)
   }

@@ -50,7 +50,7 @@ Status: **Complete**
 
 ### S1 — Feature-module migration
 
-Status: **Planned**
+Status: **Complete**
 
 - Map current flat routes/models/helpers into `modules/auth`, `modules/logs`, `modules/organizations`, and `modules/sites`.
 - Move one feature at a time behind unchanged URLs.
@@ -58,14 +58,74 @@ Status: **Planned**
 - Put authorization in services/policies, not controllers.
 - Add module tests before removing old flat files.
 
+Progress recorded: **2026-08-06**
+
+- Added feature-owned router entrypoints for auth, logs, organizations, and sites.
+- Updated `src/index.ts` to mount those module entrypoints while preserving the existing `/auth`, `/logs`, `/orgs`, and `/sites` URLs.
+- Kept the flat route implementations as compatibility-backed sources during the first slice; no request or response contract changed.
+- `npm.cmd run typecheck`, `npm.cmd test` (12/12), `npm.cmd run build`, and `git diff --check` passed.
+- Extracted the auth feature into `auth.controller`, `auth.service`, `auth.repository`, and `auth.schemas` modules.
+- Switched `/auth` to the extracted router and added schema tests covering signup validation and legacy login failure parsing.
+- Auth behavior remains contract-compatible: signup validation, login failure status, session response, cookie settings, and token payload are unchanged.
+- The expanded suite passes 14/14 tests, plus typecheck, build, and diff checks.
+- Moved the complete `/logs` implementation into `modules/logs` and removed the old flat logs route file.
+- Extracted redacted-log parsing/privacy validation into `logs.schemas`, Mongo operations into `logs.repository`, and public DTO/summary aggregation into `logs.service`.
+- Added log contract tests for allowlisted output, missing fields, raw-sensitive snippet rejection, and hostname normalization.
+- The expanded suite passes 17/17 tests, plus typecheck, build, and diff checks.
+- Moved `/sites` into `modules/sites` and removed the old flat sites route file.
+- Extracted site input normalization into `sites.schemas`, Mongo/default-site and organization-policy access into `sites.repository`, and merged public DTO construction into `sites.service`.
+- Preserved default sites, personal-site upserts, organization-managed overlays, managed-site deletion protection, and existing response fields.
+- Added site contract tests; the expanded suite passes 19/19 tests, plus typecheck, build, and diff checks.
+- Moved `/orgs` into `modules/organizations` and removed the old flat organizations route file.
+- Extracted organization/member/site DTO mapping, bounded normalization schemas, membership-role policy, and a feature-owned repository adapter.
+- Preserved owner/admin/member authorization, invitation lifecycle rules, managed-site policies, and aggregate-only organization summaries/trends.
+- Removed the obsolete flat auth route after confirming all core feature URLs are mounted from module entrypoints. Only the separate `/admin` compatibility route remains under `routes/`.
+- Final S1 verification: `npm.cmd run typecheck`, `npm.cmd test` (21/21), `npm.cmd run build`, and `git diff --check` passed.
+
+Next step: **S2 — Shared validation and error boundary**.
+
 ### S2 — Shared validation and error boundary
 
-Status: **Planned**
+Status: **Complete**
+
+Completed: **2026-08-06**
 
 - Add runtime schemas for every request and response DTO.
 - Add typed validation/authentication/authorization/conflict/not-found errors.
 - Enforce field allowlists and bounded strings/arrays at the edge.
 - Ensure errors and logs never contain rejected sensitive values.
+
+Completed work:
+
+- Added shared exact-object, query, no-body, read-method-body, and success-response DTO boundaries under `src/shared`.
+- Applied exact request field allowlists to auth, redacted logs, personal sites, organization creation/sites/members/roles, improvement events, health, and admin routes.
+- Added strict bounded validation for authentication fields, log ids/text/evidence arrays, log filters/limits/date ranges, site fields, organization fields, member roles, and trend ranges.
+- Added explicit top-level success-response schemas for every JSON endpoint. The response boundary rejects missing/extra top-level fields and recursively rejects raw prompt, password/hash, secret/candidate, file-content, and screenshot fields.
+- Added typed validation, authentication, authorization, conflict, and not-found errors with a shared Express error boundary.
+- Error responses now include a stable additive `code`; existing `error` messages and HTTP statuses remain compatible.
+- Unknown failures return only `Internal server error`; error logging emits name/code/status metadata and never exception messages, request bodies, rejected values, or server details.
+- Malformed JSON is normalized to a safe 400 validation error and oversized request bodies to a safe 413 error without retaining parser details or body content.
+- Applied no-query/no-body enforcement to endpoints that do not accept them. GET/HEAD/DELETE request bodies fail closed.
+
+Verification:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd test`: 33/33 passed, covering exact allowlists, bounded DTOs, malformed JSON/filters, oversized-body normalization, sensitive-field rejection, stable error codes, sanitized logging metadata, and response DTO enforcement.
+- `npm.cmd run build`: passed.
+- `git diff --check`: passed.
+- Endpoint audit confirmed every JSON success response uses the shared response boundary; 204 responses remain bodyless.
+
+Privacy review:
+
+- Rejected values are never included in API errors or diagnostic logs.
+- Raw prompts, raw secrets, passwords/password hashes, candidates, file contents, and screenshots are rejected from response DTOs.
+- Existing redaction-before-storage validation, aggregate-only organization reporting, authentication, tenant scoping, URLs, and persistence contracts remain unchanged.
+
+Compatibility note:
+
+- The only response-contract addition is the stable `code` field on errors. Success DTO keys and route URLs are unchanged.
+
+Next step: **S5 — Operational hardening**. S3 and S4 were already completed independently.
 
 ### S3 — Improvement telemetry contract
 

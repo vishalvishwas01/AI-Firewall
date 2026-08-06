@@ -1,121 +1,29 @@
 import { ObjectId } from "mongodb"
 import { Router } from "express"
 
-import { getDb } from "../db/mongo.js"
-import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js"
-import {
-  organizationMembersCollection,
-  organizationSitePoliciesCollection,
-  organizationsCollection,
-  type OrganizationDocument,
-  type OrganizationMemberDocument,
-  type OrganizationRole,
-  type OrganizationSitePolicyDocument
-} from "../models/organization.js"
-import { syncedLogsCollection } from "../models/syncedLog.js"
-import { usersCollection } from "../models/user.js"
+import { getDb } from "../../db/mongo.js"
+import { requireAuth, type AuthenticatedRequest } from "../../middleware/auth.js"
+import { sendJson, validateNoBody } from "../../shared/validation.js"
+import { organizationMembersCollection, organizationSitePoliciesCollection, organizationsCollection, syncedLogsCollection, usersCollection } from "./organizations.repository.js"
 import {
   addLogToOrganizationTrend,
   createOrganizationTrendWindow,
-  normalizeOrganizationTrendDays,
   type OrganizationTrendDays
-} from "../utils/organizationTrends.js"
+} from "../../utils/organizationTrends.js"
+import { requireOrganizationMembership } from "./organizations.policy.js"
+import { parseMemberInput, parseOrganizationInput, parseOrganizationSiteInput, parseRoleInput, parseTrendQuery, routeParam } from "./organizations.schemas.js"
+import { toPublicMember, toPublicOrganization, toPublicSitePolicy } from "./organizations.service.js"
+import { assertAllowedQuery } from "../../shared/validation.js"
 
 const router = Router()
 
-const roles = ["admin", "member"] as const
 const severities = ["low", "medium", "high"] as const
 const eventTypes = ["sensitive-data", "prompt-injection", "risky-upload", "scam-fraud"] as const
 const decisions = ["warned", "blocked", "ignored", "allowed", "redacted-copied"] as const
 const warningFeedback = ["correct-warning", "false-alarm", "missed-risk"] as const
 
-const normalizeEmail = (value: unknown) =>
-  typeof value === "string" ? value.trim().toLowerCase().slice(0, 180) : ""
-
-const normalizeName = (value: unknown) =>
-  typeof value === "string" ? value.trim().slice(0, 100) : ""
-
-const normalizeHostname = (value: unknown) => {
-  const raw = typeof value === "string" ? value.trim().toLowerCase() : ""
-  if (!raw) return ""
-
-  try {
-    const withProtocol = raw.startsWith("http://") || raw.startsWith("https://")
-    const hostname = new URL(withProtocol ? raw : `https://${raw}`).hostname
-    return hostname.replace(/^www\./, "").slice(0, 180)
-  } catch {
-    return raw
-      .replace(/^https?:\/\//, "")
-      .split("/")[0]
-      .replace(/^www\./, "")
-      .slice(0, 180)
-  }
-}
-
-const normalizeSiteLabel = (value: unknown) =>
-  typeof value === "string" ? value.trim().slice(0, 80) : ""
-
-const routeParam = (value: string | string[]) => (Array.isArray(value) ? value[0] ?? "" : value)
-
-const isOneOf = <T extends readonly string[]>(value: unknown, allowed: T): value is T[number] =>
-  typeof value === "string" && allowed.includes(value)
-
 const emptyCountMap = <T extends readonly string[]>(items: T) =>
   Object.fromEntries(items.map((item) => [item, 0])) as Record<T[number], number>
-
-const publicOrganization = (
-  org: OrganizationDocument,
-  membership?: OrganizationMemberDocument
-) => ({
-  id: org._id?.toHexString(),
-  name: org.name,
-  role: membership?.role ?? "member",
-  createdAt: org.createdAt.toISOString(),
-  updatedAt: org.updatedAt.toISOString()
-})
-
-const publicMember = (member: OrganizationMemberDocument) => ({
-  id: member._id?.toHexString(),
-  userId: member.userId?.toHexString(),
-  email: member.email,
-  role: member.role,
-  status: member.status,
-  revokedAt: member.revokedAt?.toISOString(),
-  createdAt: member.createdAt.toISOString(),
-  updatedAt: member.updatedAt.toISOString()
-})
-
-const publicSitePolicy = (site: OrganizationSitePolicyDocument) => ({
-  id: site._id?.toHexString(),
-  hostname: site.hostname,
-  label: site.label,
-  createdAt: site.createdAt.toISOString(),
-  updatedAt: site.updatedAt.toISOString()
-})
-
-const requireOrganizationMembership = async (
-  req: AuthenticatedRequest,
-  organizationId: string,
-  allowedRoles?: OrganizationRole[]
-) => {
-  if (!req.user || !ObjectId.isValid(organizationId)) return undefined
-
-  const db = await getDb()
-  const orgId = new ObjectId(organizationId)
-  const membership = await organizationMembersCollection(db).findOne({
-    organizationId: orgId,
-    userId: req.user.id,
-    status: "active"
-  })
-
-  if (!membership) return undefined
-  if (allowedRoles && !allowedRoles.includes(membership.role)) return undefined
-
-  const org = await organizationsCollection(db).findOne({ _id: orgId })
-  if (!org) return undefined
-
-  return { org, membership }
-}
 
 const buildOrganizationSummary = async (organizationId: ObjectId) => {
   const db = await getDb()
@@ -225,6 +133,14 @@ const buildOrganizationTrends = async (organizationId: ObjectId, days: Organizat
 }
 
 router.use(requireAuth)
+router.use((req, _res, next) => {
+  try {
+    assertAllowedQuery(req.query as Record<string, unknown>, req.method === "GET" && req.path.endsWith("/trends") ? ["days"] : [])
+    next()
+  } catch (error) {
+    next(error)
+  }
+})
 
 router.get("/", async (req: AuthenticatedRequest, res, next) => {
   try {
@@ -245,9 +161,9 @@ router.get("/", async (req: AuthenticatedRequest, res, next) => {
           .toArray()
       : []
 
-    res.json({
+    sendJson(res, ["organizations"], {
       organizations: orgs.map((org) =>
-        publicOrganization(
+        toPublicOrganization(
           org,
           memberships.find((membership) => org._id && membership.organizationId.equals(org._id))
         )
@@ -265,11 +181,12 @@ router.post("/", async (req: AuthenticatedRequest, res, next) => {
       return
     }
 
-    const name = normalizeName(req.body?.name)
-    if (!name) {
-      res.status(400).json({ error: "Enter an organization name" })
+    const input = parseOrganizationInput(req.body)
+    if ("error" in input) {
+      res.status(400).json({ error: input.error })
       return
     }
+    const { name } = input
 
     const now = new Date()
     const db = await getDb()
@@ -299,7 +216,7 @@ router.post("/", async (req: AuthenticatedRequest, res, next) => {
       throw new Error("Organization could not be loaded")
     }
 
-    res.status(201).json({ organization: publicOrganization(org, membership) })
+    sendJson(res.status(201), ["organization"], { organization: toPublicOrganization(org, membership) })
   } catch (error) {
     next(error)
   }
@@ -307,6 +224,7 @@ router.post("/", async (req: AuthenticatedRequest, res, next) => {
 
 router.get("/:id/trends", async (req: AuthenticatedRequest, res, next) => {
   try {
+    assertAllowedQuery(req.query as Record<string, unknown>, ["days"])
     const access = await requireOrganizationMembership(req, routeParam(req.params.id))
     if (!access || !access.org._id) {
       res.status(404).json({ error: "Organization not found" })
@@ -315,9 +233,9 @@ router.get("/:id/trends", async (req: AuthenticatedRequest, res, next) => {
 
     const trends = await buildOrganizationTrends(
       access.org._id,
-      normalizeOrganizationTrendDays(req.query.days)
+      parseTrendQuery(req.query)
     )
-    res.json({ trends })
+    sendJson(res, ["trends"], { trends })
   } catch (error) {
     next(error)
   }
@@ -338,9 +256,9 @@ router.get("/:id", async (req: AuthenticatedRequest, res, next) => {
       .toArray()
     const summary = await buildOrganizationSummary(access.org._id)
 
-    res.json({
-      organization: publicOrganization(access.org, access.membership),
-      members: members.map(publicMember),
+    sendJson(res, ["organization", "members", "summary"], {
+      organization: toPublicOrganization(access.org, access.membership),
+      members: members.map(toPublicMember),
       summary
     })
   } catch (error) {
@@ -362,7 +280,7 @@ router.get("/:id/sites", async (req: AuthenticatedRequest, res, next) => {
       .sort({ label: 1, hostname: 1 })
       .toArray()
 
-    res.json({ sites: sites.map(publicSitePolicy) })
+    sendJson(res, ["sites"], { sites: sites.map(toPublicSitePolicy) })
   } catch (error) {
     next(error)
   }
@@ -376,12 +294,12 @@ router.post("/:id/sites", async (req: AuthenticatedRequest, res, next) => {
       return
     }
 
-    const hostname = normalizeHostname(req.body?.hostname)
-    const label = normalizeSiteLabel(req.body?.label)
-    if (!hostname || !label || !hostname.includes(".")) {
-      res.status(400).json({ error: "Enter a domain and website name" })
+    const input = parseOrganizationSiteInput(req.body)
+    if ("error" in input) {
+      res.status(400).json({ error: input.error })
       return
     }
+    const { hostname, label } = input
 
     const db = await getDb()
     const now = new Date()
@@ -410,7 +328,7 @@ router.post("/:id/sites", async (req: AuthenticatedRequest, res, next) => {
       throw new Error("Organization site policy could not be loaded")
     }
 
-    res.status(201).json({ site: publicSitePolicy(site) })
+    sendJson(res.status(201), ["site"], { site: toPublicSitePolicy(site) })
   } catch (error) {
     next(error)
   }
@@ -450,13 +368,12 @@ router.post("/:id/members", async (req: AuthenticatedRequest, res, next) => {
       return
     }
 
-    const email = normalizeEmail(req.body?.email)
-    const role = isOneOf(req.body?.role, roles) ? req.body.role : "member"
-
-    if (!email || !email.includes("@")) {
-      res.status(400).json({ error: "Enter a valid member email" })
+    const input = parseMemberInput(req.body)
+    if ("error" in input) {
+      res.status(400).json({ error: input.error })
       return
     }
+    const { email, role } = input
 
     const db = await getDb()
     const user = await usersCollection(db).findOne({ email })
@@ -492,7 +409,7 @@ router.post("/:id/members", async (req: AuthenticatedRequest, res, next) => {
       throw new Error("Organization member could not be loaded")
     }
 
-    res.status(201).json({ member: publicMember(member) })
+    sendJson(res.status(201), ["member"], { member: toPublicMember(member) })
   } catch (error) {
     next(error)
   }
@@ -507,11 +424,12 @@ router.patch("/:id/members/:memberId", async (req: AuthenticatedRequest, res, ne
       return
     }
 
-    const nextRole = isOneOf(req.body?.role, roles) ? req.body.role : undefined
-    if (!nextRole) {
-      res.status(400).json({ error: "Choose a valid role" })
+    const input = parseRoleInput(req.body)
+    if ("error" in input) {
+      res.status(400).json({ error: input.error })
       return
     }
+    const nextRole = input.role
 
     const db = await getDb()
     const member = await organizationMembersCollection(db).findOne({
@@ -553,13 +471,13 @@ router.patch("/:id/members/:memberId", async (req: AuthenticatedRequest, res, ne
       throw new Error("Organization member could not be loaded")
     }
 
-    res.json({ member: publicMember(updated) })
+    sendJson(res, ["member"], { member: toPublicMember(updated) })
   } catch (error) {
     next(error)
   }
 })
 
-router.post("/:id/invitations/:memberId/revoke", async (req: AuthenticatedRequest, res, next) => {
+router.post("/:id/invitations/:memberId/revoke", validateNoBody, async (req: AuthenticatedRequest, res, next) => {
   try {
     const memberId = routeParam(req.params.memberId)
     const access = await requireOrganizationMembership(req, routeParam(req.params.id), ["owner", "admin"])
@@ -604,7 +522,7 @@ router.post("/:id/invitations/:memberId/revoke", async (req: AuthenticatedReques
       organizationId: access.org._id
     })
     if (!revoked) throw new Error("Revoked invitation could not be loaded")
-    res.json({ member: publicMember(revoked) })
+    sendJson(res, ["member"], { member: toPublicMember(revoked) })
   } catch (error) {
     next(error)
   }

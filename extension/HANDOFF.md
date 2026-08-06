@@ -514,3 +514,9 @@ After each step, record status, changed contracts, tests, benchmark results, and
 - Verification: 99 tests passed, 1 performance test skipped, typecheck passed, and build completed.
 - Production accuracy claims remain disabled. Server integration remains out of scope.
 - Rollback artifact: `secret-logistic-bootstrap-v1`.
+
+## 9. Server S2 compatibility record — 2026-08-06
+
+- Server request/response DTO validation and the shared privacy-safe error boundary are complete.
+- Server errors add a stable `code` beside the existing safe `error` message; success DTO keys, endpoint URLs, authentication, telemetry, and redacted-sync payloads are unchanged.
+- The extension requires no migration and may continue ignoring unknown additive error fields.

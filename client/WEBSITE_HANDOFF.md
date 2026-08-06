@@ -85,6 +85,8 @@ Status: **Planned**
 
 Status: **Planned**
 
+Server dependency update: **Server S2 completed on 2026-08-06**. Server errors now include an additive stable `code` alongside the existing safe `error` message; success DTO keys and URLs are unchanged. C2 should validate and consume this code without rendering raw transport or server details.
+
 - Add runtime validation for server responses at the API boundary.
 - Keep request/response schemas beside each feature, not in one global schema file.
 - Normalize API errors into a shared transport error type.

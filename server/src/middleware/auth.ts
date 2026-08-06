@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken"
 import { ObjectId } from "mongodb"
 
 import { env } from "../config/env.js"
+import { AuthenticationError } from "../shared/errors.js"
 
 export type AuthenticatedRequest = Request & {
   user?: {
@@ -74,12 +75,12 @@ export const authenticatedUserFromRequest = (req: Request) => {
 
 export const requireAuth = (
   req: AuthenticatedRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const user = authenticatedUserFromRequest(req)
   if (!user) {
-    res.status(401).json({ error: "Authentication required" })
+    next(new AuthenticationError())
     return
   }
 

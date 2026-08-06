@@ -1,6 +1,7 @@
 import type { NextFunction, Response } from "express"
 import { getDb } from "../../db/mongo.js"
 import type { AuthenticatedRequest } from "../../middleware/auth.js"
+import { sendJson } from "../../shared/validation.js"
 import { parseImprovementEvent } from "./telemetry.schemas.js"
 import { clearImprovementEvents, exportImprovementEvents, saveImprovementEvent } from "./telemetry.service.js"
 
@@ -20,7 +21,7 @@ export const createImprovementEvent = async (
       return
     }
     await saveImprovementEvent(await getDb(), req.user.id, input)
-    res.status(201).json({ accepted: true })
+    sendJson(res.status(201), ["accepted"], { accepted: true })
   } catch (error) {
     next(error)
   }
@@ -36,7 +37,7 @@ export const getImprovementExport = async (
       res.status(401).json({ error: "Authentication required" })
       return
     }
-    res.json({
+    sendJson(res, ["exportedAt", "privacy", "events"], {
       exportedAt: new Date().toISOString(),
       privacy: "Derived classifier features and feedback only",
       events: await exportImprovementEvents(await getDb(), req.user.id)
@@ -57,7 +58,7 @@ export const deleteImprovementData = async (
       return
     }
     const result = await clearImprovementEvents(await getDb(), req.user.id)
-    res.json({ deleted: result.deletedCount })
+    sendJson(res, ["deleted"], { deleted: result.deletedCount })
   } catch (error) {
     next(error)
   }

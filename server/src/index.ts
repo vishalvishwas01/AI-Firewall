@@ -8,13 +8,15 @@ import { ensureUserIndexes } from "./models/user.js"
 import { ensureSyncedLogIndexes } from "./models/syncedLog.js"
 import { ensureReportSiteIndexes } from "./models/reportSite.js"
 import { ensureOrganizationIndexes } from "./models/organization.js"
-import { authRouter } from "./routes/auth.js"
-import { logsRouter } from "./routes/logs.js"
-import { sitesRouter } from "./routes/sites.js"
-import { orgsRouter } from "./routes/orgs.js"
+import { authRouter } from "./modules/auth/auth.routes.js"
+import { logsRouter } from "./modules/logs/logs.routes.js"
+import { sitesRouter } from "./modules/sites/sites.routes.js"
+import { orgsRouter } from "./modules/organizations/organizations.routes.js"
 import { adminRouter } from "./routes/admin.js"
 import { improvementTelemetryRouter } from "./modules/improvementTelemetry/telemetry.routes.js"
 import { ensureImprovementTelemetryIndexes } from "./modules/improvementTelemetry/telemetry.repository.js"
+import { errorBoundary, normalizeErrorResponses } from "./shared/errors.js"
+import { rejectReadMethodBodies, sendJson, validateNoQuery } from "./shared/validation.js"
 
 const app = express()
 
@@ -46,9 +48,11 @@ app.use(
 )
 app.use(express.json({ limit: "128kb" }))
 app.use(cookieParser())
+app.use(normalizeErrorResponses)
+app.use(rejectReadMethodBodies)
 
-app.get("/health", (_req, res) => {
-  res.json({ ok: true })
+app.get("/health", validateNoQuery, (_req, res) => {
+  sendJson(res, ["ok"], { ok: true })
 })
 
 app.use("/auth", authRouter)
@@ -58,17 +62,7 @@ app.use("/orgs", orgsRouter)
 app.use("/admin", adminRouter)
 app.use("/improvement-events", improvementTelemetryRouter)
 
-app.use(
-  (
-    error: unknown,
-    _req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction
-  ) => {
-    console.error(error)
-    res.status(500).json({ error: "Internal server error" })
-  }
-)
+app.use(errorBoundary)
 
 const db = await getDb()
 await ensureUserIndexes(db)
