@@ -131,3 +131,75 @@ after successful sanitized processing under the approved policy. Validate the co
 ```
 
 See `DATA_GOVERNANCE.md` for the mandatory ingress and privacy policy.
+
+## B2 post-intake remediation
+
+The post-intake reviewers approved the intake only with required changes. Run the no-network preflight:
+
+```powershell
+.\venv\Scripts\python -m hallguard_ml.remediate --root . --check-only
+```
+
+The remediation command rehydrates only the recorded commit SHAs, checks GitHub commit verification,
+reproduces archive and accepted-tree digests, runs the secondary scanner, and builds a family-level licence
+inventory. It never performs feature extraction or training:
+
+```powershell
+.\venv\Scripts\python -m hallguard_ml.remediate --root . --network
+```
+
+The completed run produced `datasets/manifests/b2-remediation-evidence-v1.remediation.json`. The pinned
+Node.js codeload transport was unavailable, so a user-provided read-only archive was accepted only after
+its SHA-256 matched the original intake evidence. The user-owned archive was not deleted. Exact pin/tree
+checks, secondary scanning, and licence inventory completed, but final human approval remains required
+before representative-set construction.
+
+The remediation review is recorded in
+`datasets/manifests/b2-remediation-review-v1.review.json`. All three reviewers returned
+`changes-required`, so feature extraction remains blocked. The next work is human disposition of the
+secondary-scanner hits and poisoning thresholds, licence notice categories and attribution wording, and
+privacy confirmation of archive retention/deletion plus acceptance of scanner limitations. Do not run
+another intake or remediation pass unless a reviewer specifically requires targeted quarantine review.
+
+The targeted-review command is (the `PYTHONPATH` line makes the local `src` package visible):
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+.\venv\Scripts\python -m hallguard_ml.targeted_review --root . --network
+```
+
+It rehydrates exact pins only, excludes scanner-hit and notice-marker files, emits aggregate-only
+evidence, and deletes the quarantine. If an exact archive cannot be downloaded or its digest differs,
+the command fails closed and no evidence is produced.
+
+The completed retry produced `datasets/manifests/b2-targeted-review-evidence-v1.targeted.json`. Final
+security approval of the exclusion boundary and final maintainer approval of notice-file exclusion plus
+attribution are still required before representative-set construction.
+
+The final approval package is
+`datasets/manifests/b2-final-remediation-approval-v1.review.json`. It authorizes only sanitized
+representative-set construction. Training, network access during training, raw-content commits, and
+release remain disabled.
+
+## B2 representative benign set
+
+The approved construction command is:
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+.\venv\Scripts\python -m hallguard_ml.representative --root . --network
+```
+
+The generated numeric rows are ignored under `datasets/representative/`. Aggregate evidence is committed
+as `datasets/manifests/b2-representative-set-v1.representative.json`. The candidate covers three of six
+required risk strata. The limited-coverage approval is recorded in
+`datasets/manifests/b2-representative-review-v1.review.json`; evaluation is eligible for this limited set,
+but it is not training- or release-eligible.
+
+The approved limited evaluation produced
+`datasets/manifests/b2-limited-evaluation-v1.evaluation.json`. It is aggregate-only and records no model
+state. Human calibration review is still required; no production accuracy claim is permitted.
+
+The three-reviewer calibration approval is recorded in
+`datasets/manifests/b2-limited-calibration-review-v1.review.json`. It does not authorize training-state
+commitment or release.

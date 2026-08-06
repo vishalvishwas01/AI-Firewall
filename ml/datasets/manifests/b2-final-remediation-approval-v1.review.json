@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "b2-final-remediation-approval-v1",
+  "reviewType": "HUMAN_APPROVAL",
+  "reviewedOn": "2026-08-04",
+  "status": "approved-for-sanitized-representative-set-construction",
+  "targetedEvidenceVersion": "b2-targeted-review-evidence-v1",
+  "reviewers": [
+    {
+      "role": "privacy",
+      "identity": "Umang Aggarwal",
+      "decision": "approve-remediation",
+      "approvalScope": [
+        "scanner-limitations-accepted",
+        "quarantine-only-review-approved",
+        "content-free-reporting-approved",
+        "node-archive-deletion-confirmed"
+      ]
+    },
+    {
+      "role": "security",
+      "identity": "Vishal Vishwas",
+      "decision": "approve-remediation",
+      "approvalScope": [
+        "scanner-hit-file-exclusion-approved",
+        "sanitized-counts-and-tree-digests-approved",
+        "scanner-rules-approved-as-indicators",
+        "poisoning-plan-approved-as-written",
+        "no-additional-targeted-rehydration-required"
+      ]
+    },
+    {
+      "role": "maintainer",
+      "identity": "Tushar Garg",
+      "decision": "approve-remediation",
+      "approvalScope": [
+        "cpython-notice-file-exclusion-approved",
+        "nodejs-notice-file-exclusion-approved",
+        "kubernetes-notice-file-exclusion-approved",
+        "sanitized-path-family-boundaries-approved",
+        "attribution-wording-approved",
+        "attribution-publication-location-approved"
+      ]
+    }
+  ],
+  "authorization": {
+    "representativeSetConstructionEligible": true,
+    "featureExtractionEligible": true,
+    "sanitizedDerivedFeaturesOnly": true,
+    "directQuarantineFeatureExtractionAllowed": false,
+    "rawContentCommitAllowed": false,
+    "trainingEligible": false,
+    "networkDuringTrainingAllowed": false,
+    "releaseEligible": false
+  },
+  "gates": {
+    "privacyRemediationApproved": true,
+    "finalSecurityApproval": true,
+    "secondScannerReviewed": true,
+    "poisoningPlanReviewed": true,
+    "finalLicenseAttributionApproval": true,
+    "allRequiredChangesComplete": true,
+    "featureExtractionEligible": true,
+    "representativeSetConstructionEligible": true,
+    "trainingEligible": false,
+    "releaseEligible": false
+  },
+  "nextStep": "b2-construct-representative-benign-set"
+}

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "b2-calibration-publication-approval-v1",
+  "reviewType": "HUMAN_APPROVAL",
+  "reviewedOn": "2026-08-07",
+  "sourceReview": "b2-limited-calibration-review-v1.review.json",
+  "decision": "approve-calibration-publication-for-runtime-gate",
+  "scope": "limited-evaluation-artifact-only",
+  "reviewers": [
+    {
+      "role": "privacy",
+      "identity": "umang aggarwal",
+      "decision": "approve-calibration-publication-for-runtime-gate"
+    },
+    {
+      "role": "security",
+      "identity": "vishal vishwas",
+      "decision": "approve-calibration-publication-for-runtime-gate"
+    },
+    {
+      "role": "maintainer",
+      "identity": "tushar garg",
+      "decision": "approve-calibration-publication-for-runtime-gate"
+    }
+  ],
+  "gates": {
+    "limitedEvaluationOnly": true,
+    "productionAccuracyClaimAllowed": false,
+    "networkDisabled": true,
+    "runtimeActivationAllowed": true,
+    "serverIntegrationAllowed": false
+  },
+  "governanceEffect": "calibration-gate-may-be-marked-published-for-this-limited-artifact"
+}

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "b2-limited-calibration-review-v1",
+  "reviewType": "HUMAN_APPROVAL",
+  "reviewedOn": "2026-08-04",
+  "status": "approve-limited-calibration",
+  "evaluationVersion": "b2-limited-evaluation-v1",
+  "reviewers": [
+    {"role": "privacy", "identity": "Umang Aggarwal", "decision": "approve-limited-calibration"},
+    {"role": "security", "identity": "Vishal Vishwas", "decision": "approve-limited-calibration"},
+    {"role": "maintainer", "identity": "Tushar Garg", "decision": "approve-limited-calibration"}
+  ],
+  "scope": "limited-evaluation-only-no-production-claim",
+  "gates": {
+    "evaluationReviewed": true,
+    "calibrationComputed": true,
+    "calibrationApproved": true,
+    "productionClaimAllowed": false,
+    "trainingStateCommitAllowed": false,
+    "modelReleaseAllowed": false
+  },
+  "nextStep": "b2-calibration-complete-training-still-blocked"
+}

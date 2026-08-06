@@ -45,3 +45,19 @@ for exact pins, hashes, licence/attribution records, and scan results remains op
 accepted, `licensedBenignCorpus`,
 `representativeBenignSet`, `catalogHumanReview`, and `calibrationApproved` remain false. The approval
 record does not modify the M3 report or authorize M4.
+
+Post-intake review is recorded separately in `datasets/manifests/b2-post-intake-review-v1.review.json`.
+It approves the intake only with required security and licensing changes. Feature extraction remains
+blocked until remediation evidence and final human approvals exist.
+
+The 2026-08-04 remediation review is recorded in
+`datasets/manifests/b2-remediation-review-v1.review.json`. Its overall decision is `changes-required`.
+Nine manual decisions remain unresolved, and `featureExtractionEligible` remains false. A later final
+approval artifact may open the representative-set step only after all three distinct reviewers resolve
+their assigned conditions explicitly.
+
+The targeted-review retry completed for all three exact pins. Its aggregate-only evidence is
+`datasets/manifests/b2-targeted-review-evidence-v1.targeted.json`. Scanner-hit and additional-notice files
+are excluded. Final security and maintainer/licensing approval is recorded in
+`datasets/manifests/b2-final-remediation-approval-v1.review.json`. The next authorized step is sanitized
+representative-set construction; training and release remain blocked.

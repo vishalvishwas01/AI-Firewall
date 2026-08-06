@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "b2-post-intake-review-v1",
+  "reviewType": "HUMAN_APPROVAL",
+  "reviewedOn": "2026-08-04",
+  "status": "approved-with-required-changes",
+  "evidencePackageVersion": "b2-intake-evidence-v1",
+  "featureExtractionEligible": false,
+  "reviewers": [
+    {
+      "role": "privacy",
+      "identity": "vishal vishwas",
+      "decision": "approve-post-intakes",
+      "positiveFindings": [
+        "Public repositories and immutable revisions were used",
+        "Committed evidence contains aggregate counts and digests only",
+        "No feature extraction, training, evaluation, calibration, or model export occurred",
+        "Credential, personal-data, key/token, binary, and excluded-path checks were applied",
+        "Original archives and accepted quarantine content were deleted after evidence generation"
+      ],
+      "requiredChanges": [
+        "A real privacy reviewer must accept aggregate evidence and regex-scanning limits",
+        "Exact-pin rehydration must repeat the same or stronger scan",
+        "Only content-free derived features and aggregate reports may leave quarantine",
+        "Scan hits or suspected real sensitive data must stop processing and notify the incident owner"
+      ]
+    },
+    {
+      "role": "security",
+      "identity": "umang aggarwal",
+      "decision": "approve-post-intake",
+      "positiveFindings": [
+        "Downloads were pinned to 40-character Git commit SHAs and recorded with SHA-256",
+        "Traversal, symlink, size, compression, binary, path, and unsafe-content checks are bounded",
+        "Extraction is limited to the Git-ignored quarantine",
+        "Tests cover traversal cleanup, rejected-content non-retention, and release overclaim rejection"
+      ],
+      "requiredChanges": [
+        "Record GitHub commit-verification evidence for each pinned revision",
+        "Repeat archive and accepted-tree SHA-256 checks on exact-pin rehydration",
+        "Add an independently reviewed scanner profile or second scanner pass",
+        "Record scanner version, configuration, and aggregate scan digest",
+        "Define poisoning-review samples and grouped-source checks before evaluation"
+      ]
+    },
+    {
+      "role": "maintainer",
+      "identity": "tushar garg",
+      "decision": "approve-post-intake",
+      "positiveFindings": [
+        "Repository URLs, revisions, archive hashes, licence hashes, SPDX ids, and attribution are recorded",
+        "Kubernetes CC BY 4.0 attribution is represented",
+        "Node.js dependency, third-party, test, tool, benchmark, vendor, and generated paths are excluded"
+      ],
+      "requiredChanges": [
+        "Produce a content-free licence inventory for every accepted path family",
+        "Identify CPython additional or file-level notices and exclude or attribute them",
+        "Verify Node.js allowed paths contain no separately licensed or vendored material",
+        "Record Kubernetes CC BY 4.0 attribution text and its destination",
+        "Obtain final maintainer approval of the exact licence inventory and attribution plan"
+      ]
+    }
+  ],
+  "gates": {
+    "humanReviewsRecorded": true,
+    "privacyDecisionRecorded": true,
+    "securityDecisionRecorded": true,
+    "maintainerDecisionRecorded": true,
+    "commitVerificationEvidence": false,
+    "exactPinRehydrationVerified": false,
+    "secondScannerReviewed": false,
+    "scannerProfileRecorded": false,
+    "poisoningAndGroupedSplitReview": false,
+    "licenseInventoryComplete": false,
+    "finalLicenseAttributionApproval": false,
+    "allRequiredChangesComplete": false,
+    "featureExtractionEligible": false
+  },
+  "nextStep": "b2-remediation-before-feature-extraction"
+}

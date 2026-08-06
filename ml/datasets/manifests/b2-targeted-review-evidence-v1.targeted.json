@@ -1,0 +1,207 @@
+{
+  "executedOn": "2026-08-04",
+  "featureExtractionEligible": false,
+  "gates": {
+    "allNoticeMarkerFilesExcludedPendingApproval": true,
+    "allRequiredChangesComplete": false,
+    "allScannerHitFilesExcluded": true,
+    "featureExtractionEligible": false,
+    "finalLicenseAttributionApproval": false,
+    "finalSecurityApproval": false,
+    "poisoningPlanReviewed": true,
+    "privacyRemediationApproved": true,
+    "secondaryScannerRulesReviewed": true,
+    "targetedReviewComplete": true
+  },
+  "manualDispositionVersion": "b2-manual-disposition-v1",
+  "nextStep": "final-security-and-maintainer-review",
+  "policy": {
+    "additionalNoticeMarkerDisposition": "exclude-all-marker-files-pending-final-review",
+    "perFileMetadataCommitted": false,
+    "rawContentCommitted": false,
+    "secondaryScannerHitDisposition": "exclude-all-hit-files"
+  },
+  "reportVersion": "b2-targeted-review-evidence-v1",
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "acceptedTreeSha256Matched": true,
+      "archiveDeleted": true,
+      "archiveSha256Matched": true,
+      "licenseFamilies": [
+        {
+          "categoryFileCounts": {
+            "copyright": 10,
+            "licensed-under": 1,
+            "permission-grant": 0,
+            "source-code-license-statement": 0,
+            "spdx-identifier": 0
+          },
+          "disposition": "excluded-pending-final-maintainer-review",
+          "excludedFileCount": 11,
+          "family": "Doc",
+          "noticeMarkerFileCount": 11
+        },
+        {
+          "categoryFileCounts": {
+            "copyright": 82,
+            "licensed-under": 3,
+            "permission-grant": 0,
+            "source-code-license-statement": 0,
+            "spdx-identifier": 6
+          },
+          "disposition": "excluded-pending-final-maintainer-review",
+          "excludedFileCount": 83,
+          "family": "Lib",
+          "noticeMarkerFileCount": 83
+        }
+      ],
+      "rehydratedContentDeleted": true,
+      "revision": "ef0affbf7c1cb8bbc136b65cc0f02985f8c568b5",
+      "sanitizedCandidateFileCount": 945,
+      "sanitizedTreeSha256": "f32ee96fcead6aa1935569f0f87d6f639548f133064eb68f99b2ce398e69c0a4",
+      "scannedFileCount": 1062,
+      "scannerExcludedFileCount": 23,
+      "scannerHitFileCount": 23,
+      "scannerRuleDispositions": [
+        {
+          "disposition": "excluded",
+          "excludedFileCount": 8,
+          "indicatorFileCount": 8,
+          "ruleId": "high-entropy-token"
+        },
+        {
+          "disposition": "excluded",
+          "excludedFileCount": 15,
+          "indicatorFileCount": 15,
+          "ruleId": "payment-card-shape"
+        }
+      ],
+      "sourceId": "cpython-public-corpus"
+    },
+    {
+      "acceptedTreeSha256Matched": true,
+      "archiveDeleted": true,
+      "archiveSha256Matched": true,
+      "licenseFamilies": [
+        {
+          "categoryFileCounts": {
+            "copyright": 3,
+            "licensed-under": 0,
+            "permission-grant": 0,
+            "source-code-license-statement": 0,
+            "spdx-identifier": 0
+          },
+          "disposition": "excluded-pending-final-maintainer-review",
+          "excludedFileCount": 3,
+          "family": "content/en/docs",
+          "noticeMarkerFileCount": 3
+        },
+        {
+          "categoryFileCounts": {
+            "copyright": 0,
+            "licensed-under": 0,
+            "permission-grant": 0,
+            "source-code-license-statement": 0,
+            "spdx-identifier": 0
+          },
+          "disposition": "excluded-pending-final-maintainer-review",
+          "excludedFileCount": 0,
+          "family": "content/en/examples",
+          "noticeMarkerFileCount": 0
+        }
+      ],
+      "rehydratedContentDeleted": true,
+      "revision": "3281a6a4f4c1505e18040f3915eb226cc41987c3",
+      "sanitizedCandidateFileCount": 1552,
+      "sanitizedTreeSha256": "9f9f61c5e4ae1a28744048d438c5605c949908060443fefb54206fd29f6613f7",
+      "scannedFileCount": 1651,
+      "scannerExcludedFileCount": 97,
+      "scannerHitFileCount": 97,
+      "scannerRuleDispositions": [
+        {
+          "disposition": "excluded",
+          "excludedFileCount": 30,
+          "indicatorFileCount": 30,
+          "ruleId": "high-entropy-token"
+        },
+        {
+          "disposition": "excluded",
+          "excludedFileCount": 68,
+          "indicatorFileCount": 68,
+          "ruleId": "payment-card-shape"
+        }
+      ],
+      "sourceId": "kubernetes-website-public-corpus"
+    },
+    {
+      "acceptedTreeSha256Matched": true,
+      "archiveDeleted": true,
+      "archiveSha256Matched": true,
+      "licenseFamilies": [
+        {
+          "categoryFileCounts": {
+            "copyright": 0,
+            "licensed-under": 0,
+            "permission-grant": 0,
+            "source-code-license-statement": 0,
+            "spdx-identifier": 0
+          },
+          "disposition": "excluded-pending-final-maintainer-review",
+          "excludedFileCount": 0,
+          "family": "doc/api",
+          "noticeMarkerFileCount": 0
+        },
+        {
+          "categoryFileCounts": {
+            "copyright": 46,
+            "licensed-under": 3,
+            "permission-grant": 39,
+            "source-code-license-statement": 0,
+            "spdx-identifier": 1
+          },
+          "disposition": "excluded-pending-final-maintainer-review",
+          "excludedFileCount": 46,
+          "family": "lib",
+          "noticeMarkerFileCount": 46
+        },
+        {
+          "categoryFileCounts": {
+            "copyright": 0,
+            "licensed-under": 0,
+            "permission-grant": 0,
+            "source-code-license-statement": 0,
+            "spdx-identifier": 0
+          },
+          "disposition": "excluded-pending-final-maintainer-review",
+          "excludedFileCount": 0,
+          "family": "top-level-json",
+          "noticeMarkerFileCount": 0
+        }
+      ],
+      "rehydratedContentDeleted": true,
+      "revision": "15495a069fc8eaec8c70ea88781ae241a87fd25d",
+      "sanitizedCandidateFileCount": 361,
+      "sanitizedTreeSha256": "a43fa77d4e6cd16c3cdf673bf37e0879afba51278acb1235dd93656918046210",
+      "scannedFileCount": 421,
+      "scannerExcludedFileCount": 16,
+      "scannerHitFileCount": 16,
+      "scannerRuleDispositions": [
+        {
+          "disposition": "excluded",
+          "excludedFileCount": 15,
+          "indicatorFileCount": 15,
+          "ruleId": "high-entropy-token"
+        },
+        {
+          "disposition": "excluded",
+          "excludedFileCount": 1,
+          "indicatorFileCount": 1,
+          "ruleId": "payment-card-shape"
+        }
+      ],
+      "sourceId": "nodejs-public-corpus"
+    }
+  ],
+  "status": "targeted-review-complete-awaiting-final-human-approval"
+}

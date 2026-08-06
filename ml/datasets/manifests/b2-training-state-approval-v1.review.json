@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "b2-training-state-approval-v1",
+  "reviewType": "HUMAN_APPROVAL",
+  "reviewedOn": "2026-08-04",
+  "status": "approve-offline-training-state-creation",
+  "scope": "one-off-draft-training-state-for-limited-evaluation-only",
+  "reviewers": [
+    {
+      "role": "privacy",
+      "identity": "Umang Aggarwal",
+      "decision": "approve-offline-training-state-creation"
+    },
+    {
+      "role": "security",
+      "identity": "Vishal Vishwas",
+      "decision": "approve-offline-training-state-creation"
+    },
+    {
+      "role": "maintainer",
+      "identity": "Tushar Garg",
+      "decision": "approve-offline-training-state-creation"
+    }
+  ],
+  "gates": {
+    "threeReviewerApproval": true,
+    "networkDisabled": true,
+    "rawSourceRetention": false,
+    "customerOrPersonalData": false,
+    "trainingStateCommitted": "ignored-draft-only",
+    "reviewPending": true,
+    "modelReleaseAllowed": false,
+    "productionAccuracyClaimAllowed": false,
+    "extensionIntegrationAllowed": false
+  },
+  "nextStep": "b2-create-draft-training-state"
+}

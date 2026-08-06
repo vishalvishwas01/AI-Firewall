@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-b2-remediation-review-v1.schema.json",
+  "title": "HallGuard B2 Remediation Human Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status",
+    "remediationEvidenceVersion", "featureExtractionEligible", "reviewers",
+    "unresolvedManualDecisions", "gates", "nextStep"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reviewVersion": { "const": "b2-remediation-review-v1" },
+    "reviewType": { "const": "HUMAN_APPROVAL" },
+    "reviewedOn": { "type": "string", "format": "date" },
+    "status": { "const": "changes-required" },
+    "remediationEvidenceVersion": { "const": "b2-remediation-evidence-v1" },
+    "featureExtractionEligible": { "const": false },
+    "reviewers": { "type": "array", "minItems": 3, "maxItems": 3 },
+    "unresolvedManualDecisions": { "type": "array", "minItems": 9, "maxItems": 9 },
+    "gates": { "type": "object" },
+    "nextStep": { "const": "manual-disposition-before-final-remediation-approval" }
+  }
+}

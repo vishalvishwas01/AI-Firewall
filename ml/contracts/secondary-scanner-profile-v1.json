@@ -1,0 +1,39 @@
+{
+  "profileVersion": "b2-secondary-scanner-v1",
+  "status": "pending-human-review",
+  "purpose": "Independent deterministic second pass before any representative-set construction.",
+  "rules": [
+    {
+      "id": "basic-auth-url",
+      "kind": "regex",
+      "expression": "https?://[^/\\s:@]+:[^@\\s/]+@",
+      "caseInsensitive": true
+    },
+    {
+      "id": "cloud-secret-context",
+      "kind": "regex",
+      "expression": "(?:aws_secret_access_key|client_secret|private_token)\\s*[:=]\\s*[\\\"']?[A-Za-z0-9_./+=-]{12,}",
+      "caseInsensitive": true
+    },
+    {
+      "id": "ssh-public-key-material",
+      "kind": "regex",
+      "expression": "ssh-(?:rsa|ed25519)\\s+[A-Za-z0-9+/]{80,}={0,3}",
+      "caseInsensitive": false
+    },
+    {
+      "id": "payment-card-shape",
+      "kind": "regex",
+      "expression": "(?<!\\d)(?:\\d[ -]?){13,19}(?!\\d)",
+      "caseInsensitive": false
+    },
+    {
+      "id": "high-entropy-token",
+      "kind": "entropy",
+      "alphabetExpression": "[A-Za-z0-9_+/=-]{32,256}",
+      "minimumLength": 32,
+      "maximumLength": 256,
+      "minimumEntropy": 4.5
+    }
+  ]
+}

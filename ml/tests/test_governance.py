@@ -87,6 +87,13 @@ class GovernanceTests(unittest.TestCase):
             with self.assertRaisesRegex(GovernanceError, "requires content-free evidence"):
                 audit_workspace(root, stage="b2-intake")
 
+    def test_b2_remediation_requires_post_review_and_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src").mkdir()
+            with self.assertRaisesRegex(GovernanceError, "B2 remediation requires"):
+                audit_workspace(root, stage="b2-remediation")
+
 
 if __name__ == "__main__":
     unittest.main()

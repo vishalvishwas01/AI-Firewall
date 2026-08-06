@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-b2-manual-disposition-v1.schema.json",
+  "title": "HallGuard B2 Manual Disposition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status",
+    "remediationReviewVersion", "privacy", "security", "gates", "nextStep"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reviewVersion": { "const": "b2-manual-disposition-v1" },
+    "reviewType": { "const": "HUMAN_APPROVAL" },
+    "reviewedOn": { "type": "string", "format": "date" },
+    "status": { "const": "targeted-review-authorized" },
+    "remediationReviewVersion": { "const": "b2-remediation-review-v1" },
+    "privacy": { "type": "object" },
+    "security": { "type": "object" },
+    "gates": { "type": "object" },
+    "nextStep": { "const": "bounded-targeted-quarantine-review" }
+  }
+}

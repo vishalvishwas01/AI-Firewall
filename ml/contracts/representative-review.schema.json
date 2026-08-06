@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-b2-representative-review-v1.schema.json",
+  "title": "HallGuard B2 Representative Set Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status", "representativeEvidenceVersion", "waivedRiskStrata", "reviewers", "gates", "nextStep"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reviewVersion": { "const": "b2-representative-review-v1" },
+    "reviewType": { "const": "HUMAN_APPROVAL" },
+    "status": { "const": "approved-limited-representative-set" },
+    "representativeEvidenceVersion": { "const": "b2-representative-set-v1" },
+    "nextStep": { "const": "b2-evaluate-limited-representative-set" }
+  }
+}

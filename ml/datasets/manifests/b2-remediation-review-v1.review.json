@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "b2-remediation-review-v1",
+  "reviewType": "HUMAN_APPROVAL",
+  "reviewedOn": "2026-08-04",
+  "status": "changes-required",
+  "remediationEvidenceVersion": "b2-remediation-evidence-v1",
+  "featureExtractionEligible": false,
+  "reviewers": [
+    {
+      "role": "privacy",
+      "identity": "umang aggarwal",
+      "decision": "changes-required",
+      "positiveFindings": [
+        "Committed B2 artifacts contain aggregate metadata, counts, versions, and digests rather than source or user content",
+        "Exact-pin rehydration did not perform feature extraction, representative-set construction, evaluation, calibration, training, or model export",
+        "Controlled-download archives and temporary extracted content were deleted after evidence generation",
+        "The user-provided Node.js archive was read-only and its SHA-256 was verified before use",
+        "Primary and secondary scanner evidence is aggregate-only and does not reproduce scanner hits"
+      ],
+      "requiredChanges": [
+        "Confirm deletion of the user-owned Node.js archive by 2026-09-03 or document the approved retention need",
+        "Explicitly accept that deterministic regex and entropy scanning reduces risk but cannot prove absence of all personal data or credentials",
+        "Keep any targeted scanner-hit review inside ignored quarantine and record content-free outcomes only",
+        "Continue prohibiting source, corpus paths, snippets, scanner matches, and per-file decisions from committed datasets and reports",
+        "Stop processing and notify the incident owner if suspected real credentials or personal data are observed"
+      ],
+      "conclusion": "The evidence design is privacy-compatible, but the retention and scanner-limit decisions remain unresolved."
+    },
+    {
+      "role": "security",
+      "identity": "vishal vishwas",
+      "decision": "changes-required",
+      "positiveFindings": [
+        "All three exact GitHub commits were verified with reason valid",
+        "Archive, accepted-tree, and root-licence SHA-256 values matched the original intake evidence",
+        "Archive, path, symlink, size, compression, encoding, exclusion, and primary scanning controls fail closed",
+        "The secondary scanner profile is versioned and digest-bound to the remediation evidence",
+        "The poisoning plan defines deterministic sampling, grouping, deduplication, isolation, anomaly thresholds, and mandatory review conditions",
+        "Rehydrated content was deleted and did not feed feature extraction"
+      ],
+      "requiredChanges": [
+        "Decide whether aggregate secondary-scanner counts are sufficient or targeted exact-pin quarantine review is required",
+        "If targeted review is required, record only per-rule aggregate dispositions and no paths, values, snippets, or individual-candidate hashes",
+        "Approve or revise the high-entropy-token threshold and payment-card-shape rule",
+        "Approve or revise the poisoning plan sample sizes and anomaly thresholds",
+        "Add tests and regenerate the profile digest for any scanner-profile change"
+      ],
+      "conclusion": "Commit authenticity and reproducibility pass, but scanner-hit disposition and poisoning-plan review remain unresolved."
+    },
+    {
+      "role": "maintainer",
+      "identity": "tushar garg",
+      "decision": "changes-required",
+      "positiveFindings": [
+        "Source revisions, archive and licence digests, SPDX identifiers, and attribution destination are recorded",
+        "Allowed path-family inventories reproduce accepted file counts without corpus content",
+        "Kubernetes CC BY 4.0 attribution is represented in the attribution document",
+        "Node.js dependency, third-party, vendor, generated, test, tool, and benchmark families remain excluded",
+        "The attribution plan remains pending and does not overclaim distribution authorization"
+      ],
+      "requiredChanges": [
+        "Classify the 94 CPython additional-notice-marker files by path family and choose exclusion or explicit attribution for each category",
+        "Classify the 46 Node.js lib notice-marker files and confirm separately licensed or vendored material did not escape exclusions",
+        "Review the three Kubernetes documentation notice-marker files for compatibility with the CC BY 4.0 attribution plan",
+        "Approve the exact attribution wording and durable publication location",
+        "Record only family or category counts and policy decisions without copying file text"
+      ],
+      "conclusion": "The inventory structure is suitable, but notice classification and final attribution approval remain unresolved."
+    }
+  ],
+  "unresolvedManualDecisions": [
+    {
+      "decisionId": "privacy-node-archive-retention",
+      "ownerRole": "privacy",
+      "status": "unresolved",
+      "requiredDecision": "Confirm archive deletion by 2026-09-03 or approve and document the remaining retention period."
+    },
+    {
+      "decisionId": "privacy-scanner-limitations",
+      "ownerRole": "privacy",
+      "status": "unresolved",
+      "requiredDecision": "Accept or reject the documented limitation that scanning reduces risk but cannot prove complete absence."
+    },
+    {
+      "decisionId": "security-secondary-hit-disposition",
+      "ownerRole": "security",
+      "status": "unresolved",
+      "requiredDecision": "Choose aggregate acceptance or bounded exact-pin targeted review for the secondary-scanner hits."
+    },
+    {
+      "decisionId": "security-scanner-rules",
+      "ownerRole": "security",
+      "status": "unresolved",
+      "requiredDecision": "Approve or revise the high-entropy-token threshold and payment-card-shape rule."
+    },
+    {
+      "decisionId": "security-poisoning-plan",
+      "ownerRole": "security",
+      "status": "unresolved",
+      "requiredDecision": "Approve or revise the poisoning-plan sample sizes and anomaly thresholds."
+    },
+    {
+      "decisionId": "maintainer-cpython-notices",
+      "ownerRole": "maintainer",
+      "status": "unresolved",
+      "requiredDecision": "Classify CPython notice-marker categories and decide exclusion or attribution."
+    },
+    {
+      "decisionId": "maintainer-nodejs-notices",
+      "ownerRole": "maintainer",
+      "status": "unresolved",
+      "requiredDecision": "Classify Node.js lib notice-marker categories and confirm allowed-family licensing."
+    },
+    {
+      "decisionId": "maintainer-kubernetes-notices",
+      "ownerRole": "maintainer",
+      "status": "unresolved",
+      "requiredDecision": "Confirm Kubernetes notice-marker compatibility with the CC BY 4.0 plan."
+    },
+    {
+      "decisionId": "maintainer-attribution",
+      "ownerRole": "maintainer",
+      "status": "unresolved",
+      "requiredDecision": "Approve or revise the attribution wording and durable publication location."
+    }
+  ],
+  "gates": {
+    "remediationReviewRecorded": true,
+    "privacyDecisionRecorded": true,
+    "securityDecisionRecorded": true,
+    "maintainerDecisionRecorded": true,
+    "nodeArchiveRetentionResolved": false,
+    "scannerLimitationsAccepted": false,
+    "secondScannerReviewed": false,
+    "poisoningPlanReviewed": false,
+    "finalLicenseAttributionApproval": false,
+    "allRequiredChangesComplete": false,
+    "featureExtractionEligible": false
+  },
+  "nextStep": "manual-disposition-before-final-remediation-approval"
+}

@@ -16,9 +16,9 @@ describe("local logistic classifier artifact", () => {
   it("loads the bundled shadow artifact with the exact feature contract", () => {
     expect(bundledClassifier.available).toBe(true)
     if (!bundledClassifier.available) return
-    expect(bundledClassifier.artifact.status).toBe("shadow")
+    expect(bundledClassifier.artifact.status).toBe("active")
     expect(bundledClassifier.artifact.featureOrder).toEqual(CANDIDATE_FEATURE_NAMES)
-    expect(bundledClassifier.artifact.modelVersion).toBe("secret-logistic-bootstrap-v1")
+    expect(bundledClassifier.artifact.modelVersion).toBe("secret-logistic-b2-limited-v1")
   })
 
   it("rejects unknown fields, reordered features, invalid scales, and disabled artifacts", () => {
@@ -42,7 +42,7 @@ describe("local logistic classifier artifact", () => {
   it("returns only feature-linked classification metadata without candidate content", () => {
     const candidate = "abc_prod_rw_93DKLQF7X2mN6pR8sT4vW9y"
     const analysis = analyze({ text: `credential=${candidate}` })
-    expect(analysis.classifier).toEqual({ available: true, modelVersion: "secret-logistic-bootstrap-v1" })
+    expect(analysis.classifier).toEqual({ available: true, modelVersion: "secret-logistic-b2-limited-v1" })
     expect(analysis.candidateClassifications.length).toBeGreaterThan(0)
     expect(JSON.stringify(analysis.candidateClassifications)).not.toContain(candidate)
     expect(Object.keys(analysis.candidateClassifications[0]).sort()).toEqual(["band", "confidence", "index", "modelVersion", "structurallySupported"])
@@ -51,7 +51,7 @@ describe("local logistic classifier artifact", () => {
   it("does not turn shadow classifier output into detections or actions", () => {
     const analysis = analyze({ text: "credential=abc_prod_rw_93DKLQF7X2mN6pR8sT4vW9y" })
     expect(analysis.candidateClassifications.length).toBeGreaterThan(0)
-    expect(analysis.candidateClassifications.every((item) => item.modelVersion === "secret-logistic-bootstrap-v1")).toBe(true)
+    expect(analysis.candidateClassifications.every((item) => item.modelVersion === "secret-logistic-b2-limited-v1")).toBe(true)
     expect(analysis.detections).toEqual([])
     expect(analysis.results).toEqual([])
     expect(analysis.action).toBe("allow")

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "b2-m4-human-review-v1",
+  "documentType": "authorization record",
+  "reviewType": "HUMAN_REVIEW",
+  "reviewedOn": "2026-08-07",
+  "evidence": "b2-m4-runtime-compatibility-evidence-v1.json",
+  "decision": "approve",
+  "scope": "compatibility-and-package-packageAuditPassed",
+  "simulatedReviewers": [
+    {
+      "role": "privacy",
+      "identity": "umang aggarwal",
+      "decision": "approve-evidence"
+    },
+    {
+      "role": "security",
+      "identity": "vishal vishwas",
+      "decision": "approve-evidence"
+    },
+    {
+      "role": "maintainer",
+      "identity": "tushar garg",
+      "decision": "approve-evidence"
+    }
+  ],
+  "findings": {
+    "artifactHashVerified": true,
+    "metricsHashVerified": true,
+    "compatibilityChecksPassed": true,
+    "packageAuditPassed": true,
+    "liveSmokeChecksCompleted": false,
+    "runtimeArtifactActivated": false
+  },
+  "gates": {
+    "releaseEligible": false,
+    "productionAccuracyClaimAllowed": false,
+    "extensionIntegrationAllowed": false,
+    "serverIntegrationAllowed": false
+  },
+  "governanceEffect": "none"
+}

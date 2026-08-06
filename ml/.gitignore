@@ -13,6 +13,7 @@ dist/
 # explicitly allowlist any small synthetic fixture intended for version control.
 datasets/synthetic/*
 !datasets/synthetic/.gitkeep
+datasets/representative/*
 
 # Artifacts and reports require M3/M4 review before selected files are committed.
 artifacts/*

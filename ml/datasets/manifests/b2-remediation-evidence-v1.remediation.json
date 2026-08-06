@@ -1,0 +1,166 @@
+{
+  "executedOn": "2026-08-04",
+  "featureExtractionEligible": false,
+  "gates": {
+    "allRequiredChangesComplete": false,
+    "commitVerificationEvidence": true,
+    "exactPinRehydrationVerified": true,
+    "featureExtractionEligible": false,
+    "finalLicenseAttributionApproval": false,
+    "licenseInventoryComplete": true,
+    "poisoningPlanRecorded": true,
+    "poisoningPlanReviewed": false,
+    "scannerProfileRecorded": true,
+    "secondScannerExecuted": true,
+    "secondScannerReviewed": false
+  },
+  "intakeEvidenceVersion": "b2-intake-evidence-v1",
+  "nextStep": "final-remediation-human-review",
+  "poisoningPlan": {
+    "reviewStatus": "pending-final-human-review",
+    "sha256": "11362c9cb25c34fb78ea0b432cf683a6de255c0fbb0d40933c561b28a8407a2f",
+    "version": "b2-poisoning-review-plan-v1"
+  },
+  "postIntakeReviewVersion": "b2-post-intake-review-v1",
+  "reportVersion": "b2-remediation-evidence-v1",
+  "scannerProfile": {
+    "reviewStatus": "pending-final-human-review",
+    "sha256": "37dda0c4b3a2b2b4d67b3b12e4c0abf90e675e467ca5fe02a2a550376a7cfcdb",
+    "version": "b2-secondary-scanner-v1"
+  },
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "acceptedTreeSha256Matched": true,
+      "archiveInput": "controlled-download",
+      "archiveSha256Matched": true,
+      "commitVerification": {
+        "evidenceEndpoint": "github-rest-commit-endpoint",
+        "reason": "valid",
+        "shaMatches": true,
+        "verified": true,
+        "verifiedAt": "2026-08-04T10:03:08Z"
+      },
+      "licenseInventory": {
+        "attributionDestination": "docs/THIRD_PARTY_ATTRIBUTIONS.md",
+        "families": [
+          {
+            "additionalNoticeMarkerFileCount": 11,
+            "family": "Doc",
+            "fileCount": 466
+          },
+          {
+            "additionalNoticeMarkerFileCount": 83,
+            "family": "Lib",
+            "fileCount": 596
+          }
+        ],
+        "reviewStatus": "pending-final-maintainer-review",
+        "rootLicenseSha256Matched": true
+      },
+      "rehydratedContentDeleted": true,
+      "revision": "ef0affbf7c1cb8bbc136b65cc0f02985f8c568b5",
+      "secondaryScan": {
+        "aggregateScanSha256": "63a6284eb32d260afc1d86dbc5e6335b17be2b02e4111ea541e8b59aee482eb1",
+        "hitFileCount": 23,
+        "hitReasonCounts": {
+          "high-entropy-token": 8,
+          "payment-card-shape": 15
+        },
+        "scannedFileCount": 1062
+      },
+      "sourceArchiveDeletedByTool": true,
+      "sourceId": "cpython-public-corpus"
+    },
+    {
+      "acceptedTreeSha256Matched": true,
+      "archiveInput": "controlled-download",
+      "archiveSha256Matched": true,
+      "commitVerification": {
+        "evidenceEndpoint": "github-rest-commit-endpoint",
+        "reason": "valid",
+        "shaMatches": true,
+        "verified": true,
+        "verifiedAt": "2026-08-04T08:50:32Z"
+      },
+      "licenseInventory": {
+        "attributionDestination": "docs/THIRD_PARTY_ATTRIBUTIONS.md",
+        "families": [
+          {
+            "additionalNoticeMarkerFileCount": 3,
+            "family": "content/en/docs",
+            "fileCount": 1279
+          },
+          {
+            "additionalNoticeMarkerFileCount": 0,
+            "family": "content/en/examples",
+            "fileCount": 372
+          }
+        ],
+        "reviewStatus": "pending-final-maintainer-review",
+        "rootLicenseSha256Matched": true
+      },
+      "rehydratedContentDeleted": true,
+      "revision": "3281a6a4f4c1505e18040f3915eb226cc41987c3",
+      "secondaryScan": {
+        "aggregateScanSha256": "5f4d64661f2daf4501b386cbcf2723973b3b858b328883a335a9c698d0bf5a94",
+        "hitFileCount": 97,
+        "hitReasonCounts": {
+          "high-entropy-token": 30,
+          "payment-card-shape": 68
+        },
+        "scannedFileCount": 1651
+      },
+      "sourceArchiveDeletedByTool": true,
+      "sourceId": "kubernetes-website-public-corpus"
+    },
+    {
+      "acceptedTreeSha256Matched": true,
+      "archiveInput": "user-provided-read-only",
+      "archiveSha256Matched": true,
+      "commitVerification": {
+        "evidenceEndpoint": "github-rest-commit-endpoint",
+        "reason": "valid",
+        "shaMatches": true,
+        "verified": true,
+        "verifiedAt": "2026-08-04T12:33:29Z"
+      },
+      "licenseInventory": {
+        "attributionDestination": "docs/THIRD_PARTY_ATTRIBUTIONS.md",
+        "families": [
+          {
+            "additionalNoticeMarkerFileCount": 0,
+            "family": "doc/api",
+            "fileCount": 49
+          },
+          {
+            "additionalNoticeMarkerFileCount": 46,
+            "family": "lib",
+            "fileCount": 371
+          },
+          {
+            "additionalNoticeMarkerFileCount": 0,
+            "family": "top-level-json",
+            "fileCount": 1
+          }
+        ],
+        "reviewStatus": "pending-final-maintainer-review",
+        "rootLicenseSha256Matched": true
+      },
+      "rehydratedContentDeleted": true,
+      "revision": "15495a069fc8eaec8c70ea88781ae241a87fd25d",
+      "secondaryScan": {
+        "aggregateScanSha256": "b5defc77b57286387ab249111c4e3e680245094d7aaa4f609ff5b72cfb0a6799",
+        "hitFileCount": 16,
+        "hitReasonCounts": {
+          "high-entropy-token": 15,
+          "payment-card-shape": 1
+        },
+        "scannedFileCount": 421
+      },
+      "sourceArchiveDeletedByTool": false,
+      "sourceId": "nodejs-public-corpus"
+    }
+  ],
+  "status": "controls-executed-awaiting-final-human-review"
+}

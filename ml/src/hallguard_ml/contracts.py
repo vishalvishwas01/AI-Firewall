@@ -26,6 +26,31 @@ INTAKE_APPROVAL_CONTRACT_ID = "hallguard-b2-intake-approval-v1"
 INTAKE_APPROVAL_PACKAGE_VERSION = "b2-intake-approval-v1"
 INTAKE_EVIDENCE_CONTRACT_ID = "hallguard-b2-intake-evidence-v1"
 INTAKE_EVIDENCE_REPORT_VERSION = "b2-intake-evidence-v1"
+POST_INTAKE_REVIEW_CONTRACT_ID = "hallguard-b2-post-intake-review-v1"
+POST_INTAKE_REVIEW_VERSION = "b2-post-intake-review-v1"
+REMEDIATION_EVIDENCE_CONTRACT_ID = "hallguard-b2-remediation-evidence-v1"
+REMEDIATION_EVIDENCE_VERSION = "b2-remediation-evidence-v1"
+REMEDIATION_REVIEW_CONTRACT_ID = "hallguard-b2-remediation-review-v1"
+REMEDIATION_REVIEW_VERSION = "b2-remediation-review-v1"
+MANUAL_DISPOSITION_CONTRACT_ID = "hallguard-b2-manual-disposition-v1"
+MANUAL_DISPOSITION_VERSION = "b2-manual-disposition-v1"
+TARGETED_REVIEW_EVIDENCE_CONTRACT_ID = "hallguard-b2-targeted-review-evidence-v1"
+TARGETED_REVIEW_EVIDENCE_VERSION = "b2-targeted-review-evidence-v1"
+FINAL_REMEDIATION_APPROVAL_CONTRACT_ID = "hallguard-b2-final-remediation-approval-v1"
+FINAL_REMEDIATION_APPROVAL_VERSION = "b2-final-remediation-approval-v1"
+REPRESENTATIVE_SET_CONTRACT_ID = "hallguard-b2-representative-set-v1"
+REPRESENTATIVE_SET_VERSION = "b2-representative-set-v1"
+REPRESENTATIVE_REVIEW_CONTRACT_ID = "hallguard-b2-representative-review-v1"
+REPRESENTATIVE_REVIEW_VERSION = "b2-representative-review-v1"
+LIMITED_EVAL_APPROVAL_CONTRACT_ID = "hallguard-b2-limited-evaluation-approval-v1"
+LIMITED_EVAL_APPROVAL_VERSION = "b2-limited-evaluation-approval-v1"
+LIMITED_EVALUATION_VERSION = "b2-limited-evaluation-v1"
+LIMITED_CALIBRATION_REVIEW_CONTRACT_ID = "hallguard-b2-limited-calibration-review-v1"
+LIMITED_CALIBRATION_REVIEW_VERSION = "b2-limited-calibration-review-v1"
+B2_TRAINING_STATE_APPROVAL_CONTRACT_ID = "hallguard-b2-training-state-approval-v1"
+B2_TRAINING_STATE_APPROVAL_VERSION = "b2-training-state-approval-v1"
+B2_TRAINING_STATE_VERSION = "b2-limited-logistic-training-state-v1"
+B2_MODEL_VERSION = "secret-logistic-b2-limited-v1"
 M3_GATE_NAMES = (
     "heldOutGroupIsolation",
     "deterministicTrainingState",
@@ -1021,6 +1046,964 @@ def validate_intake_evidence(value: dict[str, Any]) -> None:
     }
     if value["gates"] != expected_gates:
         raise ContractError("B2 intake evidence gates overclaim the completed boundary")
+
+
+def validate_post_intake_review(value: dict[str, Any]) -> None:
+    """Validate conditional reviewer decisions without authorizing feature extraction."""
+
+    _exact_fields(
+        value,
+        {
+            "schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status",
+            "evidencePackageVersion", "featureExtractionEligible", "reviewers", "gates", "nextStep",
+        },
+        "postIntakeReview",
+    )
+    if (
+        value["schemaVersion"] != 1
+        or value["reviewVersion"] != POST_INTAKE_REVIEW_VERSION
+        or value["reviewType"] != "HUMAN_APPROVAL"
+        or value["status"] != "approved-with-required-changes"
+        or value["evidencePackageVersion"] != INTAKE_EVIDENCE_REPORT_VERSION
+        or value["featureExtractionEligible"] is not False
+        or value["nextStep"] != "b2-remediation-before-feature-extraction"
+    ):
+        raise ContractError("B2 post-intake review boundary is invalid")
+    _date_only(value["reviewedOn"], "postIntakeReview.reviewedOn")
+
+    reviewers = value["reviewers"]
+    if not isinstance(reviewers, list) or len(reviewers) != 3:
+        raise ContractError("B2 post-intake review requires exactly three reviewers")
+    roles: set[str] = set()
+    identities: set[str] = set()
+    for index, reviewer in enumerate(reviewers):
+        if not isinstance(reviewer, dict):
+            raise ContractError(f"B2 post-intake reviewer {index} must be an object")
+        _exact_fields(
+            reviewer,
+            {"role", "identity", "decision", "positiveFindings", "requiredChanges"},
+            f"postIntakeReview.reviewers[{index}]",
+        )
+        role = reviewer["role"]
+        identity = reviewer["identity"]
+        if role not in {"privacy", "security", "maintainer"} or role in roles:
+            raise ContractError("B2 post-intake reviewer roles must be unique and complete")
+        if not isinstance(identity, str) or not 3 <= len(identity.strip()) <= 80:
+            raise ContractError(f"B2 post-intake reviewer {index} identity is invalid")
+        normalized_identity = " ".join(identity.lower().split())
+        if normalized_identity in identities:
+            raise ContractError("B2 post-intake reviewers must be distinct")
+        if reviewer["decision"] not in {"approve-post-intake", "approve-post-intakes"}:
+            raise ContractError(f"B2 post-intake reviewer {index} decision is invalid")
+        for field in ("positiveFindings", "requiredChanges"):
+            items = reviewer[field]
+            if (
+                not isinstance(items, list)
+                or not items
+                or len(items) != len(set(items))
+                or any(not isinstance(item, str) or not item.strip() for item in items)
+            ):
+                raise ContractError(f"B2 post-intake reviewer {index} {field} are invalid")
+        roles.add(role)
+        identities.add(normalized_identity)
+    if roles != {"privacy", "security", "maintainer"}:
+        raise ContractError("B2 post-intake review is missing a required role")
+
+    expected_gates = {
+        "humanReviewsRecorded": True,
+        "privacyDecisionRecorded": True,
+        "securityDecisionRecorded": True,
+        "maintainerDecisionRecorded": True,
+        "commitVerificationEvidence": False,
+        "exactPinRehydrationVerified": False,
+        "secondScannerReviewed": False,
+        "scannerProfileRecorded": False,
+        "poisoningAndGroupedSplitReview": False,
+        "licenseInventoryComplete": False,
+        "finalLicenseAttributionApproval": False,
+        "allRequiredChangesComplete": False,
+        "featureExtractionEligible": False,
+    }
+    if value["gates"] != expected_gates:
+        raise ContractError("B2 post-intake review gates must remain blocked")
+
+
+def validate_remediation_evidence(value: dict[str, Any]) -> None:
+    """Validate content-free remediation evidence while retaining all final human gates."""
+
+    _exact_fields(
+        value,
+        {
+            "schemaVersion", "reportVersion", "status", "featureExtractionEligible", "executedOn",
+            "intakeEvidenceVersion", "postIntakeReviewVersion", "scannerProfile", "poisoningPlan",
+            "sources", "gates", "nextStep",
+        },
+        "remediationEvidence",
+    )
+    if (
+        value["schemaVersion"] != 1
+        or value["reportVersion"] != REMEDIATION_EVIDENCE_VERSION
+        or value["status"] != "controls-executed-awaiting-final-human-review"
+        or value["featureExtractionEligible"] is not False
+        or value["intakeEvidenceVersion"] != INTAKE_EVIDENCE_REPORT_VERSION
+        or value["postIntakeReviewVersion"] != POST_INTAKE_REVIEW_VERSION
+        or value["nextStep"] != "final-remediation-human-review"
+    ):
+        raise ContractError("B2 remediation evidence boundary is invalid")
+    _date_only(value["executedOn"], "remediationEvidence.executedOn")
+
+    for field, expected_version in (
+        ("scannerProfile", "b2-secondary-scanner-v1"),
+        ("poisoningPlan", "b2-poisoning-review-plan-v1"),
+    ):
+        profile = value[field]
+        if not isinstance(profile, dict):
+            raise ContractError(f"B2 remediation {field} must be an object")
+        _exact_fields(profile, {"version", "sha256", "reviewStatus"}, f"remediationEvidence.{field}")
+        if (
+            profile["version"] != expected_version
+            or not isinstance(profile["sha256"], str)
+            or re.fullmatch(r"[0-9a-f]{64}", profile["sha256"]) is None
+            or profile["reviewStatus"] != "pending-final-human-review"
+        ):
+            raise ContractError(f"B2 remediation {field} metadata is invalid")
+
+    expected_families = {
+        "cpython-public-corpus": {"Doc", "Lib"},
+        "kubernetes-website-public-corpus": {"content/en/docs", "content/en/examples"},
+        "nodejs-public-corpus": {"doc/api", "lib", "top-level-json"},
+    }
+    sources = value["sources"]
+    if not isinstance(sources, list) or len(sources) != 3:
+        raise ContractError("B2 remediation must cover three sources")
+    seen: set[str] = set()
+    scanner_rule_ids = {
+        "basic-auth-url", "cloud-secret-context", "ssh-public-key-material", "payment-card-shape",
+        "high-entropy-token",
+    }
+    for index, source in enumerate(sources):
+        if not isinstance(source, dict):
+            raise ContractError(f"B2 remediation source {index} must be an object")
+        _exact_fields(
+            source,
+            {
+                "sourceId", "revision", "commitVerification", "archiveSha256Matched",
+                "acceptedTreeSha256Matched", "secondaryScan", "licenseInventory",
+                "archiveInput", "sourceArchiveDeletedByTool", "rehydratedContentDeleted",
+            },
+            f"remediationEvidence.sources[{index}]",
+        )
+        source_id = source["sourceId"]
+        if source_id not in expected_families or source_id in seen:
+            raise ContractError("B2 remediation source ids must be exact and unique")
+        if (
+            not isinstance(source["revision"], str)
+            or re.fullmatch(r"[0-9a-f]{40}", source["revision"]) is None
+            or source["archiveSha256Matched"] is not True
+            or source["acceptedTreeSha256Matched"] is not True
+            or source["rehydratedContentDeleted"] is not True
+        ):
+            raise ContractError(f"B2 remediation source {index} pin/hash state is invalid")
+        if source["archiveInput"] not in {"controlled-download", "user-provided-read-only"}:
+            raise ContractError(f"B2 remediation source {index} archive input is invalid")
+        if (
+            not isinstance(source["sourceArchiveDeletedByTool"], bool)
+            or (
+                source["archiveInput"] == "controlled-download"
+                and source["sourceArchiveDeletedByTool"] is not True
+            )
+            or (
+                source["archiveInput"] == "user-provided-read-only"
+                and source["sourceArchiveDeletedByTool"] is not False
+            )
+        ):
+            raise ContractError(f"B2 remediation source {index} archive deletion state is invalid")
+
+        verification = source["commitVerification"]
+        if not isinstance(verification, dict):
+            raise ContractError(f"B2 remediation source {index} commit verification must be an object")
+        _exact_fields(
+            verification,
+            {"shaMatches", "verified", "reason", "verifiedAt", "evidenceEndpoint"},
+            f"remediationEvidence.sources[{index}].commitVerification",
+        )
+        if (
+            verification["shaMatches"] is not True
+            or not isinstance(verification["verified"], bool)
+            or not isinstance(verification["reason"], str)
+            or not verification["reason"]
+            or verification["evidenceEndpoint"] != "github-rest-commit-endpoint"
+        ):
+            raise ContractError(f"B2 remediation source {index} commit verification is invalid")
+        if verification["verifiedAt"] is not None:
+            _date_time(
+                verification["verifiedAt"],
+                f"remediationEvidence.sources[{index}].commitVerification.verifiedAt",
+            )
+
+        scan = source["secondaryScan"]
+        if not isinstance(scan, dict):
+            raise ContractError(f"B2 remediation source {index} secondary scan must be an object")
+        _exact_fields(
+            scan,
+            {"scannedFileCount", "hitFileCount", "hitReasonCounts", "aggregateScanSha256"},
+            f"remediationEvidence.sources[{index}].secondaryScan",
+        )
+        if (
+            not isinstance(scan["scannedFileCount"], int)
+            or scan["scannedFileCount"] <= 0
+            or not isinstance(scan["hitFileCount"], int)
+            or not 0 <= scan["hitFileCount"] <= scan["scannedFileCount"]
+            or not isinstance(scan["aggregateScanSha256"], str)
+            or re.fullmatch(r"[0-9a-f]{64}", scan["aggregateScanSha256"]) is None
+        ):
+            raise ContractError(f"B2 remediation source {index} secondary scan counts are invalid")
+        hit_counts = scan["hitReasonCounts"]
+        if (
+            not isinstance(hit_counts, dict)
+            or not set(hit_counts).issubset(scanner_rule_ids)
+            or any(not isinstance(count, int) or count <= 0 for count in hit_counts.values())
+        ):
+            raise ContractError(f"B2 remediation source {index} scanner reasons are invalid")
+
+        inventory = source["licenseInventory"]
+        if not isinstance(inventory, dict):
+            raise ContractError(f"B2 remediation source {index} licence inventory must be an object")
+        _exact_fields(
+            inventory,
+            {"rootLicenseSha256Matched", "families", "attributionDestination", "reviewStatus"},
+            f"remediationEvidence.sources[{index}].licenseInventory",
+        )
+        if (
+            inventory["rootLicenseSha256Matched"] is not True
+            or inventory["attributionDestination"] != "docs/THIRD_PARTY_ATTRIBUTIONS.md"
+            or inventory["reviewStatus"] != "pending-final-maintainer-review"
+        ):
+            raise ContractError(f"B2 remediation source {index} licence inventory state is invalid")
+        families = inventory["families"]
+        if not isinstance(families, list) or len(families) != len(expected_families[source_id]):
+            raise ContractError(f"B2 remediation source {index} licence families are incomplete")
+        family_names: set[str] = set()
+        for family in families:
+            if not isinstance(family, dict):
+                raise ContractError(f"B2 remediation source {index} licence family must be an object")
+            _exact_fields(
+                family,
+                {"family", "fileCount", "additionalNoticeMarkerFileCount"},
+                f"remediationEvidence.sources[{index}].licenseInventory.families",
+            )
+            if (
+                not isinstance(family["family"], str)
+                or not isinstance(family["fileCount"], int)
+                or family["fileCount"] <= 0
+                or not isinstance(family["additionalNoticeMarkerFileCount"], int)
+                or not 0 <= family["additionalNoticeMarkerFileCount"] <= family["fileCount"]
+            ):
+                raise ContractError(f"B2 remediation source {index} licence family counts are invalid")
+            family_names.add(family["family"])
+        if family_names != expected_families[source_id]:
+            raise ContractError(f"B2 remediation source {index} licence family names are invalid")
+        seen.add(source_id)
+
+    expected_gates = {
+        "commitVerificationEvidence": True,
+        "exactPinRehydrationVerified": True,
+        "secondScannerExecuted": True,
+        "scannerProfileRecorded": True,
+        "poisoningPlanRecorded": True,
+        "licenseInventoryComplete": True,
+        "secondScannerReviewed": False,
+        "poisoningPlanReviewed": False,
+        "finalLicenseAttributionApproval": False,
+        "allRequiredChangesComplete": False,
+        "featureExtractionEligible": False,
+    }
+    if value["gates"] != expected_gates:
+        raise ContractError("B2 remediation final human gates must remain blocked")
+
+
+def validate_remediation_review(value: dict[str, Any]) -> None:
+    """Validate a changes-required remediation review without opening downstream gates."""
+
+    _exact_fields(
+        value,
+        {
+            "schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status",
+            "remediationEvidenceVersion", "featureExtractionEligible", "reviewers",
+            "unresolvedManualDecisions", "gates", "nextStep",
+        },
+        "remediationReview",
+    )
+    if (
+        value["schemaVersion"] != 1
+        or value["reviewVersion"] != REMEDIATION_REVIEW_VERSION
+        or value["reviewType"] != "HUMAN_APPROVAL"
+        or value["reviewedOn"] != "2026-08-04"
+        or value["status"] != "changes-required"
+        or value["remediationEvidenceVersion"] != REMEDIATION_EVIDENCE_VERSION
+        or value["featureExtractionEligible"] is not False
+        or value["nextStep"] != "manual-disposition-before-final-remediation-approval"
+    ):
+        raise ContractError("B2 remediation review boundary is invalid")
+    _date_only(value["reviewedOn"], "remediationReview.reviewedOn")
+
+    reviewers = value["reviewers"]
+    if not isinstance(reviewers, list) or len(reviewers) != 3:
+        raise ContractError("B2 remediation review requires exactly three reviewers")
+    roles: set[str] = set()
+    identities: set[str] = set()
+    for index, reviewer in enumerate(reviewers):
+        if not isinstance(reviewer, dict):
+            raise ContractError(f"B2 remediation reviewer {index} must be an object")
+        _exact_fields(
+            reviewer,
+            {"role", "identity", "decision", "positiveFindings", "requiredChanges", "conclusion"},
+            f"remediationReview.reviewers[{index}]",
+        )
+        role = reviewer["role"]
+        identity = reviewer["identity"]
+        if role not in {"privacy", "security", "maintainer"} or role in roles:
+            raise ContractError("B2 remediation reviewer roles must be unique and complete")
+        if not isinstance(identity, str) or not 3 <= len(identity.strip()) <= 80:
+            raise ContractError(f"B2 remediation reviewer {index} identity is invalid")
+        normalized_identity = " ".join(identity.lower().split())
+        if normalized_identity in identities:
+            raise ContractError("B2 remediation reviewers must be distinct")
+        if reviewer["decision"] != "changes-required":
+            raise ContractError("B2 remediation reviewer decisions must remain changes-required")
+        for field in ("positiveFindings", "requiredChanges"):
+            items = reviewer[field]
+            if (
+                not isinstance(items, list)
+                or not items
+                or len(items) != len(set(items))
+                or any(not isinstance(item, str) or not item.strip() for item in items)
+            ):
+                raise ContractError(f"B2 remediation reviewer {index} {field} are invalid")
+        if not isinstance(reviewer["conclusion"], str) or not reviewer["conclusion"].strip():
+            raise ContractError(f"B2 remediation reviewer {index} conclusion is invalid")
+        roles.add(role)
+        identities.add(normalized_identity)
+    if roles != {"privacy", "security", "maintainer"}:
+        raise ContractError("B2 remediation review is missing a required role")
+
+    decisions = value["unresolvedManualDecisions"]
+    expected_decision_ids = {
+        "privacy-node-archive-retention",
+        "privacy-scanner-limitations",
+        "security-secondary-hit-disposition",
+        "security-scanner-rules",
+        "security-poisoning-plan",
+        "maintainer-cpython-notices",
+        "maintainer-nodejs-notices",
+        "maintainer-kubernetes-notices",
+        "maintainer-attribution",
+    }
+    if not isinstance(decisions, list) or len(decisions) != len(expected_decision_ids):
+        raise ContractError("B2 remediation review manual decisions are incomplete")
+    decision_ids: set[str] = set()
+    for index, decision in enumerate(decisions):
+        if not isinstance(decision, dict):
+            raise ContractError(f"B2 remediation manual decision {index} must be an object")
+        _exact_fields(
+            decision,
+            {"decisionId", "ownerRole", "status", "requiredDecision"},
+            f"remediationReview.unresolvedManualDecisions[{index}]",
+        )
+        if (
+            decision["decisionId"] not in expected_decision_ids
+            or decision["decisionId"] in decision_ids
+            or decision["ownerRole"] not in {"privacy", "security", "maintainer"}
+            or decision["status"] != "unresolved"
+            or not isinstance(decision["requiredDecision"], str)
+            or not decision["requiredDecision"].strip()
+        ):
+            raise ContractError(f"B2 remediation manual decision {index} is invalid")
+        decision_ids.add(decision["decisionId"])
+    if decision_ids != expected_decision_ids:
+        raise ContractError("B2 remediation review manual decisions are incomplete")
+
+    expected_gates = {
+        "remediationReviewRecorded": True,
+        "privacyDecisionRecorded": True,
+        "securityDecisionRecorded": True,
+        "maintainerDecisionRecorded": True,
+        "nodeArchiveRetentionResolved": False,
+        "scannerLimitationsAccepted": False,
+        "secondScannerReviewed": False,
+        "poisoningPlanReviewed": False,
+        "finalLicenseAttributionApproval": False,
+        "allRequiredChangesComplete": False,
+        "featureExtractionEligible": False,
+    }
+    if value["gates"] != expected_gates:
+        raise ContractError("B2 remediation review gates must remain blocked")
+
+
+def validate_manual_disposition(value: dict[str, Any]) -> None:
+    """Validate the privacy approval and security direction for the targeted review."""
+
+    _exact_fields(
+        value,
+        {
+            "schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status",
+            "remediationReviewVersion", "privacy", "security", "gates", "nextStep",
+        },
+        "manualDisposition",
+    )
+    if (
+        value["schemaVersion"] != 1
+        or value["reviewVersion"] != MANUAL_DISPOSITION_VERSION
+        or value["reviewType"] != "HUMAN_APPROVAL"
+        or value["status"] != "targeted-review-authorized"
+        or value["remediationReviewVersion"] != REMEDIATION_REVIEW_VERSION
+        or value["nextStep"] != "bounded-targeted-quarantine-review"
+    ):
+        raise ContractError("B2 manual disposition boundary is invalid")
+    _date_only(value["reviewedOn"], "manualDisposition.reviewedOn")
+
+    privacy = value["privacy"]
+    if not isinstance(privacy, dict):
+        raise ContractError("B2 privacy disposition must be an object")
+    _exact_fields(
+        privacy,
+        {
+            "identity", "role", "decision", "nodeArchiveDeleted", "deletionOn",
+            "scannerLimitationsAccepted", "quarantineOnlyReviewAccepted",
+            "contentFreeReportingAccepted",
+        },
+        "manualDisposition.privacy",
+    )
+    if (
+        " ".join(privacy["identity"].lower().split()) != "umang aggarwal"
+        or privacy["role"] != "privacy"
+        or privacy["decision"] != "approve-remediation"
+        or privacy["nodeArchiveDeleted"] is not True
+        or privacy["scannerLimitationsAccepted"] is not True
+        or privacy["quarantineOnlyReviewAccepted"] is not True
+        or privacy["contentFreeReportingAccepted"] is not True
+    ):
+        raise ContractError("B2 privacy disposition is invalid")
+    _date_only(privacy["deletionOn"], "manualDisposition.privacy.deletionOn")
+
+    security = value["security"]
+    if not isinstance(security, dict):
+        raise ContractError("B2 security disposition must be an object")
+    _exact_fields(
+        security,
+        {
+            "identity", "role", "secondaryScannerDecision", "highEntropyTokenRule",
+            "paymentCardShapeRule", "poisoningReviewPlan",
+        },
+        "manualDisposition.security",
+    )
+    if (
+        " ".join(security["identity"].lower().split()) != "vishal vishwas"
+        or security["role"] != "security"
+        or security["secondaryScannerDecision"] != "targeted-review-required"
+        or security["highEntropyTokenRule"] != "approve-as-indicator"
+        or security["paymentCardShapeRule"] != "approve-as-indicator"
+        or security["poisoningReviewPlan"] != "approve-as-written"
+    ):
+        raise ContractError("B2 security disposition is invalid")
+
+    expected_gates = {
+        "nodeArchiveDeletionConfirmed": True,
+        "scannerLimitationsAccepted": True,
+        "privacyRemediationApproved": True,
+        "secondaryScannerRulesReviewed": True,
+        "poisoningPlanReviewed": True,
+        "targetedReviewAuthorized": True,
+        "targetedReviewComplete": False,
+        "finalSecurityApproval": False,
+        "finalLicenseAttributionApproval": False,
+        "allRequiredChangesComplete": False,
+        "featureExtractionEligible": False,
+    }
+    if value["gates"] != expected_gates:
+        raise ContractError("B2 manual disposition gates overclaim the approved boundary")
+
+
+def validate_targeted_review_evidence(value: dict[str, Any]) -> None:
+    """Validate aggregate-only targeted-review evidence while final approvals remain pending."""
+
+    _exact_fields(
+        value,
+        {
+            "schemaVersion", "reportVersion", "executedOn", "status",
+            "manualDispositionVersion", "featureExtractionEligible", "policy", "sources",
+            "gates", "nextStep",
+        },
+        "targetedReviewEvidence",
+    )
+    if (
+        value["schemaVersion"] != 1
+        or value["reportVersion"] != TARGETED_REVIEW_EVIDENCE_VERSION
+        or value["status"] != "targeted-review-complete-awaiting-final-human-approval"
+        or value["manualDispositionVersion"] != MANUAL_DISPOSITION_VERSION
+        or value["featureExtractionEligible"] is not False
+        or value["nextStep"] != "final-security-and-maintainer-review"
+    ):
+        raise ContractError("B2 targeted review boundary is invalid")
+    _date_only(value["executedOn"], "targetedReviewEvidence.executedOn")
+    if value["policy"] != {
+        "secondaryScannerHitDisposition": "exclude-all-hit-files",
+        "additionalNoticeMarkerDisposition": "exclude-all-marker-files-pending-final-review",
+        "rawContentCommitted": False,
+        "perFileMetadataCommitted": False,
+    }:
+        raise ContractError("B2 targeted review policy is invalid")
+
+    expected_families = {
+        "cpython-public-corpus": {"Doc", "Lib"},
+        "kubernetes-website-public-corpus": {"content/en/docs", "content/en/examples"},
+        "nodejs-public-corpus": {"doc/api", "lib", "top-level-json"},
+    }
+    rule_ids = {"high-entropy-token", "payment-card-shape"}
+    category_ids = {
+        "spdx-identifier", "licensed-under", "copyright", "permission-grant",
+        "source-code-license-statement",
+    }
+    sources = value["sources"]
+    if not isinstance(sources, list) or len(sources) != 3:
+        raise ContractError("B2 targeted review must cover three sources")
+    seen: set[str] = set()
+    for index, source in enumerate(sources):
+        if not isinstance(source, dict):
+            raise ContractError(f"B2 targeted review source {index} must be an object")
+        _exact_fields(
+            source,
+            {
+                "sourceId", "revision", "archiveSha256Matched", "acceptedTreeSha256Matched",
+                "scannedFileCount", "scannerHitFileCount", "scannerExcludedFileCount",
+                "scannerRuleDispositions", "licenseFamilies", "sanitizedCandidateFileCount",
+                "sanitizedTreeSha256", "archiveDeleted", "rehydratedContentDeleted",
+            },
+            f"targetedReviewEvidence.sources[{index}]",
+        )
+        source_id = source["sourceId"]
+        if source_id not in expected_families or source_id in seen:
+            raise ContractError("B2 targeted review source ids are invalid")
+        if (
+            re.fullmatch(r"[0-9a-f]{40}", source["revision"]) is None
+            or source["archiveSha256Matched"] is not True
+            or source["acceptedTreeSha256Matched"] is not True
+            or source["archiveDeleted"] is not True
+            or source["rehydratedContentDeleted"] is not True
+            or not isinstance(source["scannedFileCount"], int)
+            or source["scannedFileCount"] <= 0
+            or not isinstance(source["scannerHitFileCount"], int)
+            or not isinstance(source["scannerExcludedFileCount"], int)
+            or source["scannerExcludedFileCount"] != source["scannerHitFileCount"]
+            or not 0 <= source["sanitizedCandidateFileCount"] <= source["scannedFileCount"]
+            or re.fullmatch(r"[0-9a-f]{64}", source["sanitizedTreeSha256"]) is None
+        ):
+            raise ContractError(f"B2 targeted review source {index} state is invalid")
+        dispositions = source["scannerRuleDispositions"]
+        if not isinstance(dispositions, list) or {item.get("ruleId") for item in dispositions} != rule_ids:
+            raise ContractError(f"B2 targeted review source {index} scanner dispositions are invalid")
+        for disposition in dispositions:
+            if set(disposition) != {"ruleId", "indicatorFileCount", "disposition", "excludedFileCount"}:
+                raise ContractError(f"B2 targeted review source {index} scanner fields are invalid")
+            if (
+                not isinstance(disposition["indicatorFileCount"], int)
+                or disposition["indicatorFileCount"] < 0
+                or disposition["disposition"] != "excluded"
+                or disposition["excludedFileCount"] != disposition["indicatorFileCount"]
+            ):
+                raise ContractError(f"B2 targeted review source {index} scanner counts are invalid")
+        families = source["licenseFamilies"]
+        if not isinstance(families, list) or {item.get("family") for item in families} != expected_families[source_id]:
+            raise ContractError(f"B2 targeted review source {index} licence families are invalid")
+        for family in families:
+            if set(family) != {
+                "family", "noticeMarkerFileCount", "excludedFileCount", "categoryFileCounts",
+                "disposition",
+            }:
+                raise ContractError(f"B2 targeted review source {index} licence fields are invalid")
+            categories = family["categoryFileCounts"]
+            if not isinstance(categories, dict) or set(categories) != category_ids:
+                raise ContractError(f"B2 targeted review source {index} licence categories are invalid")
+            if (
+                not isinstance(family["noticeMarkerFileCount"], int)
+                or family["noticeMarkerFileCount"] < 0
+                or family["excludedFileCount"] != family["noticeMarkerFileCount"]
+                or family["disposition"] != "excluded-pending-final-maintainer-review"
+                or any(not isinstance(count, int) or count < 0 for count in categories.values())
+            ):
+                raise ContractError(f"B2 targeted review source {index} licence counts are invalid")
+        seen.add(source_id)
+
+    expected_gates = {
+        "privacyRemediationApproved": True,
+        "secondaryScannerRulesReviewed": True,
+        "poisoningPlanReviewed": True,
+        "targetedReviewComplete": True,
+        "allScannerHitFilesExcluded": True,
+        "allNoticeMarkerFilesExcludedPendingApproval": True,
+        "finalSecurityApproval": False,
+        "finalLicenseAttributionApproval": False,
+        "allRequiredChangesComplete": False,
+        "featureExtractionEligible": False,
+    }
+    if value["gates"] != expected_gates:
+        raise ContractError("B2 targeted review final gates must remain blocked")
+
+
+def validate_final_remediation_approval(value: dict[str, Any]) -> None:
+    """Validate final B2 approvals scoped only to sanitized representative-set construction."""
+
+    _exact_fields(
+        value,
+        {
+            "schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status",
+            "targetedEvidenceVersion", "reviewers", "authorization", "gates", "nextStep",
+        },
+        "finalRemediationApproval",
+    )
+    if (
+        value["schemaVersion"] != 1
+        or value["reviewVersion"] != FINAL_REMEDIATION_APPROVAL_VERSION
+        or value["reviewType"] != "HUMAN_APPROVAL"
+        or value["status"] != "approved-for-sanitized-representative-set-construction"
+        or value["targetedEvidenceVersion"] != TARGETED_REVIEW_EVIDENCE_VERSION
+        or value["nextStep"] != "b2-construct-representative-benign-set"
+    ):
+        raise ContractError("B2 final remediation approval boundary is invalid")
+    _date_only(value["reviewedOn"], "finalRemediationApproval.reviewedOn")
+
+    expected_scopes = {
+        "privacy": {
+            "scanner-limitations-accepted",
+            "quarantine-only-review-approved",
+            "content-free-reporting-approved",
+            "node-archive-deletion-confirmed",
+        },
+        "security": {
+            "scanner-hit-file-exclusion-approved",
+            "sanitized-counts-and-tree-digests-approved",
+            "scanner-rules-approved-as-indicators",
+            "poisoning-plan-approved-as-written",
+            "no-additional-targeted-rehydration-required",
+        },
+        "maintainer": {
+            "cpython-notice-file-exclusion-approved",
+            "nodejs-notice-file-exclusion-approved",
+            "kubernetes-notice-file-exclusion-approved",
+            "sanitized-path-family-boundaries-approved",
+            "attribution-wording-approved",
+            "attribution-publication-location-approved",
+        },
+    }
+    expected_identities = {
+        "privacy": "umang aggarwal",
+        "security": "vishal vishwas",
+        "maintainer": "tushar garg",
+    }
+    reviewers = value["reviewers"]
+    if not isinstance(reviewers, list) or len(reviewers) != 3:
+        raise ContractError("B2 final remediation approval requires three reviewers")
+    seen: set[str] = set()
+    for index, reviewer in enumerate(reviewers):
+        if not isinstance(reviewer, dict):
+            raise ContractError(f"B2 final reviewer {index} must be an object")
+        _exact_fields(
+            reviewer,
+            {"role", "identity", "decision", "approvalScope"},
+            f"finalRemediationApproval.reviewers[{index}]",
+        )
+        role = reviewer["role"]
+        if role not in expected_scopes or role in seen:
+            raise ContractError("B2 final reviewer roles must be unique and complete")
+        identity = reviewer["identity"]
+        if not isinstance(identity, str) or " ".join(identity.lower().split()) != expected_identities[role]:
+            raise ContractError(f"B2 final reviewer {index} identity is invalid")
+        if reviewer["decision"] != "approve-remediation":
+            raise ContractError(f"B2 final reviewer {index} decision is invalid")
+        scope = reviewer["approvalScope"]
+        if not isinstance(scope, list) or set(scope) != expected_scopes[role] or len(scope) != len(set(scope)):
+            raise ContractError(f"B2 final reviewer {index} approval scope is incomplete")
+        seen.add(role)
+    if seen != set(expected_scopes):
+        raise ContractError("B2 final remediation approval is missing a reviewer role")
+
+    expected_authorization = {
+        "representativeSetConstructionEligible": True,
+        "featureExtractionEligible": True,
+        "sanitizedDerivedFeaturesOnly": True,
+        "directQuarantineFeatureExtractionAllowed": False,
+        "rawContentCommitAllowed": False,
+        "trainingEligible": False,
+        "networkDuringTrainingAllowed": False,
+        "releaseEligible": False,
+    }
+    if value["authorization"] != expected_authorization:
+        raise ContractError("B2 final remediation authorization exceeds the approved scope")
+
+    expected_gates = {
+        "privacyRemediationApproved": True,
+        "finalSecurityApproval": True,
+        "secondScannerReviewed": True,
+        "poisoningPlanReviewed": True,
+        "finalLicenseAttributionApproval": True,
+        "allRequiredChangesComplete": True,
+        "featureExtractionEligible": True,
+        "representativeSetConstructionEligible": True,
+        "trainingEligible": False,
+        "releaseEligible": False,
+    }
+    if value["gates"] != expected_gates:
+        raise ContractError("B2 final remediation gates are invalid")
+
+
+def validate_representative_set_evidence(value: dict[str, Any]) -> None:
+    """Validate aggregate evidence for sanitized representative features."""
+    _exact_fields(
+        value,
+        {
+            "schemaVersion", "reportVersion", "executedOn", "status", "finalApprovalVersion",
+            "featureVersion", "seed", "outputPath", "rawContentCommitted", "recordCount",
+            "datasetSha256", "sources", "coverage", "gates", "nextStep",
+        },
+        "representativeSetEvidence",
+    )
+    if (
+        value["schemaVersion"] != 1
+        or value["reportVersion"] != REPRESENTATIVE_SET_VERSION
+        or value["status"] != "constructed-awaiting-representative-human-review"
+        or value["finalApprovalVersion"] != FINAL_REMEDIATION_APPROVAL_VERSION
+        or value["featureVersion"] != FEATURE_VERSION
+        or value["seed"] != DETERMINISTIC_SEED
+        or value["outputPath"] != "datasets/representative/b2-benign-features-v1.jsonl"
+        or value["rawContentCommitted"] is not False
+        or not isinstance(value["recordCount"], int)
+        or value["recordCount"] <= 0
+        or re.fullmatch(r"[0-9a-f]{64}", value["datasetSha256"]) is None
+        or value["nextStep"] != "b2-review-representative-set"
+    ):
+        raise ContractError("B2 representative-set evidence boundary is invalid")
+    _date_only(value["executedOn"], "representativeSetEvidence.executedOn")
+    sources = value["sources"]
+    if not isinstance(sources, list) or len(sources) != 3:
+        raise ContractError("B2 representative-set evidence requires three sources")
+    for source in sources:
+        if not isinstance(source, dict):
+            raise ContractError("B2 representative source must be an object")
+        _exact_fields(source, {"sourceId", "sanitizedTreeSha256", "recordCount", "riskStratumCounts"}, "representativeSetEvidence.sources")
+        if (
+            not isinstance(source["sourceId"], str)
+            or re.fullmatch(r"[0-9a-f]{64}", source["sanitizedTreeSha256"]) is None
+            or not isinstance(source["recordCount"], int)
+            or source["recordCount"] < 0
+            or not isinstance(source["riskStratumCounts"], dict)
+            or any(not isinstance(count, int) or count < 0 for count in source["riskStratumCounts"].values())
+        ):
+            raise ContractError("B2 representative source evidence is invalid")
+    coverage = value["coverage"]
+    if not isinstance(coverage, dict):
+        raise ContractError("B2 representative coverage must be an object")
+    _exact_fields(coverage, {"requiredRiskStrata", "observedRiskStrata", "missingRiskStrata", "representativenessClaimed"}, "representativeSetEvidence.coverage")
+    required = {
+        "ordinary-identifiers", "paths-urls-and-versions", "hashes-uuids-and-timestamps",
+        "placeholders-and-examples", "secret-keyword-context-with-benign-values",
+        "high-entropy-benign-constants",
+    }
+    if (
+        set(coverage["requiredRiskStrata"]) != required
+        or set(coverage["observedRiskStrata"]) | set(coverage["missingRiskStrata"]) != required
+        or set(coverage["observedRiskStrata"]) & set(coverage["missingRiskStrata"])
+        or coverage["representativenessClaimed"] is not False
+    ):
+        raise ContractError("B2 representative coverage boundary is invalid")
+    expected_gates = {
+        "finalApprovalVerified": True,
+        "sanitizedOnly": True,
+        "rawLeakFree": True,
+        "representativeSetConstructed": True,
+        "representativeSetReviewed": False,
+        "trainingEligible": False,
+        "releaseEligible": False,
+    }
+    if value["gates"] != expected_gates:
+        raise ContractError("B2 representative-set gates are invalid")
+
+
+def validate_representative_review(value: dict[str, Any]) -> None:
+    """Validate the limited-coverage waiver before evaluation."""
+    _exact_fields(
+        value,
+        {
+            "schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status",
+            "representativeEvidenceVersion", "waivedRiskStrata", "reviewers", "gates", "nextStep",
+        },
+        "representativeReview",
+    )
+    if (
+        value["schemaVersion"] != 1
+        or value["reviewVersion"] != REPRESENTATIVE_REVIEW_VERSION
+        or value["reviewType"] != "HUMAN_APPROVAL"
+        or value["status"] != "approved-limited-representative-set"
+        or value["representativeEvidenceVersion"] != REPRESENTATIVE_SET_VERSION
+        or value["nextStep"] != "b2-evaluate-limited-representative-set"
+    ):
+        raise ContractError("B2 representative review boundary is invalid")
+    _date_only(value["reviewedOn"], "representativeReview.reviewedOn")
+    missing = {
+        "placeholders-and-examples",
+        "secret-keyword-context-with-benign-values",
+        "high-entropy-benign-constants",
+    }
+    if set(value["waivedRiskStrata"]) != missing:
+        raise ContractError("B2 representative review waiver is invalid")
+    reviewers = value["reviewers"]
+    if not isinstance(reviewers, list) or len(reviewers) != 3:
+        raise ContractError("B2 representative review requires three reviewers")
+    identities = {"privacy": "umang aggarwal", "security": "vishal vishwas", "maintainer": "tushar garg"}
+    roles: set[str] = set()
+    for reviewer in reviewers:
+        if not isinstance(reviewer, dict):
+            raise ContractError("B2 representative reviewer must be an object")
+        _exact_fields(reviewer, {"role", "identity", "decision", "scope"}, "representativeReview.reviewers")
+        role = reviewer["role"]
+        if role not in identities or role in roles or " ".join(reviewer["identity"].lower().split()) != identities[role]:
+            raise ContractError("B2 representative reviewers are invalid")
+        if reviewer["decision"] != "approve-limited-representative-set" or not isinstance(reviewer["scope"], str):
+            raise ContractError("B2 representative reviewer decision is invalid")
+        roles.add(role)
+    if roles != set(identities):
+        raise ContractError("B2 representative review roles are incomplete")
+    expected_gates = {
+        "privacyReviewRecorded": True,
+        "securityReviewRecorded": True,
+        "maintainerReviewRecorded": True,
+        "rawLeakFree": True,
+        "representativeSetReviewed": True,
+        "limitedCoverageAccepted": True,
+        "evaluationEligible": True,
+        "trainingEligible": False,
+        "releaseEligible": False,
+    }
+    if value["gates"] != expected_gates:
+        raise ContractError("B2 representative review gates are invalid")
+
+
+def validate_limited_evaluation_approval(value: dict[str, Any]) -> None:
+    """Validate approval for one transient offline fit/evaluation only."""
+    _exact_fields(value, {"schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status", "scope", "reviewers", "gates", "nextStep"}, "limitedEvaluationApproval")
+    if (
+        value["schemaVersion"] != 1
+        or value["reviewVersion"] != LIMITED_EVAL_APPROVAL_VERSION
+        or value["reviewType"] != "HUMAN_APPROVAL"
+        or value["status"] != "approved-offline-draft-training-for-limited-evaluation"
+        or value["scope"] != "evaluation-and-calibration-evidence-only"
+        or value["nextStep"] != "b2-run-limited-evaluation"
+    ):
+        raise ContractError("B2 limited evaluation approval boundary is invalid")
+    _date_only(value["reviewedOn"], "limitedEvaluationApproval.reviewedOn")
+    identities = {"privacy": "umang aggarwal", "security": "vishal vishwas", "maintainer": "tushar garg"}
+    roles: set[str] = set()
+    for reviewer in value["reviewers"]:
+        if not isinstance(reviewer, dict):
+            raise ContractError("B2 limited evaluation reviewer must be an object")
+        _exact_fields(reviewer, {"role", "identity", "decision"}, "limitedEvaluationApproval.reviewers")
+        if reviewer["role"] not in identities or reviewer["role"] in roles or " ".join(reviewer["identity"].lower().split()) != identities[reviewer["role"]] or reviewer["decision"] != "approve-offline-draft-training-for-limited-evaluation":
+            raise ContractError("B2 limited evaluation reviewer approval is invalid")
+        roles.add(reviewer["role"])
+    if roles != set(identities):
+        raise ContractError("B2 limited evaluation reviewers are incomplete")
+    expected_gates = {
+        "threeReviewerApproval": True,
+        "networkDisabled": True,
+        "rawSourceRetention": False,
+        "trainingStateCommitted": False,
+        "modelReleaseAllowed": False,
+        "productionAccuracyClaimAllowed": False,
+        "evaluationEligible": True,
+        "calibrationEligible": True,
+    }
+    if value["gates"] != expected_gates:
+        raise ContractError("B2 limited evaluation gates are invalid")
+
+
+def validate_limited_evaluation(value: dict[str, Any]) -> None:
+    _exact_fields(value, {"schemaVersion", "reportVersion", "status", "approvalVersion", "networkUsed", "trainingStateCommitted", "modelReleaseEligible", "syntheticDatasetSha256", "representativeFeatureFileSha256", "counts", "confusion", "metrics", "confidenceBands", "calibrationBins", "split", "gates", "limitations", "nextStep"}, "limitedEvaluation")
+    if value["schemaVersion"] != 1 or value["reportVersion"] != LIMITED_EVALUATION_VERSION or value["status"] != "evaluation-complete-awaiting-human-review" or value["approvalVersion"] != LIMITED_EVAL_APPROVAL_VERSION or value["networkUsed"] is not False or value["trainingStateCommitted"] is not False or value["modelReleaseEligible"] is not False or value["nextStep"] != "b2-human-review-limited-evaluation":
+        raise ContractError("B2 limited evaluation boundary is invalid")
+    if re.fullmatch(r"[0-9a-f]{64}", value["syntheticDatasetSha256"]) is None or re.fullmatch(r"[0-9a-f]{64}", value["representativeFeatureFileSha256"]) is None:
+        raise ContractError("B2 limited evaluation digests are invalid")
+    counts = value["counts"]
+    if not isinstance(counts, dict) or set(counts) != {"records", "groups", "sensitive", "benign"} or any(not isinstance(counts[key], int) or counts[key] < 0 for key in counts) or counts["sensitive"] + counts["benign"] != counts["records"]:
+        raise ContractError("B2 limited evaluation counts are invalid")
+    expected_gates = {"offlineFitCompleted": True, "heldOutGroupIsolation": True, "rawLeakFree": True, "calibrationComputed": True, "representativeCoverageWaiverApplied": True, "calibrationHumanApproved": False, "trainingEligible": False, "releaseEligible": False}
+    if value["gates"] != expected_gates:
+        raise ContractError("B2 limited evaluation gates are invalid")
+
+
+def validate_limited_calibration_review(value: dict[str, Any]) -> None:
+    _exact_fields(value, {"schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status", "evaluationVersion", "reviewers", "scope", "gates", "nextStep"}, "limitedCalibrationReview")
+    if value["schemaVersion"] != 1 or value["reviewVersion"] != LIMITED_CALIBRATION_REVIEW_VERSION or value["reviewType"] != "HUMAN_APPROVAL" or value["status"] != "approve-limited-calibration" or value["evaluationVersion"] != LIMITED_EVALUATION_VERSION or value["scope"] != "limited-evaluation-only-no-production-claim" or value["nextStep"] != "b2-calibration-complete-training-still-blocked":
+        raise ContractError("B2 limited calibration review boundary is invalid")
+    _date_only(value["reviewedOn"], "limitedCalibrationReview.reviewedOn")
+    identities = {"privacy": "umang aggarwal", "security": "vishal vishwas", "maintainer": "tushar garg"}
+    roles: set[str] = set()
+    for reviewer in value["reviewers"]:
+        if not isinstance(reviewer, dict):
+            raise ContractError("B2 calibration reviewer must be an object")
+        _exact_fields(reviewer, {"role", "identity", "decision"}, "limitedCalibrationReview.reviewers")
+        if reviewer["role"] not in identities or reviewer["role"] in roles or " ".join(reviewer["identity"].lower().split()) != identities[reviewer["role"]] or reviewer["decision"] != "approve-limited-calibration":
+            raise ContractError("B2 calibration reviewer approval is invalid")
+        roles.add(reviewer["role"])
+    if roles != set(identities):
+        raise ContractError("B2 calibration reviewers are incomplete")
+    expected_gates = {"evaluationReviewed": True, "calibrationComputed": True, "calibrationApproved": True, "productionClaimAllowed": False, "trainingStateCommitAllowed": False, "modelReleaseAllowed": False}
+    if value["gates"] != expected_gates:
+        raise ContractError("B2 calibration gates are invalid")
+
+
+def validate_b2_training_state_approval(value: dict[str, Any]) -> None:
+    _exact_fields(
+        value,
+        {"schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status", "scope", "reviewers", "gates", "nextStep"},
+        "b2TrainingStateApproval",
+    )
+    if (
+        value["schemaVersion"] != 1
+        or value["reviewVersion"] != B2_TRAINING_STATE_APPROVAL_VERSION
+        or value["reviewType"] != "HUMAN_APPROVAL"
+        or value["status"] != "approve-offline-training-state-creation"
+        or value["scope"] != "one-off-draft-training-state-for-limited-evaluation-only"
+        or value["nextStep"] != "b2-create-draft-training-state"
+    ):
+        raise ContractError("B2 training-state approval boundary is invalid")
+    _date_only(value["reviewedOn"], "b2TrainingStateApproval.reviewedOn")
+    identities = {"privacy": "umang aggarwal", "security": "vishal vishwas", "maintainer": "tushar garg"}
+    roles: set[str] = set()
+    for reviewer in value["reviewers"]:
+        if not isinstance(reviewer, dict):
+            raise ContractError("B2 training-state reviewer must be an object")
+        _exact_fields(reviewer, {"role", "identity", "decision"}, "b2TrainingStateApproval.reviewers")
+        if reviewer["role"] not in identities or reviewer["role"] in roles:
+            raise ContractError("B2 training-state reviewer roles are invalid")
+        if " ".join(reviewer["identity"].lower().split()) != identities[reviewer["role"]]:
+            raise ContractError("B2 training-state reviewer identity is invalid")
+        if reviewer["decision"] != "approve-offline-training-state-creation":
+            raise ContractError("B2 training-state reviewer decision is invalid")
+        roles.add(reviewer["role"])
+    if roles != set(identities):
+        raise ContractError("B2 training-state approval requires privacy, security, and maintainer")
+    expected_gates = {
+        "threeReviewerApproval": True,
+        "networkDisabled": True,
+        "rawSourceRetention": False,
+        "customerOrPersonalData": False,
+        "trainingStateCommitted": "ignored-draft-only",
+        "reviewPending": True,
+        "modelReleaseAllowed": False,
+        "productionAccuracyClaimAllowed": False,
+        "extensionIntegrationAllowed": False,
+    }
+    if value["gates"] != expected_gates:
+        raise ContractError("B2 training-state approval gates are invalid")
 
 
 def validate_evaluation_report(value: dict[str, Any]) -> None:

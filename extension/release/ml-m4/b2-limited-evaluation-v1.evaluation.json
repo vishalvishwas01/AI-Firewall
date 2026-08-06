@@ -1,0 +1,158 @@
+{
+  "approvalVersion": "b2-limited-evaluation-approval-v1",
+  "calibrationBins": [
+    {
+      "absoluteGap": 0.007206744841,
+      "count": 144,
+      "lower": 0.0,
+      "meanConfidence": 0.007206744841,
+      "sensitiveRate": 0.0,
+      "upper": 0.1
+    },
+    {
+      "absoluteGap": null,
+      "count": 0,
+      "lower": 0.1,
+      "meanConfidence": null,
+      "sensitiveRate": null,
+      "upper": 0.2
+    },
+    {
+      "absoluteGap": null,
+      "count": 0,
+      "lower": 0.2,
+      "meanConfidence": null,
+      "sensitiveRate": null,
+      "upper": 0.3
+    },
+    {
+      "absoluteGap": null,
+      "count": 0,
+      "lower": 0.3,
+      "meanConfidence": null,
+      "sensitiveRate": null,
+      "upper": 0.4
+    },
+    {
+      "absoluteGap": null,
+      "count": 0,
+      "lower": 0.4,
+      "meanConfidence": null,
+      "sensitiveRate": null,
+      "upper": 0.5
+    },
+    {
+      "absoluteGap": null,
+      "count": 0,
+      "lower": 0.5,
+      "meanConfidence": null,
+      "sensitiveRate": null,
+      "upper": 0.6
+    },
+    {
+      "absoluteGap": 0.366930940288,
+      "count": 1,
+      "lower": 0.6,
+      "meanConfidence": 0.633069059712,
+      "sensitiveRate": 1.0,
+      "upper": 0.7
+    },
+    {
+      "absoluteGap": 0.226900406801,
+      "count": 2,
+      "lower": 0.7,
+      "meanConfidence": 0.773099593199,
+      "sensitiveRate": 1.0,
+      "upper": 0.8
+    },
+    {
+      "absoluteGap": 0.149176710943,
+      "count": 2,
+      "lower": 0.8,
+      "meanConfidence": 0.850823289057,
+      "sensitiveRate": 1.0,
+      "upper": 0.9
+    },
+    {
+      "absoluteGap": 0.009377596899,
+      "count": 99,
+      "lower": 0.9,
+      "meanConfidence": 0.990622403101,
+      "sensitiveRate": 1.0,
+      "upper": 1.0
+    }
+  ],
+  "confidenceBands": {
+    "clean": {
+      "count": 145,
+      "sensitiveCount": 1,
+      "sensitiveRate": 0.006896551724,
+      "warningPrecision": null
+    },
+    "high": {
+      "count": 99,
+      "sensitiveCount": 99,
+      "sensitiveRate": 1.0,
+      "warningPrecision": 1.0
+    },
+    "medium": {
+      "count": 4,
+      "sensitiveCount": 4,
+      "sensitiveRate": 1.0,
+      "warningPrecision": 1.0
+    }
+  },
+  "confusion": {
+    "falseNegative": 1,
+    "falsePositive": 0,
+    "threshold": 0.65,
+    "trueNegative": 144,
+    "truePositive": 103
+  },
+  "counts": {
+    "benign": 144,
+    "groups": 53,
+    "records": 248,
+    "sensitive": 104
+  },
+  "gates": {
+    "calibrationComputed": true,
+    "calibrationHumanApproved": false,
+    "heldOutGroupIsolation": true,
+    "offlineFitCompleted": true,
+    "rawLeakFree": true,
+    "releaseEligible": false,
+    "representativeCoverageWaiverApplied": true,
+    "trainingEligible": false
+  },
+  "limitations": [
+    "limited-three-stratum-representative-set",
+    "no-production-accuracy-claim",
+    "transient-fit-no-state-retained"
+  ],
+  "metrics": {
+    "accuracy": 0.995967741935,
+    "brierScore": 0.001498813216,
+    "expectedCalibrationError": 0.012440477927,
+    "falseNegativeRate": 0.009615384615,
+    "falsePositiveRate": 0.0,
+    "logLoss": 0.013340654711,
+    "precision": 1.0,
+    "recall": 0.990384615385
+  },
+  "modelReleaseEligible": false,
+  "networkUsed": false,
+  "nextStep": "b2-human-review-limited-evaluation",
+  "reportVersion": "b2-limited-evaluation-v1",
+  "representativeFeatureFileSha256": "4cefd4c209a264353d49d9d5fbfa586cd9554cccf1180d3e8b29d69a5b40cbab",
+  "schemaVersion": 1,
+  "split": {
+    "groupKey": "templateGroupId",
+    "testRecords": 248,
+    "trainRecords": 860,
+    "validationRecords": 256
+  },
+  "status": "evaluation-complete-awaiting-human-review",
+  "syntheticDatasetSha256": "48c0cd4b704b407fee613affcfbd4418694ec25d53a9b6f1e57fc2e377d8aebd",
+  "trainingStateCommitted": false
+}

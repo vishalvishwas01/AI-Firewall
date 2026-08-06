@@ -505,3 +505,12 @@ After each step, record status, changed contracts, tests, benchmark results, and
 - `../ml/HANDOFF.md`
 - `../docs/TRUST_ARCHITECTURE.md`
 - `../docs/REDACTION_STORAGE_SPEC.md`
+
+## 8. M4 runtime activation record — 2026-08-07
+
+- Activated `secret-logistic-b2-limited-v1`; authorization is recorded in
+  `../ml/datasets/manifests/b2-m4-runtime-activation-approval-v1.review.json`.
+- Runtime artifact SHA-256: `f459fbfd2cd848af14f2ea8b93a5fe9f72065e58de6baa6fcaea33fe16933f3f`.
+- Verification: 99 tests passed, 1 performance test skipped, typecheck passed, and build completed.
+- Production accuracy claims remain disabled. Server integration remains out of scope.
+- Rollback artifact: `secret-logistic-bootstrap-v1`.

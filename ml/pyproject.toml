@@ -26,6 +26,9 @@ hallguard-ml-generate = "hallguard_ml.generate:main"
 hallguard-ml-train = "hallguard_ml.train:main"
 hallguard-ml-evaluate = "hallguard_ml.evaluate:main"
 hallguard-ml-intake = "hallguard_ml.intake:main"
+hallguard-ml-remediate = "hallguard_ml.remediate:main"
+hallguard-ml-targeted-review = "hallguard_ml.targeted_review:main"
+hallguard-ml-representative = "hallguard_ml.representative:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

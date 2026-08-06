@@ -62,7 +62,9 @@ const supported = (features: CandidateFeatures) =>
   && (features.assignmentContext === 1
     || features.secretKeywordContext === 1
     || features.structuredConfigContext === 1
-    || (features.entropy >= 3.5 && features.classTransitionRatio >= 0.18))
+    || (features.entropy >= 3.5
+      && features.classTransitionRatio >= 0.18
+      && features.separatorRatio > 0))
 
 type PrivateCandidateSpan = CandidateSignal & { start: number; end: number }
 

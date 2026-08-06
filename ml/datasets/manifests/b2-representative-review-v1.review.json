@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "b2-representative-review-v1",
+  "reviewType": "HUMAN_APPROVAL",
+  "reviewedOn": "2026-08-04",
+  "status": "approved-limited-representative-set",
+  "representativeEvidenceVersion": "b2-representative-set-v1",
+  "waivedRiskStrata": [
+    "placeholders-and-examples",
+    "secret-keyword-context-with-benign-values",
+    "high-entropy-benign-constants"
+  ],
+  "reviewers": [
+    {"role": "privacy", "identity": "Umang Aggarwal", "decision": "approve-limited-representative-set", "scope": "Derived numeric rows contain no committed source or personal data."},
+    {"role": "security", "identity": "Vishal Vishwas", "decision": "approve-limited-representative-set", "scope": "All scanner-hit files remain excluded and the scanner policy is not weakened."},
+    {"role": "maintainer", "identity": "Tushar Garg", "decision": "approve-limited-representative-set", "scope": "Licensed family boundaries and attribution remain approved for this limited evaluation."}
+  ],
+  "gates": {
+    "privacyReviewRecorded": true,
+    "securityReviewRecorded": true,
+    "maintainerReviewRecorded": true,
+    "rawLeakFree": true,
+    "representativeSetReviewed": true,
+    "limitedCoverageAccepted": true,
+    "evaluationEligible": true,
+    "trainingEligible": false,
+    "releaseEligible": false
+  },
+  "nextStep": "b2-evaluate-limited-representative-set"
+}

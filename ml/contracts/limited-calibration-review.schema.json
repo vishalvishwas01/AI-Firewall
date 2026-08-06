@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-b2-limited-calibration-review-v1.schema.json",
+  "title": "HallGuard B2 Limited Calibration Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status", "evaluationVersion", "reviewers", "scope", "gates", "nextStep"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reviewVersion": { "const": "b2-limited-calibration-review-v1" },
+    "reviewType": { "const": "HUMAN_APPROVAL" },
+    "status": { "const": "approve-limited-calibration" },
+    "evaluationVersion": { "const": "b2-limited-evaluation-v1" },
+    "nextStep": { "const": "b2-calibration-complete-training-still-blocked" }
+  }
+}

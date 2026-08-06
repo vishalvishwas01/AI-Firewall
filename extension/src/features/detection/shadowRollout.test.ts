@@ -15,7 +15,7 @@ describe("E6 classifier shadow rollout", () => {
     expect(analysis.results).toEqual([])
     expect(analysis.shadowComparison).toMatchObject({
       ruleAction: "allow",
-      modelVersion: "secret-logistic-bootstrap-v1"
+      modelVersion: "secret-logistic-b2-limited-v1"
     })
   })
 
@@ -29,7 +29,7 @@ describe("E6 classifier shadow rollout", () => {
 
   it("publishes fail-closed activation gates for the bootstrap artifact", () => {
     const report = buildShadowRolloutReport({
-      calibrationPublished: false,
+      calibrationPublished: true,
       latencyPassed: true,
       bundleGrowthPassed: true
     })
@@ -39,9 +39,9 @@ describe("E6 classifier shadow rollout", () => {
     expect(report.gates.benignFalsePositiveRate).toBe(true)
     expect(report.metrics.unknownLayeredRecall).toBeGreaterThan(report.metrics.unknownRuleRecall)
     expect(report.gates.shadowRawLeakFree).toBe(true)
-    expect(report.gates.offlineTrainedArtifact).toBe(false)
-    expect(report.gates.calibrationPublished).toBe(false)
-    expect(report.activationEligible).toBe(false)
+    expect(report.gates.offlineTrainedArtifact).toBe(true)
+    expect(report.gates.calibrationPublished).toBe(true)
+    expect(report.activationEligible).toBe(true)
   })
 
   it("never includes fixture candidates in shadow comparison output", () => {

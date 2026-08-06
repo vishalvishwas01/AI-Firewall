@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-b2-final-remediation-approval-v1.schema.json",
+  "title": "HallGuard B2 Final Remediation Approval",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status",
+    "targetedEvidenceVersion", "reviewers", "authorization", "gates", "nextStep"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reviewVersion": { "const": "b2-final-remediation-approval-v1" },
+    "reviewType": { "const": "HUMAN_APPROVAL" },
+    "reviewedOn": { "type": "string", "format": "date" },
+    "status": { "const": "approved-for-sanitized-representative-set-construction" },
+    "targetedEvidenceVersion": { "const": "b2-targeted-review-evidence-v1" },
+    "reviewers": { "type": "array", "minItems": 3, "maxItems": 3 },
+    "authorization": { "type": "object" },
+    "gates": { "type": "object" },
+    "nextStep": { "const": "b2-construct-representative-benign-set" }
+  }
+}

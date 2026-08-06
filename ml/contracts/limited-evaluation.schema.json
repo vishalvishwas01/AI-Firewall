@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-b2-limited-evaluation-v1.schema.json",
+  "title": "HallGuard B2 Limited Evaluation Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "reportVersion", "status", "approvalVersion", "networkUsed", "trainingStateCommitted", "modelReleaseEligible", "counts", "metrics", "gates", "nextStep"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reportVersion": { "const": "b2-limited-evaluation-v1" },
+    "status": { "const": "evaluation-complete-awaiting-human-review" },
+    "networkUsed": { "const": false },
+    "trainingStateCommitted": { "const": false },
+    "modelReleaseEligible": { "const": false },
+    "nextStep": { "const": "b2-human-review-limited-evaluation" }
+  }
+}

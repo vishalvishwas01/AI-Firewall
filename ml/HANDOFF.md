@@ -2,6 +2,14 @@
 
 This is the source of truth for offline dataset generation, classifier training, evaluation, and artifact release. ML work is intentionally isolated from the extension, client, and server runtimes.
 
+## Current status — 2026-08-07
+
+The historical M0–M3, B1, intake, remediation, representative-set, and limited-evaluation sections below
+describe their state at the time they were completed; their old stop boundaries and “planned” labels are
+audit history, not current blockers. B2 M4 is now authorized and the limited offline-trained artifact has
+been activated in the extension as `secret-logistic-b2-limited-v1`. Current gates remain: no production
+accuracy claim, no server integration, and no additional model release beyond this authorized artifact.
+
 ## 1. Repository decision
 
 The first implementation uses `AI-Firewall/ml/` as a separate workspace inside this repository. It has its own Python environment, dependency lock/requirements, tests, commands, and artifact manifest. It must not import application code or customer data.
@@ -319,13 +327,151 @@ Stop boundary: **Controlled intake evidence is complete. Stop before feature ext
 calibration until post-intake human review accepts the exact pins, hashes, licence/attribution records,
 and scan aggregates.**
 
+### B2 remediation — post-intake required changes
+
+Status: **Remediation review recorded — manual decisions and final approval pending**
+
+- Recorded the three conditional post-intake human reviews in
+  `datasets/manifests/b2-post-intake-review-v1.review.json`.
+- Added a versioned secondary scanner profile and poisoning/group-review plan. Both remain
+  `pending-final-human-review`.
+- Added exact-pin remediation tooling for GitHub commit-verification evidence, archive/tree digest
+  matching, secondary scanning, family-level licence inventory, and early deletion of rehydrated content.
+- GitHub commit API verification succeeded for all three recorded revisions with `verified: true` and
+  `reason: valid`.
+- The official Node.js codeload endpoint did not deliver the pinned archive within its bounded network
+  window. The user supplied a read-only local archive whose SHA-256 exactly matched the recorded intake
+  digest; the remediation tool verified it again before use and did not delete the user-owned copy.
+- Exact-pin remediation then completed for all three sources. Archive SHA-256, accepted-tree SHA-256, and
+  root licence SHA-256 values matched the original intake evidence.
+- The versioned secondary scanner ran across 1,062 CPython, 1,651 Kubernetes, and 421 Node.js accepted
+  files. Aggregate hit counts/digests only are recorded; no path or content is present in the report.
+- Family-level licence inventories were produced for CPython `Doc`/`Lib`, Kubernetes
+  `content/en/docs`/`content/en/examples`, and Node.js `doc/api`/`lib`/top-level JSON.
+- Rehydrated content and controlled-download archives were deleted after evidence generation. No feature
+  extraction, representative-set construction, evaluation, calibration, training, or model export ran.
+- Published `datasets/manifests/b2-remediation-evidence-v1.remediation.json`, which remains
+  `featureExtractionEligible: false`.
+- Recorded the 2026-08-04 remediation review from Umang Aggarwal (privacy), Vishal Vishwas (security),
+  and Tushar Garg (maintainer) in `datasets/manifests/b2-remediation-review-v1.review.json`.
+- All three decisions are `changes-required`. The record identifies nine unresolved manual decisions and
+  keeps every feature-extraction, scanner-review, poisoning-review, and licence/attribution gate closed.
+
+Required next action:
+
+- Privacy, security, and maintainer reviewers must review the remediation evidence, secondary scanner
+  profile, poisoning/group plan, licence inventory, and attribution destination.
+- The security reviewer must decide whether the secondary scanner hits are acceptable, excluded, or need
+  targeted inspection under quarantine; aggregate counts alone do not automatically clear them.
+- The maintainer must approve CPython additional-notice handling, Node.js allowed-family inventory, and
+  Kubernetes CC BY 4.0 attribution wording.
+- Privacy must confirm deletion of the user-owned Node.js archive by 2026-09-03 (or approve documented
+  continued retention) and explicitly accept the stated limitations of regex/entropy scanning.
+- After those manual dispositions are recorded, each reviewer must issue a new final decision. This
+  changes-required review is not itself final remediation approval.
+
+Stop boundary: **Do not run feature extraction, evaluation, calibration, or model export until the
+remediation evidence and all three remediation controls receive final human approval.**
+
+### B2 targeted review — complete as evidence
+
+Status: **Aggregate evidence complete; final security and maintainer approvals pending**
+
+- Recorded Umang Aggarwal's privacy approval and Vishal Vishwas's security direction in
+  `datasets/manifests/b2-manual-disposition-v1.review.json`.
+- Privacy confirmed deletion of the user-owned Node.js archive on 2026-08-04 and accepted the
+  scanner limitations, quarantine-only review, and content-free reporting rules.
+- Security approved both scanner rules as indicators, approved the poisoning plan as written, and
+  required a targeted review. The conservative targeted policy excludes every scanner-hit file and
+  every additional-notice-marker file pending final human security/licensing approval.
+- The bounded exact-pin run processed CPython, but the Kubernetes codeload transport stalled at a
+  zero-byte temporary archive. Temporary quarantine content and the stalled process were stopped and
+  deleted. No targeted evidence file was published and no feature extraction ran.
+- A later user-run retry completed all three exact-pin downloads. Archive and accepted-tree hashes
+  matched the intake evidence for CPython, Kubernetes website, and Node.js.
+- Published `datasets/manifests/b2-targeted-review-evidence-v1.targeted.json`. It records aggregate
+  dispositions and sanitized tree digests only; no paths, matches, snippets, source text, or per-file
+  decisions are committed.
+- All 23 CPython, 97 Kubernetes, and 16 Node.js secondary-scanner hit files were excluded. All 94
+  CPython, 3 Kubernetes, and 46 Node.js additional-notice-marker files were also excluded pending final
+  maintainer approval. Overlap is handled by set union when calculating sanitized candidate counts.
+- Remaining sanitized candidate counts are 945 CPython files, 1,552 Kubernetes files, and 361 Node.js
+  files. Rehydrated content and downloaded archives were deleted after evidence generation.
+
+Required next action:
+
+- Vishal must approve the aggregate excluded disposition and sanitized candidate boundary.
+- Tushar must approve exclusion of all additional-notice-marker files and the exact attribution wording
+  and durable publication location in `docs/THIRD_PARTY_ATTRIBUTIONS.md`.
+- Only after both final decisions are recorded may a fail-closed final B2 approval package mark all
+  required changes complete and authorize representative-set construction.
+
+### B2 final remediation approval
+
+Status: **Approved for sanitized representative-set construction**
+
+- The final package is `datasets/manifests/b2-final-remediation-approval-v1.review.json`.
+- Umang Aggarwal (privacy), Vishal Vishwas (security), and Tushar Garg (maintainer) each approved the
+  completed remediation scope.
+- Feature extraction and representative-set construction are eligible only for sanitized derived
+  features. Direct quarantine extraction, raw-content commits, training, network during training, and
+  model release remain prohibited.
+- The next step is `b2-construct-representative-benign-set`. This does not authorize model training or
+  release.
+
+### B2 representative benign-set construction
+
+Status: **Candidate feature set constructed; representative human review required**
+
+- Rehydrated all three exact pins, reproduced archive and accepted-tree hashes, reapplied the approved
+  scanner and notice-file exclusions, and deleted all downloaded/extracted content afterward.
+- Generated 340 ignored benign rows containing identifiers, source/group ids, risk-stratum labels, and
+  the 16 numeric `candidate-features-v1` values only. No source text, candidate value, path, offset,
+  snippet, prompt, or per-file decision is retained.
+- Published aggregate evidence in
+  `datasets/manifests/b2-representative-set-v1.representative.json`; dataset SHA-256 is
+  `4cefd4c209a264353d49d9d5fbfa586cd9554cccf1180d3e8b29d69a5b40cbab`.
+- Covered ordinary identifiers, paths/URLs/versions, and hashes/UUIDs/timestamps. The approved exclusion
+  policy leaves placeholders/examples, benign secret-keyword contexts, and high-entropy benign constants
+  unresolved. No representativeness claim is made.
+- Training and release remain blocked. The next action is human review of the observed coverage and an
+  explicit decision on how to cover or waive the three missing risk strata without weakening exclusions.
+- The three reviewers approved a limited-coverage waiver in
+  `datasets/manifests/b2-representative-review-v1.review.json`. Evaluation is now eligible for this
+  limited set only; the missing strata remain an explicit limitation and do not become a production claim.
+- Next step: `b2-evaluate-limited-representative-set`. Training, calibration approval, and release remain
+  separately gated.
+
+### B2 limited evaluation
+
+Status: **Evaluation complete; human calibration review pending**
+
+- Recorded the three-reviewer offline-fit approval in
+  `datasets/manifests/b2-limited-evaluation-approval-v1.review.json`.
+- Ran one transient offline fit using the approved synthetic rows plus the limited benign feature set.
+  Network was disabled, no training state was committed, and no model was released.
+- Published aggregate evidence in `datasets/manifests/b2-limited-evaluation-v1.evaluation.json`.
+- Held-out result: 248 records across 53 groups; 104 sensitive and 144 benign; 0 false positives and 1
+  false negative; accuracy 0.995967741935; precision 1.0; recall 0.990384615385; FPR 0.0; FNR
+  0.009615384615; Brier score 0.001498813216; ECE 0.012440477927.
+- Calibration was computed but is not human-approved. This evidence is not a production accuracy claim;
+  training, release, and calibration approval remain false.
+- Three reviewers approved limited calibration in
+  `datasets/manifests/b2-limited-calibration-review-v1.review.json`. Calibration is now approved only for
+  this evaluation; no training state, production claim, or model release is authorized.
+
 ### M4 — Artifact handoff
 
-Status: **Planned**
+Status: **Complete — authorized runtime activation recorded**
 
 - Copy only the reviewed JSON artifact and metrics manifest into the extension release process.
 - Never ship training code, datasets, Python runtime, or raw synthetic examples as runtime dependencies.
 - Record model version in extension/server handoffs.
+
+The reviewed artifact was staged, converted to the extension runtime contract, verified, and activated
+under the three-reviewer authorization recorded in
+`datasets/manifests/b2-m4-runtime-activation-approval-v1.review.json`. Production accuracy claims and
+server integration remain disabled.
 
 ## 4. Future scope
 
@@ -360,3 +506,13 @@ AR1/AR2 stopped before M0. M0 was later authorized and completed independently w
 ## 7. Completion protocol
 
 Mark a step complete only after reproducible command output, tests, metrics, artifact schema validation, and privacy review are recorded. Update `extension/HANDOFF.md` when an artifact contract changes.
+
+## 8. M4 runtime activation record — 2026-08-07
+
+- Three-reviewer authorization: `datasets/manifests/b2-m4-runtime-activation-approval-v1.review.json`.
+- Activated model: `secret-logistic-b2-limited-v1`.
+- Source training-state SHA-256: `3b84a00b00b1c7633a84ea744335cb4bacc25c25ce150004e58946ccda981fba`.
+- Converted runtime-artifact SHA-256: `f459fbfd2cd848af14f2ea8b93a5fe9f72065e58de6baa6fcaea33fe16933f3f`.
+- Metrics manifest SHA-256: `64a8c75f611cf7d6d43e10e5e4ad8a8f88a6e6bbe24cbadaeeee8bd47c04f873`.
+- Extension verification: 99 tests passed, 1 performance test skipped, typecheck passed, and build completed.
+- Production accuracy claims remain prohibited; server integration remains out of scope.

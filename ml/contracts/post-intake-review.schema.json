@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-b2-post-intake-review-v1.schema.json",
+  "title": "HallGuard B2 Post-Intake Human Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status",
+    "evidencePackageVersion", "featureExtractionEligible", "reviewers", "gates", "nextStep"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reviewVersion": { "const": "b2-post-intake-review-v1" },
+    "reviewType": { "const": "HUMAN_APPROVAL" },
+    "reviewedOn": { "type": "string", "format": "date" },
+    "status": { "const": "approved-with-required-changes" },
+    "evidencePackageVersion": { "const": "b2-intake-evidence-v1" },
+    "featureExtractionEligible": { "const": false },
+    "reviewers": { "type": "array", "minItems": 3, "maxItems": 3 },
+    "gates": { "type": "object" },
+    "nextStep": { "const": "b2-remediation-before-feature-extraction" }
+  }
+}

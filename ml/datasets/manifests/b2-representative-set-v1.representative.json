@@ -1,0 +1,76 @@
+{
+  "datasetSha256": "4cefd4c209a264353d49d9d5fbfa586cd9554cccf1180d3e8b29d69a5b40cbab",
+  "coverage": {
+    "missingRiskStrata": [
+      "high-entropy-benign-constants",
+      "placeholders-and-examples",
+      "secret-keyword-context-with-benign-values"
+    ],
+    "observedRiskStrata": [
+      "hashes-uuids-and-timestamps",
+      "ordinary-identifiers",
+      "paths-urls-and-versions"
+    ],
+    "representativenessClaimed": false,
+    "requiredRiskStrata": [
+      "ordinary-identifiers",
+      "paths-urls-and-versions",
+      "hashes-uuids-and-timestamps",
+      "placeholders-and-examples",
+      "secret-keyword-context-with-benign-values",
+      "high-entropy-benign-constants"
+    ]
+  },
+  "executedOn": "2026-08-04",
+  "featureVersion": "candidate-features-v1",
+  "finalApprovalVersion": "b2-final-remediation-approval-v1",
+  "gates": {
+    "finalApprovalVerified": true,
+    "rawLeakFree": true,
+    "releaseEligible": false,
+    "representativeSetConstructed": true,
+    "representativeSetReviewed": false,
+    "sanitizedOnly": true,
+    "trainingEligible": false
+  },
+  "nextStep": "b2-review-representative-set",
+  "outputPath": "datasets/representative/b2-benign-features-v1.jsonl",
+  "rawContentCommitted": false,
+  "recordCount": 340,
+  "reportVersion": "b2-representative-set-v1",
+  "schemaVersion": 1,
+  "seed": 20260801,
+  "sources": [
+    {
+      "recordCount": 98,
+      "riskStratumCounts": {
+        "hashes-uuids-and-timestamps": 18,
+        "ordinary-identifiers": 40,
+        "paths-urls-and-versions": 40
+      },
+      "sanitizedTreeSha256": "f32ee96fcead6aa1935569f0f87d6f639548f133064eb68f99b2ce398e69c0a4",
+      "sourceId": "cpython-public-corpus"
+    },
+    {
+      "recordCount": 101,
+      "riskStratumCounts": {
+        "hashes-uuids-and-timestamps": 21,
+        "ordinary-identifiers": 40,
+        "paths-urls-and-versions": 40
+      },
+      "sanitizedTreeSha256": "9f9f61c5e4ae1a28744048d438c5605c949908060443fefb54206fd29f6613f7",
+      "sourceId": "kubernetes-website-public-corpus"
+    },
+    {
+      "recordCount": 141,
+      "riskStratumCounts": {
+        "hashes-uuids-and-timestamps": 21,
+        "ordinary-identifiers": 60,
+        "paths-urls-and-versions": 60
+      },
+      "sanitizedTreeSha256": "a43fa77d4e6cd16c3cdf673bf37e0879afba51278acb1235dd93656918046210",
+      "sourceId": "nodejs-public-corpus"
+    }
+  ],
+  "status": "constructed-awaiting-representative-human-review"
+}

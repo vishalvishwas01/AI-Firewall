@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "templateVersion": "b2-m4-artifact-handoff-authorization-v1",
+  "documentType": "TEMPLATE_NOT_AUTHORIZATION",
+  "status": "human-approval",
+  "reviewedOn": null,
+  "artifact": "b2-limited-logistic-training-state-v1.training-state.json",
+  "artifactSha256": "3b84a00b00b1c7633a84ea744335cb4bacc25c25ce150004e58946ccda981fba",
+  "metricsManifest": "datasets/manifests/b2-limited-evaluation-v1.evaluation.json",
+  "metricsManifestSha256": "3b84a00b00b1c7633a84ea744335cb4bacc25c25ce150004e58946ccda981fba",
+  "scope": "copy-reviewed-json-and-metrics-into-extension-release-process-only",
+  "decision": "human-approval",
+  "reviewers": [
+    {
+      "role": "privacy",
+      "identity": "umang aggarwal",
+      "decision": "approve"
+    },
+    {
+      "role": "security",
+      "identity": "vishal vishwas",
+      "decision": "approve"
+    },
+    {
+      "role": "maintainer",
+      "identity": "tushar garg",
+      "decision": "approve"
+    }
+  ],
+  "gates": {
+    "networkDisabledDuringBuild": true,
+    "rawSourceIncluded": false,
+    "syntheticRowsIncluded": false,
+    "trainingCodeIncluded": false,
+    "pythonRuntimeIncluded": false,
+    "releaseEligible": false,
+    "productionAccuracyClaimAllowed": false,
+    "extensionIntegrationAllowed": false,
+    "serverIntegrationAllowed": false
+  },
+  "requiredEvidence": [
+    "artifact and metrics SHA-256 verification",
+    "extension compatibility and performance evidence",
+    "release-package content audit"
+  ],
+  "governanceEffect": "none"
+}

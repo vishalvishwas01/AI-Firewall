@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "b2-training-state-review-v1",
+  "reviewType": "HUMAN_REVIEW",
+  "reviewedOn": "2026-08-06",
+  "artifact": "b2-limited-logistic-training-state-v1.training-state.json",
+  "artifactSha256": "3b84a00b00b1c7633a84ea744335cb4bacc25c25ce150004e58946ccda981fba",
+  "decision": "approve-draft-training-state",
+  "scope": "draft-review",
+  "reviewers": [
+    {
+      "role": "privacy",
+      "identity": "Umang aggarwal",
+      "decision": "approve-draft-training-state"
+    },
+    {
+      "role": "security",
+      "identity": "vishal vishwas",
+      "decision": "approve-draft-training-state"
+    },
+    {
+      "role": "maintainer",
+      "identity": "tushar garg",
+      "decision": "approve-draft-training-state"
+    }
+  ],
+  "gates": {
+    "networkDisabled": true,
+    "rawSourceRetention": false,
+    "customerOrPersonalData": false,
+    "reviewPending": false,
+    "modelReleaseAllowed": false,
+    "productionAccuracyClaimAllowed": false,
+    "extensionIntegrationAllowed": false
+  },
+  "governanceEffect": "none"
+}

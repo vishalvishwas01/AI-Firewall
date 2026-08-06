@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "b2-manual-disposition-v1",
+  "reviewType": "HUMAN_APPROVAL",
+  "reviewedOn": "2026-08-04",
+  "status": "targeted-review-authorized",
+  "remediationReviewVersion": "b2-remediation-review-v1",
+  "privacy": {
+    "identity": "Umang Aggarwal",
+    "role": "privacy",
+    "decision": "approve-remediation",
+    "nodeArchiveDeleted": true,
+    "deletionOn": "2026-08-04",
+    "scannerLimitationsAccepted": true,
+    "quarantineOnlyReviewAccepted": true,
+    "contentFreeReportingAccepted": true
+  },
+  "security": {
+    "identity": "Vishal Vishwas",
+    "role": "security",
+    "secondaryScannerDecision": "targeted-review-required",
+    "highEntropyTokenRule": "approve-as-indicator",
+    "paymentCardShapeRule": "approve-as-indicator",
+    "poisoningReviewPlan": "approve-as-written"
+  },
+  "gates": {
+    "nodeArchiveDeletionConfirmed": true,
+    "scannerLimitationsAccepted": true,
+    "privacyRemediationApproved": true,
+    "secondaryScannerRulesReviewed": true,
+    "poisoningPlanReviewed": true,
+    "targetedReviewAuthorized": true,
+    "targetedReviewComplete": false,
+    "finalSecurityApproval": false,
+    "finalLicenseAttributionApproval": false,
+    "allRequiredChangesComplete": false,
+    "featureExtractionEligible": false
+  },
+  "nextStep": "bounded-targeted-quarantine-review"
+}

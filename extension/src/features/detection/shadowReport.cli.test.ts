@@ -5,7 +5,7 @@ import { buildShadowRolloutReport } from "./shadowBenchmark"
 describe("E6 shadow rollout report", () => {
   it("prints sanitized shadow metrics and gate status", () => {
     const report = buildShadowRolloutReport({
-      calibrationPublished: false,
+      calibrationPublished: true,
       latencyPassed: true,
       bundleGrowthPassed: true
     })

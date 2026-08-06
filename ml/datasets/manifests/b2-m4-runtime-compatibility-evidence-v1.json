@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "evidenceVersion": "b2-m4-runtime-compatibility-evidence-v1",
+  "status": "compatibility-and-smoke-evidence-complete-awaiting-release-decision",
+  "artifact": "extension/release/ml-m4/secret-logistic-b2-limited-v1.runtime-artifact.json",
+  "artifactSha256": "f459fbfd2cd848af14f2ea8b93a5fe9f72065e58de6baa6fcaea33fe16933f3f",
+  "sourceTrainingStateSha256": "3b84a00b00b1c7633a84ea744335cb4bacc25c25ce150004e58946ccda981fba",
+  "metricsManifestSha256": "64a8c75f611cf7d6d43e10e5e4ad8a8f88a6e6bbe24cbadaeeee8bd47c04f873",
+  "networkUsed": false,
+  "rawSourceIncluded": false,
+  "runtimeActivation": false,
+  "checks": {
+    "classifierContractTestsPassed": true,
+    "fullExtensionTestsPassed": true,
+    "fullExtensionTestCount": 95,
+    "shadowBenchmarkPassed": true,
+    "typecheckPassed": true,
+    "productionBuildCompleted": true,
+    "stagingContentAuditPassed": true,
+    "smokeChecksCompleted": true
+  },
+  "knownBuildWarnings": [
+    "offline Plasmo package metadata fetch failed",
+    "optional svgo dependency is unavailable"
+  ],
+  "gates": {
+    "releaseEligible": false,
+    "productionAccuracyClaimAllowed": false,
+    "extensionIntegrationAllowed": false,
+    "serverIntegrationAllowed": false
+  },
+  "nextStep": "b2-m4-final-release-decision"
+}

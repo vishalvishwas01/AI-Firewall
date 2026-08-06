@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-b2-targeted-review-evidence-v1.schema.json",
+  "title": "HallGuard B2 Targeted Review Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "reportVersion", "executedOn", "status", "manualDispositionVersion",
+    "featureExtractionEligible", "policy", "sources", "gates", "nextStep"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reportVersion": { "const": "b2-targeted-review-evidence-v1" },
+    "executedOn": { "type": "string", "format": "date" },
+    "status": { "const": "targeted-review-complete-awaiting-final-human-approval" },
+    "manualDispositionVersion": { "const": "b2-manual-disposition-v1" },
+    "featureExtractionEligible": { "const": false },
+    "policy": { "type": "object" },
+    "sources": { "type": "array", "minItems": 3, "maxItems": 3 },
+    "gates": { "type": "object" },
+    "nextStep": { "const": "final-security-and-maintainer-review" }
+  }
+}

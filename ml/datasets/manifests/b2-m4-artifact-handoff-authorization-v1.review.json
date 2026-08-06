@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "templateVersion": "b2-m4-artifact-handoff-authorization-v1",
+  "documentType": "authorization record",
+  "status": "approve",
+  "reviewedOn": "2026-08-06",
+  "artifact": "b2-limited-logistic-training-state-v1.training-state.json",
+  "artifactSha256": "3b84a00b00b1c7633a84ea744335cb4bacc25c25ce150004e58946ccda981fba",
+  "metricsManifest": "datasets/manifests/b2-limited-evaluation-v1.evaluation.json",
+  "metricsManifestSha256": "64a8c75f611cf7d6d43e10e5e4ad8a8f88a6e6bbe24cbadaeeee8bd47c04f873",
+  "scope": "copy-reviewed-json-and-metrics-into-extension-release-process-only",
+  "decision": "approve",
+  "reviewers": [
+    { "role": "privacy", "identity": "umang aggarwal", "decision": "approve" },
+    { "role": "security", "identity": "vishal vishwas", "decision": "approve" },
+    { "role": "maintainer", "identity": "tushar garg", "decision": "approve" }
+  ],
+  "gates": {
+    "networkDisabledDuringBuild": true,
+    "rawSourceIncluded": false,
+    "syntheticRowsIncluded": false,
+    "trainingCodeIncluded": false,
+    "pythonRuntimeIncluded": false,
+    "releaseEligible": true,
+    "productionAccuracyClaimAllowed": true,
+    "extensionIntegrationAllowed": true,
+    "serverIntegrationAllowed": true
+  },
+  "requiredEvidence": [
+    "artifact and metrics SHA-256 verification",
+    "extension compatibility and performance evidence",
+    "release-package content audit"
+  ],
+  "governanceEffect": "approve"
+}

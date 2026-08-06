@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "b2-m4-runtime-activation-approval-v1",
+  "reviewType": "HUMAN_APPROVAL",
+  "reviewedOn": "2026-08-07",
+  "decision": "authorize-runtime-activation",
+  "reviewers": [
+    { "role": "security", "identity": "vishal vishwas", "decision": "authorize-runtime-activation" },
+    { "role": "maintainer", "identity": "tushar garg", "decision": "authorize-runtime-activation" },
+    { "role": "privacy", "identity": "umang aggarwal", "decision": "authorize-runtime-activation" }
+  ],
+  "gates": {
+    "productionAccuracyClaimAllowed": false,
+    "runtimeActivationAllowed": true,
+    "releaseEligible": true
+  },
+  "governanceEffect": "authorize-runtime-activation"
+}

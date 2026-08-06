@@ -1,0 +1,23 @@
+{
+  "planVersion": "b2-poisoning-review-plan-v1",
+  "status": "pending-human-review",
+  "groupKey": "sourceId:pathFamily",
+  "sample": {
+    "seed": 20260801,
+    "minimumFilesPerFamily": 25,
+    "maximumFilesPerFamily": 100,
+    "selection": "sha256-order-without-content-in-report"
+  },
+  "checks": {
+    "crossGroupDuplicateDigestsRejected": true,
+    "archiveAndTreeDigestMatchRequired": true,
+    "secondaryScannerHitsRequireReview": true,
+    "unexpectedFamilyGrowthRequiresReview": true,
+    "sourceFamiliesCannotCrossEvaluationSplits": true
+  },
+  "anomalyThresholds": {
+    "secondaryScannerHitRate": 0.01,
+    "duplicateDigestRate": 0.02,
+    "familyFileCountChangeRate": 0.1
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-b2-remediation-evidence-v1.schema.json",
+  "title": "HallGuard B2 Remediation Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "reportVersion", "status", "featureExtractionEligible", "executedOn",
+    "intakeEvidenceVersion", "postIntakeReviewVersion", "scannerProfile", "poisoningPlan",
+    "sources", "gates", "nextStep"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reportVersion": { "const": "b2-remediation-evidence-v1" },
+    "status": { "const": "controls-executed-awaiting-final-human-review" },
+    "featureExtractionEligible": { "const": false },
+    "executedOn": { "type": "string", "format": "date" },
+    "intakeEvidenceVersion": { "const": "b2-intake-evidence-v1" },
+    "postIntakeReviewVersion": { "const": "b2-post-intake-review-v1" },
+    "scannerProfile": { "type": "object" },
+    "poisoningPlan": { "type": "object" },
+    "sources": { "type": "array", "minItems": 3, "maxItems": 3 },
+    "gates": { "type": "object" },
+    "nextStep": { "const": "final-remediation-human-review" }
+  }
+}

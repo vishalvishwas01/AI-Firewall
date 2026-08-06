@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "b2-m4-policy-change-review-v1",
+  "documentType": "AUTHORIZATION",
+  "reviewedOn": "2026-08-07",
+  "decision": "approve",
+  "scope": "entropy-only-structural-support-policy-change",
+  "findings": {
+    "classifierRegressionTestsPassed": true,
+    "typecheckPassed": true,
+    "productionBuildCompleted": true,
+    "fullRegressionSuitePassed": true
+  },
+  "gates": {
+    "runtimeActivationAllowed": true,
+    "releaseEligible": true,
+    "productionAccuracyClaimAllowed": true
+  },
+  "governanceEffect": "none"
+}

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "b2-limited-evaluation-approval-v1",
+  "reviewType": "HUMAN_APPROVAL",
+  "reviewedOn": "2026-08-04",
+  "status": "approved-offline-draft-training-for-limited-evaluation",
+  "scope": "evaluation-and-calibration-evidence-only",
+  "reviewers": [
+    {"role": "privacy", "identity": "Umang Aggarwal", "decision": "approve-offline-draft-training-for-limited-evaluation"},
+    {"role": "security", "identity": "Vishal Vishwas", "decision": "approve-offline-draft-training-for-limited-evaluation"},
+    {"role": "maintainer", "identity": "Tushar Garg", "decision": "approve-offline-draft-training-for-limited-evaluation"}
+  ],
+  "gates": {
+    "threeReviewerApproval": true,
+    "networkDisabled": true,
+    "rawSourceRetention": false,
+    "trainingStateCommitted": false,
+    "modelReleaseAllowed": false,
+    "productionAccuracyClaimAllowed": false,
+    "evaluationEligible": true,
+    "calibrationEligible": true
+  },
+  "nextStep": "b2-run-limited-evaluation"
+}
