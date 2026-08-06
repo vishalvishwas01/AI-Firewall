@@ -73,13 +73,23 @@ Status: **Complete**
 
 ### C1 — Client module migration
 
-Status: **Planned**
+Status: **In Progress**
 
 - Inventory current `App.tsx`, `src/lib/api.ts`, and report/team components.
 - Move auth, reports, organizations, and site-management code into feature folders without behavior changes.
 - Keep route URLs and API payloads backward compatible.
 - Add feature-level loading, error, empty, and authorization states.
 - Verify client typecheck and build before continuing.
+
+Progress recorded: **2026-08-07**
+
+- Added feature-owned API and type boundaries under `src/features/auth`, `reports`, `organizations`, `sites`, and `trust`.
+- Isolated shared HTTP transport in `src/lib/http.ts`; `src/lib/api.ts` remains a compatibility barrel for existing imports.
+- Moved extension authentication/site bridges, report downloads, and feature loading/error/empty states into their owning feature folders.
+- Preserved all existing endpoint URLs, request payloads, response shapes, auth/session behavior, and route paths.
+- `npm.cmd run typecheck` and `npm.cmd run build` pass.
+
+Remaining C1 work: move the large route page implementations currently composed in `App.tsx` into feature page modules, then run the final client smoke verification.
 
 ### C2 — API DTO validation and typed client boundary
 

@@ -18,41 +18,21 @@ import {
   supportedTools,
   workflowSteps
 } from "./data/siteContent";
-import {
-  addOrganizationMember,
-  createOrganizationSitePolicy,
-  createOrganization,
-  createReportSite,
-  deleteReportSite,
-  deleteOrganizationSitePolicy,
-  exportAccountLogs,
-  getAdminBenchmark,
-  getOrganization,
-  getOrganizationSitePolicies,
-  getOrganizationTrends,
-  getOrganizations,
-  getLogSummary,
-  getLogs,
-  getReportSites,
-  getSession,
-  login,
-  logout,
-  removeOrganizationMember,
-  revokeOrganizationInvitation,
-  signup,
-  updateOrganizationMemberRole,
-  type Organization,
-  type OrganizationMember,
-  type OrganizationRole,
-  type OrganizationSummary,
-  type OrganizationSitePolicy,
-  type OrganizationTrends,
-  type DetectionBenchmark,
-  type ReportLog,
-  type ReportSummary,
-  type ReportSite,
-  type SessionUser
-} from "./lib/api";
+import { getSession, login, logout, signup } from "./features/auth/api";
+import type { SessionUser } from "./features/auth/types";
+import { authRedirectKey, isExtensionAuthFlow, sendSessionToExtension } from "./features/auth/extensionBridge";
+import { exportAccountLogs, getLogSummary, getLogs } from "./features/reports/api";
+import type { ReportLog, ReportSummary } from "./features/reports/types";
+import { downloadJson } from "./features/reports/download";
+import { ReportsEmptyState, ReportsErrorState, ReportsLoadingState } from "./features/reports/components/ReportStates";
+import { createReportSite, deleteReportSite, getReportSites } from "./features/sites/api";
+import type { ReportSite } from "./features/sites/types";
+import { hostnameMatchesSite, sendSitesToExtension } from "./features/sites/extensionBridge";
+import { addOrganizationMember, createOrganization, createOrganizationSitePolicy, deleteOrganizationSitePolicy, getOrganization, getOrganizationSitePolicies, getOrganizations, getOrganizationTrends, removeOrganizationMember, revokeOrganizationInvitation, updateOrganizationMemberRole } from "./features/organizations/api";
+import type { Organization, OrganizationMember, OrganizationRole, OrganizationSitePolicy, OrganizationSummary, OrganizationTrends } from "./features/organizations/types";
+import { OrganizationLoadingState, OrganizationSelectionState, OrganizationsEmptyState, OrganizationsLoadingState } from "./features/organizations/components/OrganizationStates";
+import { getAdminBenchmark } from "./features/trust/api";
+import type { DetectionBenchmark } from "./features/trust/types";
 
 const fadeIn = {
   initial: { opacity: 0, y: 18 },
@@ -60,76 +40,6 @@ const fadeIn = {
   viewport: { once: true, margin: "-80px" },
   transition: { duration: 0.45, ease: "easeOut" as const }
 } as const;
-
-const extensionId = import.meta.env.VITE_EXTENSION_ID as string;
-
-const hostnameMatchesSite = (hostname: string, siteHostname: string) =>
-  hostname === siteHostname || hostname.endsWith(`.${siteHostname}`);
-
-const isExtensionAuthFlow = () =>
-  new URLSearchParams(window.location.search).get("source") === "extension";
-
-const authRedirectKey = "ai-firewall-auth-redirect";
-
-const downloadJson = (filename: string, value: unknown) => {
-  const blob = new Blob([JSON.stringify(value, null, 2)], { type: "application/json" });
-  const url = window.URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  window.URL.revokeObjectURL(url);
-};
-
-// const sendSessionToExtension = async (token: string) => {
-//   if (!extensionId || !window.chrome?.runtime?.sendMessage) return;
-
-//   await new Promise<void>((resolve) => {
-//     window.chrome.runtime.sendMessage(
-//       extensionId,
-//       { type: "AI_FIREWALL_AUTH_TOKEN", token },
-//       () => resolve()
-//     );
-//   });
-// };
-
-const sendSessionToExtension = async (token: string) => {
-  const sendMessage = window.chrome?.runtime?.sendMessage;
-
-  if (!extensionId || !sendMessage) return;
-
-  await new Promise<void>((resolve) => {
-    sendMessage(
-      extensionId,
-      { type: "AI_FIREWALL_AUTH_TOKEN", token },
-      () => resolve()
-    );
-  });
-};
-
-const sendSitesToExtension = async (sites: ReportSite[]) => {
-  const sendMessage = window.chrome?.runtime?.sendMessage;
-  if (!extensionId || !sendMessage) return;
-
-  await new Promise<void>((resolve) => {
-    sendMessage(
-      extensionId,
-      {
-        type: "AI_FIREWALL_PROTECTED_SITES",
-        sites: sites.map((site) => ({
-          hostname: site.hostname,
-          label: site.label,
-          isDefault: site.isDefault,
-          source: site.source,
-          managed: site.managed,
-          organizationId: site.organizationId,
-          organizationName: site.organizationName
-        }))
-      },
-      () => resolve()
-    );
-  });
-};
 
 function App() {
   const [user, setUser] = useState<SessionUser | null>(null);
@@ -812,13 +722,9 @@ function ReportsPage({
 
         <div className="py-6">
           {sessionLoading || loading ? (
-            <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
-              Loading reports...
-            </div>
+            <ReportsLoadingState />
           ) : error ? (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 p-6 text-sm font-medium text-rose-800">
-              {error}
-            </div>
+            <ReportsErrorState message={error} />
           ) : logs.length === 0 ? (
             <>
               {summary ? (
@@ -834,10 +740,7 @@ function ReportsPage({
                   ))}
                 </div>
               ) : null}
-              <div className="rounded-lg border border-slate-200 bg-white p-8 text-sm leading-6 text-slate-600">
-                No synced logs yet. When the extension starts uploading redacted
-                records, they will appear here.
-              </div>
+              <ReportsEmptyState />
             </>
           ) : (
             <>
@@ -1359,11 +1262,9 @@ function TeamPage({
             <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-950">Your organizations</h2>
               {loading ? (
-                <p className="mt-3 text-sm text-slate-600">Loading teams...</p>
+                <OrganizationsLoadingState />
               ) : organizations.length === 0 ? (
-                <p className="mt-3 text-sm leading-6 text-slate-600">
-                  No organizations yet. Create one to start team reporting.
-                </p>
+                <OrganizationsEmptyState />
               ) : (
                 <div className="mt-4 space-y-2">
                   {organizations.map((organization) => (
@@ -1394,13 +1295,9 @@ function TeamPage({
             ) : null}
 
             {!selectedOrganization ? (
-              <div className="rounded-lg border border-slate-200 bg-white p-8 text-sm leading-6 text-slate-600">
-                Select or create an organization to view team reporting.
-              </div>
+              <OrganizationSelectionState />
             ) : detailLoading ? (
-              <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
-                Loading organization...
-              </div>
+              <OrganizationLoadingState />
             ) : (
               <>
                 <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
