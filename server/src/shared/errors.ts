@@ -43,9 +43,9 @@ export const safeErrorLog = (error: unknown) => error instanceof HttpError
   ? { name: error.name, code: error.code, status: error.status }
   : { name: "InternalError", code: "internal_error", status: 500 }
 
-export const errorBoundary: ErrorRequestHandler = (error, _req, res, _next) => {
+export const errorBoundary: ErrorRequestHandler = (error, req, res, _next) => {
   const known = normalizedHttpError(error)
-  console.error(safeErrorLog(error))
+  console.error(JSON.stringify({ event: "request_failed", requestId: req.requestId, ...safeErrorLog(error) }))
   res.status(known?.status ?? 500).json({
     error: known?.message ?? "Internal server error",
     code: known?.code ?? "internal_error"

@@ -193,10 +193,31 @@ Known limitation:
 
 ### S5 — Operational hardening
 
-Status: **Planned**
+Status: **Complete and verified**
+
+Completed: **2026-08-07**
 
 - Add correlation ids, bounded rate limits, structured privacy-safe logs, health/readiness separation, retention jobs, and documented deletion/backup behavior.
 - Test tenant isolation, duplicate writes, malformed payloads, expired tokens, and concurrent invitation changes.
+
+Completed work:
+
+- Added bounded correlation ids (`X-Request-ID`) and structured request/error logs that exclude request values, exception messages, and configured service URLs.
+- Added bounded in-process global/authentication rate limits with retry metadata and a 10,000-bucket memory cap.
+- Split liveness (`/health`) from MongoDB-backed readiness (`/ready`), with fail-closed 503 behavior and graceful shutdown that closes MongoDB and stops retention scheduling.
+- Added a 15-minute improvement-event retention sweep in addition to the existing 90-day TTL index.
+- Documented retention, deletion, encrypted backup, restore, and recovery behavior in `server/OPERATIONS.md`.
+- Invitation revocation now uses an atomic pending-state filter, so concurrent activation/revocation cannot produce a double transition.
+
+Verification:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd test`: passed, including tenant-scoped/idempotent log writes, malformed payload rejection, expired-token rejection, atomic invitation transition, rate-limit bounds, correlation ids, and retention cleanup.
+- `npm.cmd run build`: passed.
+- Client and extension typecheck/build smoke checks passed; no client or extension API payload changed.
+- `git diff --check`: passed.
+
+Privacy review: operational logs contain only route family, method, status, duration, correlation id, and safe error metadata. Backups and restore procedures explicitly prohibit raw customer content and require deletion/retention reconciliation.
 
 ## 5. Compatibility and completion rules
 

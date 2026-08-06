@@ -520,3 +520,8 @@ After each step, record status, changed contracts, tests, benchmark results, and
 - Server request/response DTO validation and the shared privacy-safe error boundary are complete.
 - Server errors add a stable `code` beside the existing safe `error` message; success DTO keys, endpoint URLs, authentication, telemetry, and redacted-sync payloads are unchanged.
 - The extension requires no migration and may continue ignoring unknown additive error fields.
+
+## 10. Server S5 compatibility record — 2026-08-07
+
+- Server operational hardening added correlation/rate-limit headers and `/ready`; extension request payloads and telemetry consent/storage contracts are unchanged.
+- Rate-limit failures remain safe additive error responses; extension retry/failure handling remains local and fail-closed.

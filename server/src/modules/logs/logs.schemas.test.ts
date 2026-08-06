@@ -2,6 +2,8 @@ import test from "node:test"
 import assert from "node:assert/strict"
 
 import { isParsedLogInput, normalizeHostname, parseLogInput, parseLogQuery } from "./logs.schemas.js"
+import { saveLog } from "./logs.repository.js"
+import { ObjectId, type Db } from "mongodb"
 
 const validInput = {
   extensionLogId: "extension-log-1",
@@ -54,4 +56,19 @@ test("validates bounded log query DTOs", () => {
   assert.throws(() => parseLogQuery({ limit: "201" }, true))
   assert.throws(() => parseLogQuery({ tool: "Unknown" }, true))
   assert.throws(() => parseLogQuery({ rawPrompt: "private" }, true))
+})
+
+test("log writes are tenant-scoped and idempotent by extension id", async () => {
+  const filters: unknown[] = []
+  const userId = new ObjectId()
+  const saved = { _id: new ObjectId(), userId, extensionLogId: validInput.extensionLogId, timestamp: new Date(validInput.timestamp), tool: "ChatGPT", hostname: "chatgpt.com", eventType: "sensitive-data", severity: "high", decision: "warned", title: validInput.title, redactedSnippet: validInput.redactedSnippet, evidence: [], createdAt: new Date() }
+  const db = { collection: () => ({
+    updateOne: async (filter: unknown) => { filters.push(filter); return { acknowledged: true } },
+    findOne: async (filter: unknown) => { filters.push(filter); return saved }
+  }) } as unknown as Db
+  const parsed = parseLogInput(validInput)
+  assert.ok(isParsedLogInput(parsed))
+  await saveLog(db, userId, parsed)
+  assert.deepEqual(filters[0], { userId, extensionLogId: validInput.extensionLogId })
+  assert.deepEqual(filters[1], { userId, extensionLogId: validInput.extensionLogId })
 })

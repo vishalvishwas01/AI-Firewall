@@ -50,6 +50,12 @@ export const pendingInvitationActivationFilter = (userId: ObjectId, email: strin
   $or: [{ userId: { $exists: false as const } }, { userId }]
 })
 
+export const pendingInvitationRevocationFilter = (memberId: ObjectId, organizationId: ObjectId) => ({
+  _id: memberId,
+  organizationId,
+  status: "invited" as const
+})
+
 export const activateOrganizationInvitations = async (
   db: Db,
   userId: ObjectId,

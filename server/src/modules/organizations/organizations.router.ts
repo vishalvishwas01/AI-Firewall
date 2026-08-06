@@ -14,6 +14,7 @@ import { requireOrganizationMembership } from "./organizations.policy.js"
 import { parseMemberInput, parseOrganizationInput, parseOrganizationSiteInput, parseRoleInput, parseTrendQuery, routeParam } from "./organizations.schemas.js"
 import { toPublicMember, toPublicOrganization, toPublicSitePolicy } from "./organizations.service.js"
 import { assertAllowedQuery } from "../../shared/validation.js"
+import { pendingInvitationRevocationFilter } from "../../models/organization.js"
 
 const router = Router()
 
@@ -507,7 +508,7 @@ router.post("/:id/invitations/:memberId/revoke", validateNoBody, async (req: Aut
 
     const revokedAt = new Date()
     const result = await organizationMembersCollection(db).updateOne(
-      { _id: member._id, organizationId: access.org._id, status: "invited" },
+      pendingInvitationRevocationFilter(member._id, access.org._id),
       {
         $set: { status: "revoked", revokedAt, updatedAt: revokedAt },
         $unset: { userId: "" }

@@ -507,6 +507,11 @@ AR1/AR2 stopped before M0. M0 was later authorized and completed independently w
 
 Mark a step complete only after reproducible command output, tests, metrics, artifact schema validation, and privacy review are recorded. Update `extension/HANDOFF.md` when an artifact contract changes.
 
+## 9. Server S5 compatibility record — 2026-08-07
+
+- Server operational hardening changed no ML artifact, dataset, training, or telemetry feature contract.
+- ML remains offline and isolated from server operational logs, backups, and runtime readiness checks.
+
 ## 8. M4 runtime activation record — 2026-08-07
 
 - Three-reviewer authorization: `datasets/manifests/b2-m4-runtime-activation-approval-v1.review.json`.

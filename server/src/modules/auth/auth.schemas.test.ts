@@ -6,6 +6,10 @@ import {
   parseLoginCredentials,
   parseSignupCredentials
 } from "./auth.schemas.js"
+import jwt from "jsonwebtoken"
+import { env } from "../../config/env.js"
+import { authenticatedUserFromRequest } from "../../middleware/auth.js"
+import { ObjectId } from "mongodb"
 
 test("signup credentials normalize email and enforce password length", () => {
   const parsed = parseSignupCredentials({ email: "  USER@Example.COM ", password: "password" })
@@ -33,4 +37,10 @@ test("authentication DTOs reject extra fields and oversized passwords", () => {
   assert.deepEqual(parseSignupCredentials({ email: "user@example.com", password: "x".repeat(1025) }), {
     error: "Password is too long"
   })
+})
+
+test("expired bearer tokens fail closed", () => {
+  const token = jwt.sign({ sub: new ObjectId().toHexString(), email: "user@example.com" }, env.jwtSecret, { expiresIn: -1 })
+  const req = { cookies: {}, header: (name: string) => name === "authorization" ? `Bearer ${token}` : undefined } as never
+  assert.equal(authenticatedUserFromRequest(req), undefined)
 })

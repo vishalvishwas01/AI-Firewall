@@ -3,7 +3,7 @@ import cors from "cors"
 import cookieParser from "cookie-parser"
 
 import { env } from "./config/env.js"
-import { getDb } from "./db/mongo.js"
+import { closeMongoClient, getDb } from "./db/mongo.js"
 import { ensureUserIndexes } from "./models/user.js"
 import { ensureSyncedLogIndexes } from "./models/syncedLog.js"
 import { ensureReportSiteIndexes } from "./models/reportSite.js"
@@ -17,6 +17,9 @@ import { improvementTelemetryRouter } from "./modules/improvementTelemetry/telem
 import { ensureImprovementTelemetryIndexes } from "./modules/improvementTelemetry/telemetry.repository.js"
 import { errorBoundary, normalizeErrorResponses } from "./shared/errors.js"
 import { rejectReadMethodBodies, sendJson, validateNoQuery } from "./shared/validation.js"
+import { authRateLimiter, globalRateLimiter, requestIdMiddleware, structuredRequestLogger } from "./shared/operational.js"
+import { runRetentionSweep } from "./infrastructure/retention.js"
+import { safeErrorLog } from "./shared/errors.js"
 
 const app = express()
 
@@ -26,10 +29,15 @@ const allowedOrigins = [
   env.extensionOrigin,
 ].filter(Boolean)
 
-console.log({
-  clientOrigin: env.clientOrigin,
-  extensionOrigin: env.extensionOrigin,
-})
+console.log(JSON.stringify({
+  event: "server_configured",
+  clientOriginConfigured: Boolean(env.clientOrigin),
+  extensionOriginConfigured: Boolean(env.extensionOrigin),
+}))
+
+app.use(requestIdMiddleware)
+app.use(structuredRequestLogger)
+app.use(globalRateLimiter)
 
 app.use(
   cors({
@@ -55,7 +63,22 @@ app.get("/health", validateNoQuery, (_req, res) => {
   sendJson(res, ["ok"], { ok: true })
 })
 
-app.use("/auth", authRouter)
+let ready = false
+app.get("/ready", validateNoQuery, async (_req, res) => {
+  try {
+    if (!ready) {
+      sendJson(res.status(503), ["ok", "code"], { ok: false, code: "not_ready" })
+      return
+    }
+    await (await getDb()).command({ ping: 1 })
+    sendJson(res, ["ok", "db"], { ok: true, db: "ok" })
+  } catch {
+    ready = false
+    sendJson(res.status(503), ["ok", "code"], { ok: false, code: "database_unavailable" })
+  }
+})
+
+app.use("/auth", authRateLimiter, authRouter)
 app.use("/logs", logsRouter)
 app.use("/sites", sitesRouter)
 app.use("/orgs", orgsRouter)
@@ -70,7 +93,31 @@ await ensureSyncedLogIndexes(db)
 await ensureReportSiteIndexes(db)
 await ensureOrganizationIndexes(db)
 await ensureImprovementTelemetryIndexes(db)
+ready = true
 
-app.listen(env.port, () => {
-  console.log(`AI Firewall API listening on port ${env.port}`)
+const retentionTimer = setInterval(async () => {
+  try {
+    const result = await runRetentionSweep(db)
+    if (result.improvementEventsDeleted > 0) {
+      console.log(JSON.stringify({ event: "retention_sweep", ...result }))
+    }
+  } catch (error) {
+    console.error(JSON.stringify({ event: "retention_sweep_failed", ...safeErrorLog(error) }))
+  }
+}, 15 * 60 * 1000)
+retentionTimer.unref()
+
+const server = app.listen(env.port, () => {
+  console.log(JSON.stringify({ event: "server_listening", port: env.port }))
 })
+
+const shutdown = async (signal: string) => {
+  ready = false
+  clearInterval(retentionTimer)
+  await new Promise<void>((resolve) => server.close(() => resolve()))
+  await closeMongoClient()
+  console.log(JSON.stringify({ event: "server_stopped", signal }))
+}
+
+process.once("SIGTERM", () => { void shutdown("SIGTERM") })
+process.once("SIGINT", () => { void shutdown("SIGINT") })

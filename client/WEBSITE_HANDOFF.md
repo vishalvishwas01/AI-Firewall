@@ -128,6 +128,11 @@ Status: **Planned**
 - A feature is marked **Complete** only after implementation, typecheck/build, relevant tests, and manual smoke verification.
 - When a step completes, update this file, the server handoff if the API changed, and the extension handoff if the bridge changed.
 
+## 7. Server S5 compatibility record — 2026-08-07
+
+- Server operational hardening added correlation/rate-limit headers and `/ready`; client DTO keys, routes, and authenticated payloads are unchanged.
+- The client continues to render normalized safe API errors and does not expose operational log or backup details.
+
 ## 6. Related sources of truth
 
 - `../extension/HANDOFF.md` — browser protection and local detection.

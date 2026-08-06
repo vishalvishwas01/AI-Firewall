@@ -12,3 +12,10 @@ export const getDb = async () => {
   const client = await getMongoClient()
   return client.db(env.mongodbDbName)
 }
+
+export const closeMongoClient = async () => {
+  if (!clientPromise) return
+  const client = await clientPromise
+  clientPromise = undefined
+  await client.close()
+}

@@ -22,3 +22,6 @@ export const upsertImprovementEvent = async (db: Db, userId: ObjectId, input: Im
 
 export const listImprovementEvents = (db: Db, userId: ObjectId) => improvementEventsCollection(db).find({ userId }).sort({ timestamp: -1 }).limit(1000).toArray()
 export const deleteImprovementEvents = (db: Db, userId: ObjectId) => improvementEventsCollection(db).deleteMany({ userId })
+
+export const deleteExpiredImprovementEvents = (db: Db, now = new Date()) =>
+  improvementEventsCollection(db).deleteMany({ expiresAt: { $lte: now } })
