@@ -49,7 +49,7 @@ export const workflowSteps: IconItem[] = [
   {
     title: "Detect locally",
     description:
-      "Rules run in the browser against prompts, uploads, paste events, and send actions.",
+      "Deterministic rules run in the browser against prompts, uploads, paste events, and send actions. An optional local classifier adds private shadow signals without deciding warnings.",
     icon: Bot
   },
   {
@@ -72,7 +72,7 @@ export const privacyPoints: IconItem[] = [
   {
     title: "Local protection first",
     description:
-      "Detection runs in the browser even as account-backed report viewing is added.",
+      "Deterministic rules and the optional local classifier run in the browser. The classifier remains shadow-only and never sends prompt content.",
     icon: CheckCircle2
   },
   {
@@ -103,7 +103,7 @@ export const faqItems = [
   {
     question: "Is detection perfect?",
     answer:
-      "No. The current MVP uses local rules, so it can miss subtle risks or warn on harmless text. The first public version should explain that clearly."
+      "No. Deterministic rules can miss subtle risks or warn on harmless text. An optional local classifier provides additional private shadow signals, but it is not used to create warnings."
   },
   {
     question: "Which sites are supported first?",

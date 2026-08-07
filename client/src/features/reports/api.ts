@@ -1,5 +1,6 @@
 import { apiRequest } from "../../lib/http"
 import type { AccountLogExport, ReportFilters, ReportLog, ReportSummary } from "./types"
+import { parseAccountLogExport, parseLogsResponse, parseSummaryResponse } from "./schemas"
 
 const filterQuery = (filters: ReportFilters) => {
   const params = new URLSearchParams()
@@ -11,10 +12,10 @@ const filterQuery = (filters: ReportFilters) => {
 }
 export const getLogs = (filters: ReportFilters = {}) => {
   const query = filterQuery(filters)
-  return apiRequest<{ logs: ReportLog[] }>(`/logs${query ? `?${query}` : ""}`)
+  return apiRequest<{ logs: ReportLog[] }>(`/logs${query ? `?${query}` : ""}`, {}, parseLogsResponse)
 }
 export const getLogSummary = (filters: ReportFilters = {}) => {
   const query = filterQuery(filters)
-  return apiRequest<{ summary: ReportSummary }>(`/logs/summary${query ? `?${query}` : ""}`)
+  return apiRequest<{ summary: ReportSummary }>(`/logs/summary${query ? `?${query}` : ""}`, {}, parseSummaryResponse)
 }
-export const exportAccountLogs = () => apiRequest<AccountLogExport>("/logs/export")
+export const exportAccountLogs = () => apiRequest<AccountLogExport>("/logs/export", {}, parseAccountLogExport)

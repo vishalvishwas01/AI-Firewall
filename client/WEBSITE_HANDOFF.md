@@ -73,7 +73,7 @@ Status: **Complete**
 
 ### C1 — Client module migration
 
-Status: **In Progress**
+Status: **Complete and verified**
 
 - Inventory current `App.tsx`, `src/lib/api.ts`, and report/team components.
 - Move auth, reports, organizations, and site-management code into feature folders without behavior changes.
@@ -86,14 +86,17 @@ Progress recorded: **2026-08-07**
 - Added feature-owned API and type boundaries under `src/features/auth`, `reports`, `organizations`, `sites`, and `trust`.
 - Isolated shared HTTP transport in `src/lib/http.ts`; `src/lib/api.ts` remains a compatibility barrel for existing imports.
 - Moved extension authentication/site bridges, report downloads, and feature loading/error/empty states into their owning feature folders.
+- Moved `AuthPage`, `ReportsPage`, and `TeamPage` out of `App.tsx` into feature-owned component modules; shared authenticated navigation now lives in `components/SiteHeader.tsx`.
 - Preserved all existing endpoint URLs, request payloads, response shapes, auth/session behavior, and route paths.
 - `npm.cmd run typecheck` and `npm.cmd run build` pass.
 
-Remaining C1 work: move the large route page implementations currently composed in `App.tsx` into feature page modules, then run the final client smoke verification.
+Final verification: `App.tsx` now owns route/session composition and public pages rather than authenticated feature implementation. Client typecheck, production build, and `git diff --check` pass.
+
+Next step: **C2 — API DTO validation and typed client boundary**.
 
 ### C2 — API DTO validation and typed client boundary
 
-Status: **Planned**
+Status: **Complete and verified**
 
 Server dependency update: **Server S2 completed on 2026-08-06**. Server errors now include an additive stable `code` alongside the existing safe `error` message; success DTO keys and URLs are unchanged. C2 should validate and consume this code without rendering raw transport or server details.
 
@@ -103,14 +106,47 @@ Server dependency update: **Server S2 completed on 2026-08-06**. Server errors n
 - Never render raw server error details or sensitive values.
 - Add tests for malformed responses, expired sessions, unauthorized organization access, and empty datasets.
 
+Progress recorded: **2026-08-07**
+
+- Added feature-local runtime response schemas for auth, reports, organizations, sites, and trust/benchmark DTOs.
+- Added a shared exact-object/schema toolkit that rejects missing or unexpected response fields, invalid enums, malformed dates, unsafe values, and unbounded collections.
+- Added a shared `TransportError` boundary with stable safe error codes and user-safe messages; server error details are never rendered. Unknown codes and statuses use conservative fallbacks, and session bootstrap now normalizes network failures too.
+- Preserved existing success DTO keys, request payloads, routes, credentials, and 204 behavior.
+- Added contract tests for malformed responses, expired sessions, unauthorized organization access, and valid empty datasets.
+- `npm.cmd test` (4/4), `npm.cmd run typecheck`, `npm.cmd run build`, and `git diff --check` pass.
+
+Final verification: all feature API modules consume runtime response schemas, malformed or sensitive response shapes fail closed as `invalid_response`, and transport errors expose only stable safe messages/codes.
+
+Next step: **C3 — Trust and layered-detection product surfaces**.
+
 ### C3 — Trust and layered-detection product surfaces
 
-Status: **Planned**
+Status: **Complete and verified**
 
 - Update public copy to describe deterministic rules plus an optional local classifier only after the extension ships it.
 - The extension/server E5 telemetry contract is complete; a future website surface may expose authenticated export/deletion, but must not duplicate or imply the extension's collection consent.
 - Explain that improvement telemetry contains derived features and feedback only; it does not upload prompt content.
 - Keep report pages limited to redacted records and aggregate organization data.
+
+Progress recorded: **2026-08-07**
+
+- Added the feature-owned `/trust` surface under `src/features/trust/components/TrustPage.tsx` with explicit local inspection, local storage, redacted report sync, never-stored, and separate improvement-telemetry boundaries.
+- Public copy now states that deterministic rules authoritatively control warnings and actions; the optional local classifier is shipped but remains shadow-only and cannot create warnings.
+- Documented separate, off-by-default improvement consent for bounded derived features and feedback. The website does not present report sync as telemetry consent and does not expose raw prompt, secret, candidate, file, screenshot, hostname, or per-user organization detail.
+- Kept the synthetic detection benchmark behind the authenticated organization owner/admin endpoint, with signed-out, loading, authorization-error, and successful metric/table states. Benchmark responses remain runtime-validated by the trust schema.
+- Added C3 contract coverage for layered privacy copy and benchmark response rejection of prompt-detail fields.
+
+Verification: **2026-08-07**
+
+- Manual smoke check at `http://127.0.0.1:4173/trust` confirmed the trust page renders, sets the Trust Architecture title, shows the layered privacy copy, and settles into the signed-out benchmark state with no console errors.
+- From `client/`: `npm.cmd test` passed (6/6), `npm.cmd run typecheck` passed, `npm.cmd run build` passed, and `git diff --check` passed.
+
+Privacy review: **2026-08-07**
+
+- No client API or extension bridge contract changed for C3. Existing server and extension E5 contracts remain the source of truth for separately consented improvement telemetry and authenticated export/deletion.
+- Reports remain redacted individual records; organization pages remain aggregate-only.
+
+Next step: **C4 — QA and release readiness**.
 
 ### C4 — QA and release readiness
 
