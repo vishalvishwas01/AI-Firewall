@@ -521,3 +521,17 @@ Mark a step complete only after reproducible command output, tests, metrics, art
 - Metrics manifest SHA-256: `64a8c75f611cf7d6d43e10e5e4ad8a8f88a6e6bbe24cbadaeeee8bd47c04f873`.
 - Extension verification: 99 tests passed, 1 performance test skipped, typecheck passed, and build completed.
 - Production accuracy claims remain prohibited; server integration remains out of scope.
+
+## 9. Architecture evolution decision — V2 intelligence updates
+
+Status: **Direction approved; implementation not started**
+
+The current V1/M4 design remains local inference with a bundled artifact. The next architecture keeps
+rules, heuristics, feature extraction, logistic inference, and final policy evaluation local while a
+future intelligence service distributes signed rule/model packages. Packages must carry versions,
+digests, signatures, compatibility and rollback metadata. The extension must verify them, retain a
+last-known-good package, and fail closed when updates are invalid or unavailable.
+
+This does not authorize server-side inference, raw-content upload, autonomous rule activation, or
+production accuracy claims. Update service, signing, cadence, retention, and policy contracts require
+separate implementation and review.

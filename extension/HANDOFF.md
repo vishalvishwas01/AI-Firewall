@@ -515,6 +515,20 @@ After each step, record status, changed contracts, tests, benchmark results, and
 - Production accuracy claims remain disabled. Server integration remains out of scope.
 - Rollback artifact: `secret-logistic-bootstrap-v1`.
 
+## 9. Future E8 — Signed intelligence package client
+
+Status: **Planned; local inference remains active**
+
+- Verify signed rule/model packages, hashes, schema compatibility, expiry, and rollback metadata.
+- Install updates atomically beside a built-in last-known-good package.
+- Continue operating offline when the intelligence service is unavailable.
+- Include extension, rules, and model versions in privacy-safe derived events.
+- Test invalid signatures, wrong hashes, incompatible packages, rollback, expiry, interrupted downloads,
+  and offline operation.
+
+E8 requires a separately approved signed-package contract and update endpoint. It does not move inference
+to a server.
+
 ## 9. Server S2 compatibility record — 2026-08-06
 
 - Server request/response DTO validation and the shared privacy-safe error boundary are complete.

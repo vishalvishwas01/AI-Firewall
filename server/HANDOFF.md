@@ -226,6 +226,15 @@ Privacy review: operational logs contain only route family, method, status, dura
 - A step is **Complete** only after typecheck, tests, build, privacy checks, and affected client/extension smoke tests pass.
 - Update this file plus the relevant client, extension, and ML handoff in the same change.
 
+## 7. Future S6 — Intelligence package distribution
+
+Status: **Planned; no server-side inference**
+
+The future service may publish reviewed, signed rule/model packages with immutable bytes, metadata,
+compatibility ranges, expiry, rollback, key rotation, revocation, and audit records. It must not receive
+raw prompt content for prediction. Organization policy distribution remains a separate authenticated
+contract. S6 requires security, privacy, maintainer, retention, and operational review before coding.
+
 ## 6. Related sources
 
 - `../client/WEBSITE_HANDOFF.md`
