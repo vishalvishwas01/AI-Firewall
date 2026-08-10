@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/intelligence-package-manifest-v1.schema.json",
+  "title": "HallGuard Signed Intelligence Package Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "packageId",
+    "packageVersion",
+    "sequence",
+    "status",
+    "distribution",
+    "issuedAt",
+    "expiresAt",
+    "signing",
+    "compatibility",
+    "versions",
+    "capabilities",
+    "entries",
+    "rollback"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "packageId": { "const": "hallguard-intelligence" },
+    "packageVersion": { "type": "string", "pattern": "^[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}-v[0-9]+$" },
+    "sequence": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "status": { "enum": ["active", "rollback"] },
+    "distribution": { "const": "signed-data-package" },
+    "issuedAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "signing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "keyId", "signatureEncoding", "domain"],
+      "properties": {
+        "algorithm": { "const": "Ed25519" },
+        "keyId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{2,63}$" },
+        "signatureEncoding": { "const": "base64url-no-pad" },
+        "domain": { "const": "hallguard-intelligence-package-v1" }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minExtensionVersion", "maxExtensionVersion", "requiredCapabilities"],
+      "properties": {
+        "minExtensionVersion": { "$ref": "#/$defs/version" },
+        "maxExtensionVersion": { "$ref": "#/$defs/version" },
+        "requiredCapabilities": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": { "enum": ["rules-v1", "model-v2", "candidate-features-v1"] }
+        }
+      }
+    },
+    "versions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ruleSetVersion", "modelVersion", "trustBundleVersion"],
+      "properties": {
+        "ruleSetVersion": { "$ref": "#/$defs/version" },
+        "modelVersion": { "$ref": "#/$defs/version" },
+        "trustBundleVersion": { "$ref": "#/$defs/version" }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["remoteRules", "remoteModels", "executablePayloads", "remoteRegex"],
+      "properties": {
+        "remoteRules": { "const": true },
+        "remoteModels": { "const": true },
+        "executablePayloads": { "const": false },
+        "remoteRegex": { "const": false }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "kind", "mediaType", "size", "sha256"],
+        "properties": {
+          "path": { "enum": ["payload/rules.json", "payload/model.json"] },
+          "kind": { "enum": ["rules", "model"] },
+          "mediaType": { "const": "application/json" },
+          "size": { "type": "integer", "minimum": 2, "maximum": 5242880 },
+          "sha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["isRollback", "targetPackageVersion", "targetSequence"],
+      "properties": {
+        "isRollback": { "type": "boolean" },
+        "targetPackageVersion": { "type": ["string", "null"], "pattern": "^[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}-v[0-9]+$" },
+        "targetSequence": { "type": ["integer", "null"], "minimum": 1, "maximum": 9007199254740991 }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "version": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{2,127}$" }
+  }
+}

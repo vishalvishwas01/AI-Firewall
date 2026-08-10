@@ -102,7 +102,12 @@ The v1 manifest hard-codes:
 
 ## Future signed-update design
 
-Signed remote data updates are not implemented. Before they can be considered, a separate authorized step must define canonical serialization, key custody/rotation/revocation, signature verification, freshness and rollback protection, compatibility constraints, audit records, recovery behavior, and browser-offline fallback.
+Signed remote data updates are not implemented. The V2-0 contract and threat model
+are defined in `docs/SIGNED_INTELLIGENCE_PACKAGE_SPEC.md`, with exact manifest
+and trust-bundle schemas under `docs/contracts/`. The contract defines canonical
+serialization, Ed25519 signatures, SHA-256 payload binding, key
+custody/rotation/revocation, freshness and rollback protection, compatibility
+constraints, audit records, recovery behavior, and browser-offline fallback.
 
 Even a future signed format must remain data-only, schema-validated, bounded, non-executable, and incapable of carrying JavaScript or arbitrary regex. Human approval and release gates remain mandatory.
 

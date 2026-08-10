@@ -524,7 +524,7 @@ Mark a step complete only after reproducible command output, tests, metrics, art
 
 ## 9. Architecture evolution decision — V2 intelligence updates
 
-Status: **Direction approved; implementation not started**
+Status: **Direction approved; V2-0 contract complete; no model release**
 
 The current V1/M4 design remains local inference with a bundled artifact. The next architecture keeps
 rules, heuristics, feature extraction, logistic inference, and final policy evaluation local while a
@@ -535,3 +535,38 @@ last-known-good package, and fail closed when updates are invalid or unavailable
 This does not authorize server-side inference, raw-content upload, autonomous rule activation, or
 production accuracy claims. Update service, signing, cadence, retention, and policy contracts require
 separate implementation and review.
+
+The V2-0 contract design is complete in `../docs/SIGNED_INTELLIGENCE_PACKAGE_SPEC.md`.
+ML may prepare model/package metadata for that contract, but must not publish a new model, retrain from
+customer data, or authorize autonomous activation as part of V2 design.
+
+### V2-0 completion record — 2026-08-10
+
+- Adopted the shared package and trust-bundle contract from `../docs/SIGNED_INTELLIGENCE_PACKAGE_SPEC.md`.
+- ML release metadata is bound to package versions, model versions, rule-set versions, immutable digests, compatibility ranges, and human release evidence.
+- Model artifacts remain offline-trained and locally inferred; V2-0 authorizes no retraining, customer-data intake, new artifact, or production accuracy claim.
+- Verification: both new JSON schemas parse successfully; `git diff --check` passes.
+- Privacy review: no dataset, prompt, telemetry, production log, candidate, or runtime model data changed.
+
+Next step: **ML V2 package metadata fixtures and compatibility checks**, now that the extension/server
+validator and retrieval behavior has been reviewed.
+
+Verification gap for the validator slice: the existing `ml/venv` launcher points to
+`C:\Users\nites\AppData\Local\Programs\Python\Python314\python.exe`, which was access-denied,
+and the environment does not contain `pytest`. No ML source or artifact changed in this slice.
+
+Cross-component package record: extension verification/staging and server immutable package
+publication/retrieval changed no ML artifact, feature order, training state, metrics, or release status.
+
+### V2 retrieval/activation review record — 2026-08-10
+
+- The server now authenticates retrieval of signed package/trust-bundle metadata and immutable payload
+  bytes; the extension verifies and stores them locally.
+- No ML artifact, training state, feature order, calibration metric, dataset, or release status changed.
+- The extension does not yet consume the remote package in the detection engine, so the active ML artifact
+  remains the separately reviewed local runtime artifact.
+- ML verification remains unchanged: the existing virtual-environment launcher is access-denied and
+  `pytest` is unavailable in that environment.
+
+Next step: **ML V2 package metadata fixtures and compatibility checks**, without producing or releasing
+another model artifact.

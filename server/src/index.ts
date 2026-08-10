@@ -15,6 +15,8 @@ import { orgsRouter } from "./modules/organizations/organizations.routes.js"
 import { adminRouter } from "./routes/admin.js"
 import { improvementTelemetryRouter } from "./modules/improvementTelemetry/telemetry.routes.js"
 import { ensureImprovementTelemetryIndexes } from "./modules/improvementTelemetry/telemetry.repository.js"
+import { ensureIntelligencePackageIndexes } from "./modules/intelligence/intelligence.repository.js"
+import { intelligenceRouter } from "./modules/intelligence/intelligence.routes.js"
 import { errorBoundary, normalizeErrorResponses } from "./shared/errors.js"
 import { rejectReadMethodBodies, sendJson, validateNoQuery } from "./shared/validation.js"
 import { authRateLimiter, globalRateLimiter, requestIdMiddleware, structuredRequestLogger } from "./shared/operational.js"
@@ -84,6 +86,7 @@ app.use("/sites", sitesRouter)
 app.use("/orgs", orgsRouter)
 app.use("/admin", adminRouter)
 app.use("/improvement-events", improvementTelemetryRouter)
+app.use("/intelligence", intelligenceRouter)
 
 app.use(errorBoundary)
 
@@ -93,6 +96,7 @@ await ensureSyncedLogIndexes(db)
 await ensureReportSiteIndexes(db)
 await ensureOrganizationIndexes(db)
 await ensureImprovementTelemetryIndexes(db)
+await ensureIntelligencePackageIndexes(db)
 ready = true
 
 const retentionTimer = setInterval(async () => {

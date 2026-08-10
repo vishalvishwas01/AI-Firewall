@@ -36,8 +36,8 @@ export const validateDetectionRule = (value: unknown): DetectionRule => {
   return value as unknown as DetectionRule
 }
 
-export const validateRuleSet = (value: unknown) => {
-  if (!isRecord(value) || !hasOnlyKeys(value, ["version", "rules"]) || value.version !== RULE_SET_VERSION || !Array.isArray(value.rules)) {
+export const validateRuleSet = (value: unknown, expectedVersion = RULE_SET_VERSION) => {
+  if (!isRecord(value) || !hasOnlyKeys(value, ["version", "rules"]) || value.version !== expectedVersion || !Array.isArray(value.rules)) {
     throw new Error("Invalid detection rule set")
   }
   const rules = value.rules.map(validateDetectionRule)

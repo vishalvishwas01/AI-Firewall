@@ -228,12 +228,82 @@ Privacy review: operational logs contain only route family, method, status, dura
 
 ## 7. Future S6 — Intelligence package distribution
 
-Status: **Planned; no server-side inference**
+Status: **Complete for authenticated retrieval and immutable publication; server-side inference remains forbidden**
 
-The future service may publish reviewed, signed rule/model packages with immutable bytes, metadata,
+The service may publish reviewed, signed rule/model packages with immutable bytes, metadata,
 compatibility ranges, expiry, rollback, key rotation, revocation, and audit records. It must not receive
 raw prompt content for prediction. Organization policy distribution remains a separate authenticated
-contract. S6 requires security, privacy, maintainer, retention, and operational review before coding.
+contract.
+
+## Architecture alignment — new architecture baseline
+
+The `docs/NEW_ARCHITECTURE.md` direction is accepted as the V2 design boundary:
+
+- Detection, feature extraction, classifier inference, and the final allow/warn/block policy decision remain local to the extension.
+- This server may distribute signed intelligence packages and authenticated organization policy, but it must not receive raw prompt content for prediction.
+- Intelligence packages are separate from customer telemetry and redacted logs. Package metadata may include versions, immutable digests, compatibility ranges, expiry, rollback, key rotation, revocation, and audit records.
+- The contract and threat model are now documented for S6. No package endpoint, signing implementation, scheduler, or storage model is authorized until the contract receives the required security, privacy, maintainer, and operations review.
+
+### V2-0 completion record — 2026-08-10
+
+- Completed the shared signed-intelligence package and trust-bundle contract in `../docs/SIGNED_INTELLIGENCE_PACKAGE_SPEC.md`.
+- Added exact machine-readable schemas for package manifests and trust bundles under `../docs/contracts/`.
+- Defined canonical manifest signing, Ed25519 signatures, SHA-256 payload binding, key rotation/revocation, expiry, sequence, compatibility, rollback, atomic activation, and offline fallback.
+- Confirmed the server boundary: package metadata/bytes and authenticated policy may be served later; raw prompts and inference requests remain forbidden.
+- Updated trust and rule-knowledge documentation to reference the shared contract.
+- Verification: both new JSON schemas parse successfully; `git diff --check` passes.
+- Privacy review: no server route, collection, telemetry field, customer-data path, or inference path changed.
+
+### S6 validation and immutable retrieval completion record — 2026-08-10
+
+- Added pure package-manifest, trust-bundle, signature-envelope, compatibility, replay, rollback, and canonicalization validators under `src/modules/intelligence/`.
+- Added shared content-free validation fixtures under `../docs/contracts/intelligence-validation-fixtures.json`.
+- Added insert-only Mongo publication/retrieval helpers and unique package identity/sequence indexes under `src/modules/intelligence/intelligence.repository.ts`.
+- No route, controller, network client, signing-key storage, or activation path was added.
+- Verification: server typecheck, 46 tests, build, JSON contract parsing, and `git diff --check` passed.
+- Privacy review: validators accept only bounded metadata and digests; raw prompts, candidates, snippets, files, screenshots, and inference requests remain outside the server boundary.
+
+Historical next step: **S6 authenticated package retrieval route and response DTO**; completed in the
+retrieval completion record below.
+
+### S6 authenticated retrieval and trust publication completion record — 2026-08-10
+
+- Added the authenticated intelligence router mounted at `/intelligence`.
+- Added `GET /intelligence/packages/latest` and `GET /intelligence/trust-bundles/latest`.
+- Both endpoints require the existing authenticated-user middleware and reject query parameters.
+- Package DTOs expose only `manifest`, `signature`, `payloads`, and `publishedAt`.
+- Trust-bundle DTOs expose only `bundle`, `signature`, and `publishedAt`; internal `createdAt`,
+  `expiresAt`, and Mongo identity fields are never returned.
+- Added immutable trust-bundle publication/retrieval storage and startup indexes.
+- No server-side inference, raw-content request field, telemetry path, or customer-log path was added.
+
+Verification:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd test`: 47/47 passed.
+- `npm.cmd run build`: passed.
+- Extension typecheck: passed.
+- Extension test suite: 109 passed, 1 existing performance test skipped.
+- Extension build: completed successfully; existing Plasmo package-metadata network/EACCES and SVGO
+  warnings remain environmental and do not change the generated build result.
+- `git diff --check`: passed.
+
+Privacy and security review:
+
+- Retrieval is authenticated and read-only.
+- Publication validation remains bounded to signed metadata, digests, and data-only JSON payloads.
+- Raw prompts, secrets, candidates, snippets, files, screenshots, and inference requests remain outside
+  the server boundary.
+
+Known limitation:
+
+- Publishing is currently an internal repository/service capability; no admin publishing workflow,
+  signing-key storage, scheduler, or audit UI was added.
+- The extension refresh flow stores an active package but the detection engine still uses the bundled
+  reviewed runtime. Remote package consumption requires a separate activation/runtime-consumption step.
+
+Next step: **S7/E9 runtime consumption review and guarded active-package integration**, with explicit
+fallback, rollback, and release-governance gates.
 
 ## 6. Related sources
 

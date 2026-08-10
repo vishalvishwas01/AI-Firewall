@@ -149,7 +149,10 @@ Proposed rule knowledge must cite official HTTPS documentation or security advis
 
 Future proposal-origin rules require distinct security, privacy, and maintainer reviewers plus benchmark, false-positive, redaction, raw-leak, and latency gates. Eligibility never activates a rule automatically. The extension accepts rules only through its bundled release manifest, which disables remote updates, executable payloads, and remote regex. Existing pre-E7 rules are recorded as baseline entries without fabricated approval claims.
 
-Signed remote updates remain unimplemented. The full workflow and future design boundary are documented in `docs/RULE_KNOWLEDGE_WORKFLOW.md`.
+Signed remote updates remain unimplemented. The V2-0 shared contract and threat model are documented in
+`docs/SIGNED_INTELLIGENCE_PACKAGE_SPEC.md`; its machine-readable manifest and trust-bundle schemas live
+under `docs/contracts/`. The rule proposal workflow remains documented in
+`docs/RULE_KNOWLEDGE_WORKFLOW.md`.
 
 ## Change Rule
 

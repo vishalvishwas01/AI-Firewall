@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/intelligence-trust-bundle-v1.schema.json",
+  "title": "HallGuard Intelligence Trust Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "bundleId",
+    "bundleVersion",
+    "sequence",
+    "issuedAt",
+    "expiresAt",
+    "rootKeyIds",
+    "keys",
+    "revocations"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "bundleId": { "const": "hallguard-intelligence-trust" },
+    "bundleVersion": { "type": "string", "pattern": "^[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}-v[0-9]+$" },
+    "sequence": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "issuedAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "rootKeyIds": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/keyId" }
+    },
+    "keys": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["keyId", "algorithm", "publicKey", "notBefore", "notAfter", "status"],
+        "properties": {
+          "keyId": { "$ref": "#/$defs/keyId" },
+          "algorithm": { "const": "Ed25519" },
+          "publicKey": { "type": "string", "pattern": "^[A-Za-z0-9_-]{43}$" },
+          "notBefore": { "type": "string", "format": "date-time" },
+          "notAfter": { "type": "string", "format": "date-time" },
+          "status": { "enum": ["active", "retired"] }
+        }
+      }
+    },
+    "revocations": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["keyId", "revokedAt", "reasonCode"],
+        "properties": {
+          "keyId": { "$ref": "#/$defs/keyId" },
+          "revokedAt": { "type": "string", "format": "date-time" },
+          "reasonCode": { "enum": ["compromised", "retired", "administrative"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "keyId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{2,63}$" }
+  }
+}

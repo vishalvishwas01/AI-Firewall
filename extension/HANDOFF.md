@@ -359,11 +359,12 @@ Known limitations:
 - No real proposal has been approved or converted; tests use synthetic schema fixtures only.
 - Existing baseline rules were not retroactively presented as human-approved. A future migration may independently review them.
 - Signed updates are a documented future design boundary only and remain disabled.
-- At the E7 stop boundary, model release governance still required separately authorized ML M0–M4 work. M0–M3 completed later; M4 remains planned.
+- At the E7 stop boundary, model release governance still required separately authorized ML M0–M4 work. M0–M3 completed later and M4 was subsequently completed with the limited runtime artifact activation recorded below.
 
 Workflow specification: `../docs/RULE_KNOWLEDGE_WORKFLOW.md`.
 
-E7 is the final extension roadmap step in this handoff. Stop and obtain a new explicitly scoped plan before further architecture or activation work.
+E7 was the final pre-distribution extension roadmap step. Signed intelligence package distribution is
+tracked separately as E8 below and requires a new explicitly scoped plan before implementation.
 
 ### AR1 — Deterministic benign-shape hardening
 
@@ -517,7 +518,7 @@ After each step, record status, changed contracts, tests, benchmark results, and
 
 ## 9. Future E8 — Signed intelligence package client
 
-Status: **Planned; local inference remains active**
+Status: **Complete for retrieval, trust-store installation, and storage-only activation; bundled runtime remains active**
 
 - Verify signed rule/model packages, hashes, schema compatibility, expiry, and rollback metadata.
 - Install updates atomically beside a built-in last-known-good package.
@@ -526,8 +527,69 @@ Status: **Planned; local inference remains active**
 - Test invalid signatures, wrong hashes, incompatible packages, rollback, expiry, interrupted downloads,
   and offline operation.
 
-E8 requires a separately approved signed-package contract and update endpoint. It does not move inference
-to a server.
+E8 does not move inference to a server.
+
+### V2-0 completion record — 2026-08-10
+
+- Adopted `../docs/SIGNED_INTELLIGENCE_PACKAGE_SPEC.md` and the package/trust-bundle schemas under `../docs/contracts/`.
+- Defined client-side validation requirements for signatures, hashes, exact archive entries, compatibility, freshness, rollback, atomic installation, last-known-good retention, and offline fallback.
+- Confirmed that remote packages cannot activate classifier enforcement, alter consent, change organization policy, or carry executable data.
+- Verification: both new JSON schemas parse successfully; `git diff --check` passes.
+- Privacy review: inference remains local and no extension storage, permission, telemetry, report, or network behavior changed.
+
+### E8 verification and staging completion record — 2026-08-10
+
+- Added pure package-manifest, trust-bundle, signature-envelope, compatibility, replay, rollback, and canonicalization validators under `src/features/intelligence/`.
+- Added shared content-free validation fixtures under `../docs/contracts/intelligence-validation-fixtures.json`.
+- Added Web Crypto Ed25519/SHA-256 verification, exact payload digest checks, bounded JSON payload checks, and verified staging in `chrome.storage.local`.
+- No download, signing-key storage, active-package pointer, or activation behavior was added.
+- Verification: extension typecheck, 107 tests with 1 existing performance skip, build completion, JSON contract parsing, and `git diff --check` passed. The build emitted existing Plasmo metadata/SVGO warnings but exited successfully.
+- Privacy review: validators consume metadata and digests only; local inference and deterministic fallback remain unchanged.
+
+Historical next step: **E8 package download, trust-store loading, and last-known-good activation**;
+completed in the retrieval and activation completion record below.
+
+### E8 retrieval, trust-store, and activation completion record — 2026-08-10
+
+- Added authenticated retrieval for the latest trust bundle and intelligence package through the server
+  DTOs, with exact response-shape validation and safe handling of 401/404 responses.
+- Added Ed25519 root-key verification for trust bundles, monotonic trust sequence checks, and atomic
+  active/last-known-good trust storage.
+- Added staged-package activation that validates manifest/signature/payload schemas and model/rule
+  version compatibility before atomic promotion.
+- Active package promotion retains the prior active package as last-known-good, clears staged state,
+  and rejects expired rollback restoration.
+- Added reusable cryptographic fixtures and lifecycle tests for trust rotation, activation, rollback,
+  and expiry.
+
+Verification:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd test`: 109 passed, 1 existing performance test skipped.
+- `npm.cmd run build`: completed successfully with existing Plasmo package-metadata network/EACCES and
+  SVGO warnings.
+- Server typecheck/build passed.
+- Server tests: 47/47 passed.
+- `git diff --check`: passed.
+
+Privacy review:
+
+- Network responses contain only signed metadata, base64url-encoded data-only JSON payloads, and
+  publication timestamps.
+- No raw prompt, secret, candidate, snippet, file, screenshot, classifier input, or inference result is
+  sent to the server.
+- Active and fallback packages remain local browser storage records.
+
+Known limitation:
+
+- No background scheduler or UI-triggered refresh integration was added yet.
+- The detection engine still consumes the bundled reviewed rule/model runtime; the active remote package
+  is storage-only until a separately reviewed runtime-consumption step.
+- Offline operation remains on the bundled runtime when retrieval is unavailable.
+
+Next step: **S7/E9 guarded runtime consumption of the active package**, including release gating,
+background refresh integration, and proof that invalid or unavailable updates never displace the
+bundled fallback.
 
 ## 9. Server S2 compatibility record — 2026-08-06
 

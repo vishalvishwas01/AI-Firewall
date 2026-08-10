@@ -1,0 +1,100 @@
+{
+  "manifest": {
+    "schemaVersion": 1,
+    "packageId": "hallguard-intelligence",
+    "packageVersion": "2026.08.10-v1",
+    "sequence": 1,
+    "status": "active",
+    "distribution": "signed-data-package",
+    "issuedAt": "2026-08-10T00:00:00.000Z",
+    "expiresAt": "2026-09-09T00:00:00.000Z",
+    "signing": {
+      "algorithm": "Ed25519",
+      "keyId": "release-2026-08-v1",
+      "signatureEncoding": "base64url-no-pad",
+      "domain": "hallguard-intelligence-package-v1"
+    },
+    "compatibility": {
+      "minExtensionVersion": "0.1.0",
+      "maxExtensionVersion": "0.1.99",
+      "requiredCapabilities": [
+        "rules-v1",
+        "model-v2",
+        "candidate-features-v1"
+      ]
+    },
+    "versions": {
+      "ruleSetVersion": "2026.08.01-v1",
+      "modelVersion": "secret-logistic-b2-limited-v1",
+      "trustBundleVersion": "2026.08.10-v1"
+    },
+    "capabilities": {
+      "remoteRules": true,
+      "remoteModels": true,
+      "executablePayloads": false,
+      "remoteRegex": false
+    },
+    "entries": [
+      {
+        "path": "payload/rules.json",
+        "kind": "rules",
+        "mediaType": "application/json",
+        "size": 4096,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "path": "payload/model.json",
+        "kind": "model",
+        "mediaType": "application/json",
+        "size": 2048,
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ],
+    "rollback": {
+      "isRollback": false,
+      "targetPackageVersion": null,
+      "targetSequence": null
+    }
+  },
+  "packageSignature": {
+    "schemaVersion": 1,
+    "purpose": "package-manifest",
+    "algorithm": "Ed25519",
+    "keyId": "release-2026-08-v1",
+    "signatureEncoding": "base64url-no-pad",
+    "domain": "hallguard-intelligence-package-v1",
+    "payloadSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "signature": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  },
+  "trustBundle": {
+    "schemaVersion": 1,
+    "bundleId": "hallguard-intelligence-trust",
+    "bundleVersion": "2026.08.10-v1",
+    "sequence": 1,
+    "issuedAt": "2026-08-10T00:00:00.000Z",
+    "expiresAt": "2027-02-06T00:00:00.000Z",
+    "rootKeyIds": ["root-2026-v1"],
+    "keys": [
+      {
+        "keyId": "release-2026-08-v1",
+        "algorithm": "Ed25519",
+        "publicKey": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "notBefore": "2026-08-10T00:00:00.000Z",
+        "notAfter": "2026-11-08T00:00:00.000Z",
+        "status": "active"
+      }
+    ],
+    "revocations": []
+  },
+  "trustBundleSignature": {
+    "schemaVersion": 1,
+    "purpose": "trust-bundle",
+    "algorithm": "Ed25519",
+    "keyId": "root-2026-v1",
+    "signatureEncoding": "base64url-no-pad",
+    "domain": "hallguard-intelligence-trust-bundle-v1",
+    "payloadSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "signature": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+  }
+}
+
