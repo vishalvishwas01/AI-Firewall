@@ -150,13 +150,32 @@ Next step: **C4 — QA and release readiness**.
 
 ### C4 — QA and release readiness
 
-Status: **Planned**
+Status: **Complete and verified**
 
 - Test responsive layouts, keyboard navigation, focus states, contrast, and reduced-motion behavior.
 - Verify signup/login/logout and extension redirect flows in a fresh browser.
 - Verify report filters and organization permissions against the live API contract.
 - Run `npm run typecheck` and `npm run build` from `client/`.
 - Update screenshots and public copy only after the extension UI is stable.
+
+Progress recorded: **2026-08-10**
+
+- Reworked the shared header for 320px authenticated and signed-out layouts; navigation no longer clips, creates an internal scroller, or causes document overflow.
+- Added a keyboard-visible skip link and route focus targets, plus a global high-contrast `:focus-visible` baseline for links, controls, and disclosure summaries.
+- Wrapped every route in Framer Motion's user-preference mode and added a CSS reduced-motion fallback that suppresses nonessential transitions and animations.
+- Added C4 request-contract tests for signup, login, logout, identically encoded report list/summary filters, credentialed requests, and safe organization authorization errors.
+- Kept the existing public mock and copy unchanged because no newer stable extension UI was declared for screenshot replacement.
+
+Verification: **2026-08-10**
+
+- Fresh-browser QA against a same-origin current-contract API harness verified extension-origin signup return, login, logout, protected-route redirects, authenticated empty reports, date-filter controls, and a normalized organization permission error.
+- Responsive browser checks at 320x700 and 1440x900 found no document or navigation overflow after the fixes. Keyboard focus rendered the shared high-contrast outline, and an on-page contrast audit found no failures across 103 visible text/control candidates.
+- `npm.cmd test` passed 9/9 client tests; the current server contract and authorization suite passed 40/40.
+- `npm.cmd run typecheck`, `npm.cmd run build`, and `git diff --check` passed.
+
+Final verification: C4's release-readiness gates are complete. The temporary QA API/proxy was removed and the local client environment was restored after browser verification; no production API or extension bridge contract changed.
+
+Next step: **C5 - Deployment**.
 
 ### C5 — Deployment
 

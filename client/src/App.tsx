@@ -87,7 +87,7 @@ function App() {
           sessionLoading={sessionLoading}
           onLogout={handleLogout}
         />
-        <AuthPage mode={authMode} onAuthenticated={setUser} />
+        <div id="page-content" tabIndex={-1}><AuthPage mode={authMode} onAuthenticated={setUser} /></div>
       </main>
     );
   }
@@ -100,7 +100,7 @@ function App() {
           sessionLoading={sessionLoading}
           onLogout={handleLogout}
         />
-        <ReportsPage user={user} sessionLoading={sessionLoading} />
+        <div id="page-content" tabIndex={-1}><ReportsPage user={user} sessionLoading={sessionLoading} /></div>
       </main>
     );
   }
@@ -113,7 +113,7 @@ function App() {
           sessionLoading={sessionLoading}
           onLogout={handleLogout}
         />
-        <TeamPage user={user} sessionLoading={sessionLoading} />
+        <div id="page-content" tabIndex={-1}><TeamPage user={user} sessionLoading={sessionLoading} /></div>
       </main>
     );
   }
@@ -126,7 +126,7 @@ function App() {
           sessionLoading={sessionLoading}
           onLogout={handleLogout}
         />
-        <PrivacyPolicyPage />
+        <div id="page-content" tabIndex={-1}><PrivacyPolicyPage /></div>
         <SiteFooter />
       </main>
     );
@@ -140,7 +140,7 @@ function App() {
           sessionLoading={sessionLoading}
           onLogout={handleLogout}
         />
-        <FeatureTrustPage user={user} sessionLoading={sessionLoading} />
+        <div id="page-content" tabIndex={-1}><FeatureTrustPage user={user} sessionLoading={sessionLoading} /></div>
         <SiteFooter />
       </main>
     );
@@ -171,7 +171,7 @@ function App() {
 
 function HeroSection() {
   return (
-    <section className="relative overflow-hidden border-b border-slate-200 bg-white">
+    <section id="page-content" tabIndex={-1} className="relative overflow-hidden border-b border-slate-200 bg-white">
       <div className="mx-auto grid min-h-[92vh] w-full max-w-7xl items-center gap-12 px-6 py-8 sm:px-8 lg:grid-cols-[1fr_0.9fr] lg:px-10">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
