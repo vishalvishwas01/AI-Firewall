@@ -3,13 +3,14 @@ dist
 .vercel
 .test-dist
 *.local
-
+a
 build
 .parcel-cache
 .plasmo
 coverage
 .env
 .env.*
+!.env.example
 *.local
 .vscode/*
 !.vscode/settings.json
