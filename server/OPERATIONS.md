@@ -10,8 +10,18 @@
 ## Retention and deletion
 
 - Improvement events have a MongoDB TTL index at `expiresAt` (90 days), plus a sweep every 15 minutes for deterministic cleanup and operational metrics. TTL deletion is asynchronous.
+- Intelligence release audits and revocation records have TTL indexes plus the same scheduled sweep. `INTELLIGENCE_AUDIT_RETENTION_DAYS` accepts 365 to 3650 days and defaults to 730.
 - `DELETE /improvement-events` immediately deletes the authenticated user's active events; `GET /improvement-events/export` is capped at the latest 1,000 events.
 - Redacted warning logs have no automatic expiry in this release. Account-wide deletion is not an API contract; privacy requests follow the documented support process.
+
+## Intelligence publishing and revocation
+
+- `INTELLIGENCE_PUBLISHER_EMAILS` is a comma-separated, bounded allowlist. Publisher endpoints also require an active organization owner/admin membership.
+- `INTELLIGENCE_SIGNER_MODE=external` confirms that deployment uses reviewed external private-key custody. Any other value disables publisher and revocation operations.
+- The server accepts signed package bytes but never stores or generates signing private keys.
+- A recorded package revocation prevents that version from being returned by latest-package retrieval. Already-active clients require a separately signed replacement or rollback package and a normal verified refresh.
+- Production public roots belong in the extension build environment as `PLASMO_PUBLIC_INTELLIGENCE_ROOT_KEYS`; do not place private signing keys in extension or server environment files.
+- Run the local and target staging procedures in `../docs/INTELLIGENCE_DEPLOYMENT_DRILL.md` before enabling production publication. `npm.cmd run intelligence:drill` exercises server schema, governance, audit, revocation, and rollback readiness without using deployment keys.
 
 ## Backups and recovery
 

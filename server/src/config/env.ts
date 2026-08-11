@@ -1,4 +1,9 @@
 import dotenv from "dotenv"
+import {
+  parseIntelligenceAuditRetentionDays,
+  parseIntelligencePublisherEmails,
+  parseIntelligenceSignerMode
+} from "../modules/intelligence/intelligence.policy.js"
 
 dotenv.config()
 
@@ -17,5 +22,14 @@ export const env = {
   mongodbDbName: process.env.MONGODB_DB_NAME ?? "ai_firewall",
   jwtSecret: process.env.JWT_SECRET!,
   clientOrigin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173",
-  extensionOrigin: process.env.EXTENSION_ORIGIN ?? ""
+  extensionOrigin: process.env.EXTENSION_ORIGIN ?? "",
+  intelligencePublisherEmails: parseIntelligencePublisherEmails(
+    process.env.INTELLIGENCE_PUBLISHER_EMAILS
+  ),
+  intelligenceAuditRetentionDays: parseIntelligenceAuditRetentionDays(
+    process.env.INTELLIGENCE_AUDIT_RETENTION_DAYS
+  ),
+  intelligenceSignerMode: parseIntelligenceSignerMode(
+    process.env.INTELLIGENCE_SIGNER_MODE
+  )
 }

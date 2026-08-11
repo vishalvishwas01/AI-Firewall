@@ -1,10 +1,11 @@
 # HallGuard Signed Intelligence Package Specification
 
-Status: **V2-0 contract design complete; implementation not yet authorized**
+Status: **V2 runtime verification, retrieval, activation, guarded consumption, and publication governance implemented**
 
-This is the shared contract for future HallGuard intelligence distribution. It is
+This is the shared contract for HallGuard intelligence distribution. It is
 used by the server publisher, ML release workflow, and extension package client.
-It does not enable remote updates or change the current bundled runtime.
+Signed packages may now be retrieved, verified, activated, and consumed through
+the guarded local runtime boundary described below.
 
 ## Design Invariants
 
@@ -183,10 +184,77 @@ V2-0 does not implement:
 - extension-store release changes;
 - production accuracy claims.
 
+## Current Implementation Boundary
+
+The server now provides authenticated package and trust-bundle retrieval. The
+extension verifies, stages, activates, and loads package data locally. Runtime
+loading re-checks manifest/signature shape, exact payload paths, payload sizes,
+SHA-256 digests, rule/model schemas, versions, compatibility, and expiry.
+
+Package rule data may supply metadata used to identify reviewed rules associated
+with an existing deterministic detection. It does not add detector code or
+regular expressions. Package model data may replace the local classifier input,
+but classifier output remains observational and does not change the final
+allow/warn/confirm action. Bundled detectors, thresholds, redaction, consent,
+and policy semantics remain authoritative.
+
+Invalid active state restores a valid last-known-good package. If neither stored
+package is valid, the extension uses the bundled runtime.
+
+Reviewed public root keys are supplied through the bounded
+`PLASMO_PUBLIC_INTELLIGENCE_ROOT_KEYS` JSON configuration. If the configuration
+is absent or malformed, background refresh is disabled rather than trusting an
+unknown key. When configured, refresh uses a six-hour alarm with a one-minute
+initial delay and single-flight protection.
+
+Server publication governance requires a content-free release review with
+matching package/trust/signing metadata, exact payload digests, critical recall,
+benign false-positive, redaction, and raw-leak gates, plus distinct approved
+security, privacy, and maintainer reviewers. The package and its immutable audit
+record are inserted in one Mongo transaction.
+
+## Operational Publisher And Refresh Boundary
+
+The server exposes authenticated publisher operations at
+`POST /intelligence/publish` and `GET /intelligence/audits`. Both require the
+existing authenticated user, active organization owner/admin membership, and an
+email present in the bounded `INTELLIGENCE_PUBLISHER_EMAILS` deployment
+allowlist. The publish body contains only the validated package publication and
+content-free release review.
+
+The extension records bounded refresh status locally:
+`disabled`, `refreshing`, `unchanged`, `activated`, or `failed`, with a maximum
+consecutive-failure count of three. Failure status contains no network error
+text. Retries use a five-minute one-shot alarm and stop after three consecutive
+failures; the regular six-hour alarm remains the long-term retry path.
+
+Recorded package revocations are retained as metadata-only governance records and
+are excluded from future latest-package retrieval. The server never edits signed
+package bytes or rewrites an extension's active pointer. An already-active client
+therefore moves away from a revoked package only after receiving and verifying a
+separately signed replacement or rollback package.
+
+## ML Compatibility Boundary
+
+The ML workspace now owns content-free V2 package compatibility fixtures and a
+dependency-free validator. The validator binds the shared manifest fixture to
+the reviewed local runtime artifact and rejects model-version drift, feature
+version/order drift, missing model capabilities, unsupported extension ranges,
+invalid model entry metadata, disabled artifacts, and malformed rollback
+metadata. It validates only metadata and reads no prompt, candidate, dataset row,
+telemetry payload, or customer content.
+
+These checks do not sign, publish, activate, train, or release an artifact. The
+current reviewed model version remains `secret-logistic-b2-limited-v1`, and the
+extension remains responsible for payload digest/signature verification and
+atomic runtime activation.
+
 ## Next Authorized Step
 
-The pure validators, detached digest/signature verification, staged browser
-storage, and insert-only server publication/retrieval primitives are now
-implemented. The next implementation step is **S6 authenticated package
-retrieval plus E8 trust-store loading and last-known-good activation**. Network
-download and activation must remain separately testable and fail closed.
+The ephemeral local replacement/rollback drill and fail-closed deployment
+readiness checks are complete. Provision reviewed root public keys and publisher
+identities in the target staging deployment, then execute and review the staging
+drill in `INTELLIGENCE_DEPLOYMENT_DRILL.md`. This step may not introduce server
+inference, content upload, autonomous activation, unsigned rollback, remote
+policy thresholds, private-key storage in the application, or a new model
+release.

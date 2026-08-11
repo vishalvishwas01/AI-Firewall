@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "fixtureSetVersion": "ml-v2-package-compatibility-v1",
+  "extensionVersion": "0.1.0",
+  "supportedCapabilities": ["rules-v1", "model-v2", "candidate-features-v1"],
+  "artifact": {
+    "schemaVersion": 1,
+    "modelVersion": "secret-logistic-b2-limited-v1",
+    "featureVersion": "candidate-features-v1",
+    "classifierType": "logistic-regression",
+    "status": "active",
+    "featureOrder": [
+      "length", "lengthBucket", "entropy", "letterRatio", "digitRatio",
+      "uppercaseRatio", "lowercaseRatio", "punctuationRatio", "separatorRatio",
+      "classTransitionRatio", "repeatedCharacterRatio", "safeShape",
+      "assignmentContext", "secretKeywordContext", "structuredConfigContext", "pathLike"
+    ]
+  },
+  "cases": [
+    {
+      "caseId": "compatible-active-model-package",
+      "artifactOverrides": {},
+      "package": {
+        "packageVersion": "2026.08.11-v1", "sequence": 2, "status": "active",
+        "minExtensionVersion": "0.1.0", "maxExtensionVersion": "0.1.99",
+        "requiredCapabilities": ["rules-v1", "model-v2", "candidate-features-v1"],
+        "modelVersion": "secret-logistic-b2-limited-v1", "modelEntryPath": "payload/model.json",
+        "modelEntryKind": "model", "modelEntryMediaType": "application/json", "modelEntrySize": 2048,
+        "modelEntrySha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "rollback": {"isRollback": false, "targetPackageVersion": null, "targetSequence": null}
+      },
+      "expectedCompatible": true,
+      "expectedBlockers": []
+    },
+    {
+      "caseId": "model-version-must-bind-to-artifact",
+      "artifactOverrides": {},
+      "package": {
+        "packageVersion": "2026.08.11-v2", "sequence": 3, "status": "active",
+        "minExtensionVersion": "0.1.0", "maxExtensionVersion": "0.1.99",
+        "requiredCapabilities": ["rules-v1", "model-v2", "candidate-features-v1"],
+        "modelVersion": "secret-logistic-b2-limited-v2", "modelEntryPath": "payload/model.json",
+        "modelEntryKind": "model", "modelEntryMediaType": "application/json", "modelEntrySize": 2048,
+        "modelEntrySha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "rollback": {"isRollback": false, "targetPackageVersion": null, "targetSequence": null}
+      },
+      "expectedCompatible": false,
+      "expectedBlockers": ["model-version-mismatch"]
+    },
+    {
+      "caseId": "feature-capability-is-required",
+      "artifactOverrides": {},
+      "package": {
+        "packageVersion": "2026.08.11-v3", "sequence": 4, "status": "active",
+        "minExtensionVersion": "0.1.0", "maxExtensionVersion": "0.1.99",
+        "requiredCapabilities": ["rules-v1", "model-v2"],
+        "modelVersion": "secret-logistic-b2-limited-v1", "modelEntryPath": "payload/model.json",
+        "modelEntryKind": "model", "modelEntryMediaType": "application/json", "modelEntrySize": 2048,
+        "modelEntrySha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "rollback": {"isRollback": false, "targetPackageVersion": null, "targetSequence": null}
+      },
+      "expectedCompatible": false,
+      "expectedBlockers": ["model-capability-contract-mismatch"]
+    },
+    {
+      "caseId": "extension-range-is-enforced",
+      "artifactOverrides": {},
+      "package": {
+        "packageVersion": "2026.08.11-v4", "sequence": 5, "status": "active",
+        "minExtensionVersion": "0.2.0", "maxExtensionVersion": "0.2.99",
+        "requiredCapabilities": ["rules-v1", "model-v2", "candidate-features-v1"],
+        "modelVersion": "secret-logistic-b2-limited-v1", "modelEntryPath": "payload/model.json",
+        "modelEntryKind": "model", "modelEntryMediaType": "application/json", "modelEntrySize": 2048,
+        "modelEntrySha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "rollback": {"isRollback": false, "targetPackageVersion": null, "targetSequence": null}
+      },
+      "expectedCompatible": false,
+      "expectedBlockers": ["extension-version-out-of-range"]
+    },
+    {
+      "caseId": "disabled-artifact-is-rejected",
+      "artifactOverrides": {"status": "disabled"},
+      "package": {
+        "packageVersion": "2026.08.11-v5", "sequence": 6, "status": "active",
+        "minExtensionVersion": "0.1.0", "maxExtensionVersion": "0.1.99",
+        "requiredCapabilities": ["rules-v1", "model-v2", "candidate-features-v1"],
+        "modelVersion": "secret-logistic-b2-limited-v1", "modelEntryPath": "payload/model.json",
+        "modelEntryKind": "model", "modelEntryMediaType": "application/json", "modelEntrySize": 2048,
+        "modelEntrySha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "rollback": {"isRollback": false, "targetPackageVersion": null, "targetSequence": null}
+      },
+      "expectedCompatible": false,
+      "expectedBlockers": ["disabled-artifact"]
+    },
+    {
+      "caseId": "compatible-explicit-rollback",
+      "artifactOverrides": {},
+      "package": {
+        "packageVersion": "2026.08.11-v6", "sequence": 7, "status": "rollback",
+        "minExtensionVersion": "0.1.0", "maxExtensionVersion": "0.1.99",
+        "requiredCapabilities": ["rules-v1", "model-v2", "candidate-features-v1"],
+        "modelVersion": "secret-logistic-b2-limited-v1", "modelEntryPath": "payload/model.json",
+        "modelEntryKind": "model", "modelEntryMediaType": "application/json", "modelEntrySize": 2048,
+        "modelEntrySha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "rollback": {"isRollback": true, "targetPackageVersion": "2026.08.10-v1", "targetSequence": 1}
+      },
+      "expectedCompatible": true,
+      "expectedBlockers": []
+    },
+    {
+      "caseId": "rollback-target-must-precede-release",
+      "artifactOverrides": {},
+      "package": {
+        "packageVersion": "2026.08.11-v7", "sequence": 8, "status": "rollback",
+        "minExtensionVersion": "0.1.0", "maxExtensionVersion": "0.1.99",
+        "requiredCapabilities": ["rules-v1", "model-v2", "candidate-features-v1"],
+        "modelVersion": "secret-logistic-b2-limited-v1", "modelEntryPath": "payload/model.json",
+        "modelEntryKind": "model", "modelEntryMediaType": "application/json", "modelEntrySize": 2048,
+        "modelEntrySha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "rollback": {"isRollback": true, "targetPackageVersion": "2026.08.10-v1", "targetSequence": 8}
+      },
+      "expectedCompatible": false,
+      "expectedBlockers": ["invalid-rollback-metadata"]
+    }
+  ]
+}

@@ -1,4 +1,10 @@
-import { analyze, type AnalysisResult, type AnalyzeInput, type Detection } from "../detection"
+import {
+  analyze,
+  type AnalysisResult,
+  type AnalyzeContext,
+  type AnalyzeInput,
+  type Detection
+} from "../detection"
 import type { ProtectionSettings } from "../storage"
 
 const confidenceBand = (confidence: number): "low" | "medium" | "high" =>
@@ -39,9 +45,10 @@ export type WarningAnalysis = AnalysisResult & { warningDetections: Detection[] 
 
 export const analyzeForWarning = (
   input: AnalyzeInput,
-  settings: ProtectionSettings
+  settings: ProtectionSettings,
+  runtime: Pick<AnalyzeContext, "classifierArtifact" | "ruleSet"> = {}
 ): WarningAnalysis => {
-  const analysis = analyze(input, { settings })
+  const analysis = analyze(input, { settings, ...runtime })
   const warningDetections = enrichDetections(analysis)
   if (analysis.incompleteScan) warningDetections.unshift(incompleteScanDetection(analysis))
   return { ...analysis, warningDetections }

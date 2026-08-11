@@ -179,7 +179,7 @@ Next step: **C5 - Deployment**.
 
 ### C5 — Deployment
 
-Status: **Planned**
+Status: **Planned — held behind the product-hardening audit and production-security gates**
 
 - Configure Vercel root directory as `client/`.
 - Set production API and extension identifiers through environment variables.
@@ -204,3 +204,39 @@ Status: **Planned**
 - `../server/HANDOFF.md` — API, persistence, authentication, and organization contracts.
 - `../ml/HANDOFF.md` — offline model/data work.
 - `../docs/TRUST_ARCHITECTURE.md` and `../docs/REDACTION_STORAGE_SPEC.md` — privacy contracts.
+
+## 8. Product hardening roadmap adoption — 2026-08-11
+
+Status: **Phase 0 / C6 complete — read-only audit verified**
+
+`../docs/Latest_info.md` is adopted as the cross-component hardening direction. Its detailed Phase
+0–12 master specification is canonical where the earlier abbreviated phase list differs. This records
+the plan only; implementation remains stepwise under `../docs/EXECUTION_PROTOCOL.md`.
+
+| Shared phase | Client step | Client responsibility |
+| --- | --- | --- |
+| Phase 0 | C6 | Read-only audit of auth, reports, organizations, protected sites, extension bridges, settings, trust/benchmark UI, dead paths, and unsupported claims. |
+| Phases 1–2 | C7a | Keep classifier/benchmark copy aligned with verified extension behavior; add no client-side detection, scoring, or policy decisions. |
+| Phase 3 | C7 | Organization policy administration, version/conflict states, and managed-precedence explanations after server and extension contracts exist. |
+| Phases 4–5 | C8 | Show only `active`, `stale`, or `protection-unavailable`; never infer uninstall. Document managed-browser anti-bypass honestly. |
+| Phases 6–7 | C8a | Expose only reviewed intelligence/model versions and safe status; never expose signing material or imply signing equals approval. |
+| Phase 8 | C8b | Keep upload claims metadata-only until local document inspection is implemented and verified. |
+| Phase 9 | C9 | Field-level privacy, consent, retention, export, and deletion surfaces; keep redacted reports separate from improvement telemetry. |
+| Phases 10–11 | C10 | Review auth/bridge/DTO/authorization security and add safe reliability states only after bounded contracts exist. |
+| Phase 12 | C11 | Privacy-safe activation, quality, and team-conversion measurement only after review; billing remains out of scope. |
+
+C6 must produce an evidence-backed gap report with exact files, dependencies, contradictions, risks,
+and tests. It must verify classifier copy, upload depth, organization-policy depth, extension health,
+intelligence readiness, deletion behavior, and business claims. It may not change source, copy, APIs,
+analytics, or deployment.
+
+### C6 completion record — 2026-08-11
+
+- Audited all client routes, feature APIs/schemas, organization/report/trust surfaces, and extension bridges.
+- Confirmed there is no central policy UI, extension-health UI, billing, or product analytics contract.
+- Confirmed upload and classifier public copy needs truth-alignment described in
+  `../docs/PHASE_0_REPOSITORY_AUDIT.md`.
+- Verification: client tests 9/9 and typecheck passed; no runtime source was changed.
+
+Next step: **wait for reviewed Phase 1 extension contracts/evidence**. C5 remains planned and C7 may not
+start until its server/extension dependencies are explicitly authorized.

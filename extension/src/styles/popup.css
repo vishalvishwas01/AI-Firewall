@@ -231,6 +231,35 @@ h2 {
   gap: 10px;
 }
 
+.intelligence-update-row {
+  align-items: center;
+  border: 1px solid #e5dfd2;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 20px 1fr 30px;
+  min-height: 56px;
+  padding: 9px 10px;
+}
+
+.intelligence-update-row > svg {
+  color: #375348;
+}
+
+.intelligence-update-row strong {
+  display: block;
+  font-size: 13px;
+}
+
+.intelligence-update-row small {
+  color: #6b665d;
+  display: block;
+  font-size: 12px;
+  line-height: 1.35;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
 .sensitivity-control {
   background: #f8fafc;
   border: 1px solid #e5dfd2;

@@ -105,15 +105,23 @@ test("rejects payload tampering and exposes read-only retrieval helpers", async 
   assert.ok(parsed)
   const tampered = { ...parsed, payloads: { "payload/rules.json": Buffer.from('{"rules":["tampered"]}').toString("base64url") } }
   const db = {
-    collection: () => ({
+    collection: (name: string) => ({
       insertOne: async () => ({ acknowledged: true }),
+      distinct: async () => name === "intelligence_revocations" ? [] : undefined,
       findOne: async (filter: unknown, options?: unknown) => ({ filter, options })
     })
   } as unknown as Db
   await assert.rejects(() => publishIntelligencePackage(db, tampered))
   const latest = await findLatestPublishedIntelligencePackage(db, now)
   const exact = await findPublishedIntelligencePackage(db, "2026.08.10-v1")
-  assert.deepEqual(latest, { filter: { packageId: "hallguard-intelligence", expiresAt: { $gt: now } }, options: { sort: { sequence: -1 } } })
+  assert.deepEqual(latest, {
+    filter: {
+      packageId: "hallguard-intelligence",
+      packageVersion: { $nin: [] },
+      expiresAt: { $gt: now }
+    },
+    options: { sort: { sequence: -1 } }
+  })
   assert.deepEqual(exact, { filter: { packageId: "hallguard-intelligence", packageVersion: "2026.08.10-v1" }, options: undefined })
 })
 

@@ -1,9 +1,10 @@
 import { analyzeNormalizedText, defaultSettings, detectRiskyUploads } from "./detectors"
 import { extractCandidateSignals } from "./candidates"
 import { bundledClassifier, classifyCandidateSignals, loadClassifierArtifact } from "./classifier"
-import { RULE_SET_VERSION, type AnalysisResult, type AnalyzeContext, type AnalyzeInput } from "./contracts"
+import { type AnalysisResult, type AnalyzeContext, type AnalyzeInput } from "./contracts"
 import { normalizeForInspection } from "./normalization"
 import { actionForResults, resultForDetection } from "./policy"
+import { detectionRuleSet } from "./rules"
 import { buildShadowComparison } from "./shadow"
 
 export const analyze = (input: AnalyzeInput, context: AnalyzeContext = {}): AnalysisResult => {
@@ -16,7 +17,8 @@ export const analyze = (input: AnalyzeInput, context: AnalyzeContext = {}): Anal
     ? detectedUploads.filter((detection) => detection.severity === "high")
     : detectedUploads
   const detections = [...textDetections, ...uploadDetections]
-  const results = detections.map(resultForDetection)
+  const ruleSet = context.ruleSet ?? detectionRuleSet
+  const results = detections.map((detection) => resultForDetection(detection, ruleSet))
   const candidateSignals = extractCandidateSignals(normalized.normalizedText)
   const classifier = context.classifierArtifact === undefined
     ? bundledClassifier
@@ -38,7 +40,7 @@ export const analyze = (input: AnalyzeInput, context: AnalyzeContext = {}): Anal
     classifier: classifier.available
       ? { available: true, modelVersion: classifier.artifact.modelVersion }
       : { available: false, reason: classifier.reason },
-    ruleSetVersion: RULE_SET_VERSION,
+    ruleSetVersion: ruleSet.version,
     inspectedBytes: normalized.inspectedBytes,
     incompleteScan: normalized.incompleteScan,
     action

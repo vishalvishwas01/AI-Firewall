@@ -18,6 +18,10 @@ import {
   queueImprovementEvents
 } from "../features/improvementTelemetry"
 import {
+  loadActiveIntelligenceRuntime,
+  type IntelligenceRuntime
+} from "../features/intelligence"
+import {
   addActivityLog,
   getProtectedSites,
   getSettings,
@@ -52,6 +56,7 @@ const sendButtonSelectors = [
 
 const observedOutput = new Set<string>()
 let cachedSettings: ProtectionSettings = defaultSettings
+let cachedIntelligenceRuntime: IntelligenceRuntime = { source: "bundled" }
 let composerBadge: HTMLDivElement | undefined
 let badgeTarget: Element | null = null
 let siteEnabled = false
@@ -81,6 +86,16 @@ const refreshProtectedSites = async () => {
   queueBadgeUpdate()
 }
 
+const refreshIntelligenceRuntime = async () => {
+  cachedIntelligenceRuntime = await loadActiveIntelligenceRuntime()
+  queueBadgeUpdate()
+}
+
+const analyzeWithRuntime = (
+  input: Parameters<typeof analyzeForWarning>[0],
+  settings: ProtectionSettings
+) => analyzeForWarning(input, settings, cachedIntelligenceRuntime)
+
 if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === "local" && changes["ai-firewall-settings"]) {
@@ -88,6 +103,15 @@ if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
     }
     if (areaName === "local" && changes["ai-firewall-protected-sites"]) {
       void refreshProtectedSites()
+    }
+    if (
+      areaName === "local"
+      && (
+        changes["ai-firewall-intelligence-package-active"]
+        || changes["ai-firewall-intelligence-package-last-known-good"]
+      )
+    ) {
+      void refreshIntelligenceRuntime()
     }
   })
 }
@@ -509,7 +533,7 @@ const updateComposerBadge = () => {
   }
 
   badgeTarget = composer
-  const analysis = analyzeForWarning({ text: getElementText(composer) }, cachedSettings)
+  const analysis = analyzeWithRuntime({ text: getElementText(composer) }, cachedSettings)
   const { state, label } = badgeTextForAnalysis(analysis)
 
   badge.dataset.hidden = "false"
@@ -524,6 +548,7 @@ const queueBadgeUpdate = () => {
 
 void refreshSettings()
 void refreshProtectedSites()
+void refreshIntelligenceRuntime()
 
 const showToast = (
   detection: Detection,
@@ -842,7 +867,7 @@ const handleComposerReview = (
     return repeatAllowed
   }
 
-  const analysis = analyzeForWarning({ text }, cachedSettings)
+  const analysis = analyzeWithRuntime({ text }, cachedSettings)
   const detections = analysis.warningDetections
   if (detections.length === 0) {
     void queueImprovementEvents(improvementEventsFromAnalysis(analysis, "allowed")).catch(() => undefined)
@@ -880,7 +905,7 @@ document.addEventListener(
   (event) => {
     if (!siteEnabled) return
     const text = event.clipboardData?.getData("text") ?? ""
-    const analysis = analyzeForWarning({ text }, cachedSettings)
+    const analysis = analyzeWithRuntime({ text }, cachedSettings)
     const detections = analysis.warningDetections
     const top = detections.length > 0 ? topDetection(detections) : undefined
 
@@ -980,7 +1005,7 @@ document.addEventListener(
       size: file.size,
       type: file.type
     }))
-    const analysis = analyzeForWarning({ files }, cachedSettings)
+    const analysis = analyzeWithRuntime({ files }, cachedSettings)
     const detections = analysis.warningDetections
     if (detections.length === 0) return
 
@@ -1024,7 +1049,7 @@ const observeAssistantContent = () => {
     if (observedOutput.has(key)) return
     observedOutput.add(key)
 
-    const analysis = analyzeForWarning({ text }, settings)
+    const analysis = analyzeWithRuntime({ text }, settings)
     const detections = analysis.warningDetections.filter(
       (detection) => detection.category === "prompt-injection" || detection.category === "scam-fraud"
     )

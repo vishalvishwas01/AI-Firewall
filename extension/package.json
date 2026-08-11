@@ -12,6 +12,7 @@
     "test": "vitest run --environment node",
     "benchmark:report": "vitest run --environment node src/firewall/benchmarkReport.cli.test.ts --reporter=verbose",
     "benchmark:shadow": "vitest run --environment node src/features/detection/shadowReport.cli.test.ts src/features/detection/shadowPerformance.test.ts --reporter=verbose --poolOptions.threads.singleThread=true",
+    "intelligence:drill": "vitest run --environment node src/features/intelligence/deploymentDrill.test.ts --reporter=verbose",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -47,6 +48,7 @@
       ]
     },
     "permissions": [
+      "alarms",
       "tabs",
       "storage"
     ]

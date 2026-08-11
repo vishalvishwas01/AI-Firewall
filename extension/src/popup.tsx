@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, CircleSlash, Download, Eraser, Eye, Lock, ShieldCheck, Upload } from "lucide-react"
+import { AlertTriangle, CheckCircle2, CircleSlash, Download, Eraser, Eye, Lock, RefreshCw, ShieldCheck, Upload } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import hallGuardLogo from "data-base64:../assets/icon.png"
@@ -37,6 +37,11 @@ import {
   getQueuedImprovementEvents,
   retryQueuedImprovementEvents
 } from "./features/improvementTelemetry"
+import {
+  getIntelligenceRefreshStatus,
+  runConfiguredIntelligenceRefresh,
+  type IntelligenceRefreshStatus
+} from "./features/intelligence"
 
 type ToggleSettingKey =
   | "sensitiveData"
@@ -150,6 +155,8 @@ const Popup = () => {
   const [queuedImprovementCount, setQueuedImprovementCount] = useState(0)
   const [siteStatus, setSiteStatus] = useState<CurrentSiteStatus | null>(null)
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
+  const [intelligenceStatus, setIntelligenceStatus] = useState<IntelligenceRefreshStatus | null>(null)
+  const [isRefreshingIntelligence, setIsRefreshingIntelligence] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [missedRiskSaved, setMissedRiskSaved] = useState(false)
 
@@ -160,16 +167,32 @@ const Popup = () => {
       getQueuedSyncLogs(),
       getQueuedImprovementEvents(),
       getProtectedSites().then((sites) => getCurrentSiteStatus(sites)),
-      getAuthStatus()
-    ]).then(([nextSettings, nextLogs, nextQueuedSyncLogs, nextImprovementEvents, nextSiteStatus, nextAuthStatus]) => {
+      getAuthStatus(),
+      getIntelligenceRefreshStatus()
+    ]).then(([nextSettings, nextLogs, nextQueuedSyncLogs, nextImprovementEvents, nextSiteStatus, nextAuthStatus, nextIntelligenceStatus]) => {
       setSettings(nextSettings)
       setLogs(nextLogs)
       setQueuedSyncCount(nextQueuedSyncLogs.length)
       setQueuedImprovementCount(nextImprovementEvents.length)
       setSiteStatus(nextSiteStatus)
       setAuthStatus(nextAuthStatus)
+      setIntelligenceStatus(nextIntelligenceStatus)
       setIsLoading(false)
     })
+  }, [])
+
+  useEffect(() => {
+    if (typeof chrome === "undefined" || !chrome.storage?.onChanged) return
+    const listener = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string
+    ) => {
+      if (areaName === "local" && changes["ai-firewall-intelligence-refresh-status"]) {
+        void getIntelligenceRefreshStatus().then(setIntelligenceStatus)
+      }
+    }
+    chrome.storage.onChanged.addListener(listener)
+    return () => chrome.storage.onChanged.removeListener(listener)
   }, [])
 
   const activeCount = useMemo(
@@ -253,6 +276,31 @@ const Popup = () => {
     window.setTimeout(() => setMissedRiskSaved(false), 2200)
   }
 
+  const refreshIntelligence = async () => {
+    setIsRefreshingIntelligence(true)
+    await runConfiguredIntelligenceRefresh()
+    setIntelligenceStatus(await getIntelligenceRefreshStatus())
+    setIsRefreshingIntelligence(false)
+  }
+
+  const intelligenceStatusText = (() => {
+    if (!intelligenceStatus) return "Checking update status"
+    if (intelligenceStatus.state === "disabled") return "Updates are not configured"
+    if (intelligenceStatus.state === "refreshing" || isRefreshingIntelligence) return "Checking for updates"
+    if (intelligenceStatus.state === "activated") {
+      return intelligenceStatus.packageVersion
+        ? `Active package ${intelligenceStatus.packageVersion}`
+        : "Latest package activated"
+    }
+    if (intelligenceStatus.state === "failed") {
+      return `Update check failed (${intelligenceStatus.consecutiveFailures}/3)`
+    }
+    if (intelligenceStatus.lastSuccessAt) {
+      return `Last checked ${formatTime(Date.parse(intelligenceStatus.lastSuccessAt))}`
+    }
+    return "No update check completed"
+  })()
+
   return (
     <main className="popup-shell">
       <section className="status-band">
@@ -321,6 +369,25 @@ const Popup = () => {
 
       <section className="panel trust-panel">
         <h2>Trust controls</h2>
+        <div className="intelligence-update-row">
+          <ShieldCheck size={18} aria-hidden="true" />
+          <span>
+            <strong>Intelligence updates</strong>
+            <small>{intelligenceStatusText}</small>
+          </span>
+          <button
+            className="icon-button"
+            disabled={
+              isRefreshingIntelligence
+              || intelligenceStatus?.state === "refreshing"
+              || intelligenceStatus?.state === "disabled"
+            }
+            onClick={() => void refreshIntelligence()}
+            title="Check for intelligence updates"
+            type="button">
+            <RefreshCw size={16} />
+          </button>
+        </div>
         <div className="sensitivity-control" aria-label="Warning sensitivity">
           {sensitivityOptions.map((option) => (
             <button

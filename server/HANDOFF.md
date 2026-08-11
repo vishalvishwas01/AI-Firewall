@@ -242,7 +242,9 @@ The `docs/NEW_ARCHITECTURE.md` direction is accepted as the V2 design boundary:
 - Detection, feature extraction, classifier inference, and the final allow/warn/block policy decision remain local to the extension.
 - This server may distribute signed intelligence packages and authenticated organization policy, but it must not receive raw prompt content for prediction.
 - Intelligence packages are separate from customer telemetry and redacted logs. Package metadata may include versions, immutable digests, compatibility ranges, expiry, rollback, key rotation, revocation, and audit records.
-- The contract and threat model are now documented for S6. No package endpoint, signing implementation, scheduler, or storage model is authorized until the contract receives the required security, privacy, maintainer, and operations review.
+- The contract and threat model are documented for S6. Authenticated package/trust retrieval and immutable
+  storage are implemented; signing-key custody, publication workflow, scheduler, and audit records remain
+  separately governed.
 
 ### V2-0 completion record — 2026-08-10
 
@@ -299,11 +301,152 @@ Known limitation:
 
 - Publishing is currently an internal repository/service capability; no admin publishing workflow,
   signing-key storage, scheduler, or audit UI was added.
-- The extension refresh flow stores an active package but the detection engine still uses the bundled
-  reviewed runtime. Remote package consumption requires a separate activation/runtime-consumption step.
 
-Next step: **S7/E9 runtime consumption review and guarded active-package integration**, with explicit
-fallback, rollback, and release-governance gates.
+Historical next step: **S7/E9 runtime consumption review and guarded active-package integration**;
+completed by the extension runtime-consumption record dated 2026-08-11.
+
+### S7/E9 extension runtime compatibility record — 2026-08-11
+
+- The extension may consume validated active package rule metadata and classifier artifacts locally.
+- Server endpoints, DTOs, authentication, storage collections, and indexes did not change in this step.
+- The server still receives no prompts, candidates, feature vectors, detection results, files, screenshots,
+  DOM content, or inference requests.
+- Extension verification: typecheck passed, 111 tests passed with 1 existing performance skip, and the
+  production build completed.
+- Server regression suite: 47/47 passed.
+
+Historical next step: **S7 publication governance and release audit records**, coordinated with E10
+reviewed root-key configuration and bounded background refresh; completed in the record below.
+
+### S7 publication governance and release-audit completion record — 2026-08-11
+
+- Added exact release-review validation for package version/sequence, trust-bundle version, signing key,
+  payload digests, benchmark evidence, and three distinct approved security/privacy/maintainer reviewers.
+- Added `intelligence_release_audits` with unique release/package identity indexes and immutable audit
+  documents containing metadata only.
+- Added `publishReviewedIntelligencePackage`, which rejects incomplete or mismatched review evidence and
+  inserts the package plus audit record inside one Mongo transaction.
+- No public publisher route or signing-key storage was added.
+
+Verification:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd test`: 49/49 passed.
+- `npm.cmd run build`: passed.
+- Extension typecheck/build passed; extension tests: 113 passed with 1 existing performance skip.
+- `git diff --check`: passed.
+
+Privacy and security review:
+
+- Release audits contain package metadata, digests, benchmark aggregates, and reviewer identifiers only.
+- Review validation rejects prompts, secrets, snippets, candidates, files, screenshots, and arbitrary
+  executable fields through exact schemas.
+- Publication remains separate from telemetry, logs, organization reporting, and inference.
+
+Known limitation:
+
+- Publisher and audit access require deployment configuration through
+  `INTELLIGENCE_PUBLISHER_EMAILS`; an empty or malformed allowlist fails closed.
+- There is no separate signing-key custody service, reviewer identity directory, or audit retention job
+  yet.
+
+Historical next step: **S8 authenticated publisher workflow and audit read path**, completed in the
+record below.
+
+### S8 authenticated publisher and audit read completion record — 2026-08-11
+
+- Added `POST /intelligence/publish` for authenticated, configured intelligence publishers.
+- Added `GET /intelligence/audits?limit=...` for the same restricted operator group.
+- Publisher access requires an active organization owner/admin membership plus an email in
+  `INTELLIGENCE_PUBLISHER_EMAILS`.
+- Publication requests require exact package/review objects and pass the existing release gates before
+  transactional package-plus-audit insertion.
+- Audit DTOs expose release id, package version/sequence, trust-bundle/signing metadata, payload digests,
+  aggregate benchmark evidence, reviewer decisions, and timestamps only.
+- Added bounded publisher-email parsing and fail-closed authorization tests.
+
+Verification:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd test`: 50/50 passed.
+- `npm.cmd run build`: passed.
+- Extension typecheck/build passed; extension tests: 114 passed with 1 existing performance skip.
+- `git diff --check`: passed.
+
+Privacy and security review:
+
+- No route accepts prompts, candidates, snippets, secrets, files, screenshots, DOM content, feature
+  vectors, or inference requests.
+- Audit reads are restricted to configured operators and omit Mongo internal identifiers.
+- Publication cannot bypass signature/digest/review gates through the HTTP route.
+
+Known limitation:
+
+- The endpoint accepts signed publication bytes but does not custody signing private keys; signing remains
+  an external reviewed release responsibility.
+- Audit retention, revocation operations, and a dedicated reviewer identity provider remain future work.
+
+Next step: **S9 audit retention/revocation controls and deployment key-custody integration**, coordinated
+with E12 user-facing refresh status.
+
+### S9 audit retention and revocation controls completion record - 2026-08-11
+
+- Added immutable `intelligence_revocations` records with exact reason, package identity, replacement
+  requirement, and three distinct approved security/privacy/maintainer decisions.
+- Added restricted publisher-only `POST /intelligence/revocations` and
+  `GET /intelligence/revocations?limit=...` endpoints.
+- Added TTL indexes and the existing scheduled retention sweep for release audits and revocation
+  records, with a bounded configurable retention window (`365` to `3650` days, default `730`).
+- Latest package retrieval excludes package versions with recorded revocations, while signed package
+  bytes remain immutable and are never edited in place.
+- Added fail-closed external signer mode configuration. The server does not store or generate signing
+  private keys; deployment must provide reviewed external key custody and publisher identities.
+
+Verification:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd test`: 52/52 passed, including revocation schema, retention, and revoked-latest exclusion
+  coverage.
+- `npm.cmd run build`: passed.
+- Extension typecheck/build passed; extension tests: 114 passed with 1 existing performance skip.
+- `git diff --check`: passed.
+
+Privacy and security review:
+
+- Revocation and audit records contain package metadata, digests, benchmark aggregates, reviewer
+  identifiers, reason codes, and timestamps only.
+- No route accepts prompts, candidates, snippets, secrets, files, screenshots, DOM content, feature
+  vectors, or inference requests.
+- Revocation cannot mutate signed package bytes or activate an unsigned rollback.
+
+Known limitation:
+
+- A client that already activated a revoked package needs a signed replacement or rollback package
+  and a normal verified refresh; server-side exclusion alone cannot rewrite browser state.
+- Signing-key custody, reviewer identity management, and deployment-specific root/publisher values
+  remain operational responsibilities.
+
+ML V2 package metadata fixtures and cross-component compatibility checks are complete. They validate
+the shared manifest/model metadata boundary without changing publication, retrieval, audit, or
+revocation behavior.
+
+Next step: **deployment root-key/publisher provisioning and a signed replacement/rollback drill**.
+The drill must retain immutable signed package bytes and exercise normal authenticated publication and
+retrieval paths.
+
+### Deployment readiness and local rollback drill record - 2026-08-11
+
+- Added fail-closed deployment readiness blockers for missing external signer custody and an empty
+  publisher allowlist.
+- Added reviewed higher-sequence rollback publication coverage and an `npm.cmd run intelligence:drill`
+  command for schema, governance, repository, revocation, audit, and retrieval checks.
+- The local server drill passed 13/13 checks; the full server suite passed 53/53.
+- Server typecheck and build passed.
+- No signing private key, production root, publisher identity, or deployment credential was created or
+  committed.
+
+Remaining deployment action: provide reviewed publisher identities and external key custody in target
+staging, then complete `../docs/INTELLIGENCE_DEPLOYMENT_DRILL.md` before production publication.
 
 ## 6. Related sources
 
@@ -311,3 +454,44 @@ fallback, rollback, and release-governance gates.
 - `../extension/HANDOFF.md`
 - `../ml/HANDOFF.md`
 - `../docs/REDACTION_STORAGE_SPEC.md`
+
+## 8. Product hardening roadmap adoption — 2026-08-11
+
+Status: **Phase 0 / S10 complete — read-only audit verified**
+
+`../docs/Latest_info.md` is adopted as the cross-component hardening direction. Its detailed Phase
+0–12 master specification is canonical where the abbreviated phase list differs. Existing services are
+to be audited and extended, not rebuilt.
+
+| Shared phase | Server step | Server responsibility |
+| --- | --- | --- |
+| Phase 0 | S10 | Read-only audit of auth, logs, organizations/members, protected sites, telemetry, intelligence, MongoDB, readiness, rate limits, validation, retention, and deletion. |
+| Phases 1–2 | S11a | Preserve the no-inference boundary; serve only sanitized reviewed metadata, never prompts/candidates/raw fixtures or server-side risk scoring. |
+| Phase 3 | S11 | Versioned organization-policy schemas, storage, authorization, migration/conflict behavior, and exact DTO validation. Intelligence packages cannot alter policy. |
+| Phases 4–5 | S12 | Bounded content-free heartbeat ingestion and organization health using `active`, `stale`, and `protection-unavailable`; never infer uninstall. |
+| Phases 6–7 | Existing staging step, then S13 | Preserve signature/digest/replay/rollback/revocation/governance/atomicity controls; distribute reviewed artifacts only and keep inference local. |
+| Phase 8 | Boundary only | Do not add a file-body upload or document-inference endpoint. |
+| Phase 9 | S14 | Field-level data-flow audit and negative tests rejecting prompt, file, secret, candidate, and free-form fields; keep report and improvement stores separate. |
+| Phases 10–11 | S15 | Adversarial auth/IDOR/role/JWT/CORS/query/log/intelligence review plus bounded operational reliability evidence. |
+| Phase 12 | S16 | Reviewed content-free product metrics only; billing and entitlements remain out of scope. |
+
+When S11 is authorized, precedence is `security hard limits -> explicit organization-managed policy ->
+personal settings -> risk assessment`. A model or intelligence package may not override policy,
+consent, redaction, or software hard limits.
+
+S10 must produce an evidence-backed gap report with exact routes/modules/collections, dependencies,
+migration risks, contradictions, and tests. It must answer current policy depth, health support,
+intelligence readiness, accepted data, deletion/retention coverage, and unsupported claims. No schema,
+route, collection, environment, or runtime change is allowed.
+
+### S10 completion record — 2026-08-11
+
+- Audited all routes, schemas, repositories, models, authorization, retention, operational middleware,
+  telemetry, and intelligence publication/retrieval paths.
+- Confirmed organization policy is hostname metadata only, extension health is absent, and account/log
+  deletion and general retention lifecycles are incomplete.
+- Confirmed no raw-prompt inference or file-body endpoint exists.
+- Verification: server tests 53/53 and typecheck passed; no runtime source was changed.
+
+Next step: **wait for Phase 1 detection evidence and the Phase 2 risk contract before S11 policy design**.
+Staging key/publisher provisioning remains separately authorized operational work.

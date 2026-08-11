@@ -518,7 +518,7 @@ After each step, record status, changed contracts, tests, benchmark results, and
 
 ## 9. Future E8 — Signed intelligence package client
 
-Status: **Complete for retrieval, trust-store installation, and storage-only activation; bundled runtime remains active**
+Status: **Complete through guarded local runtime consumption; bundled enforcement remains authoritative**
 
 - Verify signed rule/model packages, hashes, schema compatibility, expiry, and rollback metadata.
 - Install updates atomically beside a built-in last-known-good package.
@@ -583,13 +583,182 @@ Privacy review:
 Known limitation:
 
 - No background scheduler or UI-triggered refresh integration was added yet.
-- The detection engine still consumes the bundled reviewed rule/model runtime; the active remote package
-  is storage-only until a separately reviewed runtime-consumption step.
 - Offline operation remains on the bundled runtime when retrieval is unavailable.
 
-Next step: **S7/E9 guarded runtime consumption of the active package**, including release gating,
-background refresh integration, and proof that invalid or unavailable updates never displace the
-bundled fallback.
+Historical next step: **S7/E9 guarded runtime consumption of the active package**; completed in the
+runtime-consumption record below.
+
+### S7/E9 guarded runtime consumption completion record — 2026-08-11
+
+- Added `loadActiveIntelligenceRuntime`, which revalidates active package metadata, exact payload paths,
+  payload sizes, SHA-256 digests, rule/model schemas, versions, and expiry before local use.
+- Invalid active state restores a valid last-known-good package. Invalid active and fallback state returns
+  the bundled runtime without interrupting detection.
+- The content script caches the validated runtime and refreshes it when active or last-known-good browser
+  storage changes.
+- Validated package rules may supply rule ids, evidence codes, and rule-set version metadata for existing
+  deterministic detections.
+- Validated package models may supply the local classifier artifact. Classifier output remains shadow-only
+  and does not participate in the final enforcement action.
+- Deterministic detectors, severity mapping, thresholds, redaction, user consent, protected-site policy,
+  and final allow/warn/confirm calculation remain bundled and unchanged.
+
+Verification:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd test`: 111 passed, 1 existing performance test skipped.
+- `npm.cmd run build`: completed successfully with the existing Plasmo metadata network/EACCES and SVGO
+  warnings.
+- Server tests: 47/47 passed.
+- Deterministic benchmark remained 18/18 with zero false positives, zero false negatives, complete
+  redaction checks, and complete raw-leak checks.
+
+Privacy and security review:
+
+- Runtime inference remains local. No prompt, candidate, feature vector, detection result, file content,
+  screenshot, or DOM content is sent to the server.
+- Runtime loading is data-only and rejects extra, corrupted, expired, or schema-incompatible package
+  state.
+- A signed model cannot activate classifier enforcement, and signed rules cannot introduce executable
+  detectors or remote regular expressions.
+
+Known limitation:
+
+- Root public keys are still supplied by the refresh caller; reviewed production root-key deployment is
+  not yet wired into the extension release.
+- No bounded background refresh alarm, retry cadence, or user-visible update status exists yet.
+
+Historical next step: **E10 reviewed root-key configuration and bounded background refresh**, followed
+by server publication governance and release-audit records; completed in the record below.
+
+### E10 reviewed root-key configuration and bounded refresh completion record — 2026-08-11
+
+- Added exact, bounded parsing for `PLASMO_PUBLIC_INTELLIGENCE_ROOT_KEYS`; malformed or absent
+  configuration disables refresh fail closed.
+- Added a six-hour Chrome alarm with a one-minute initial delay and single-flight refresh protection.
+- Refresh runs at service-worker startup and after successful external authentication.
+- Added the `alarms` permission; no new content permission or telemetry path was added.
+- Added scheduler/root configuration tests covering malformed roots, disabled refresh, and duplicate
+  in-flight refresh calls.
+
+Verification:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd test`: 113 passed, 1 existing performance test skipped.
+- `npm.cmd run build`: completed successfully with existing Plasmo package-metadata network/EACCES and
+  SVGO warnings.
+- Server typecheck/build passed; server tests remained 49/49.
+- `git diff --check`: passed.
+
+Privacy review:
+
+- Only public Ed25519 root keys are configured; no private signing key or customer content is present.
+- Refresh requests remain authenticated and contain no prompt, candidate, feature, file, screenshot, DOM,
+  or inference data.
+- Network failure or missing root configuration leaves the local active/bundled runtime unchanged.
+
+Known limitation:
+
+- No production root-key values were invented or committed. Deployment must provide reviewed public
+  roots through the build environment.
+- There is no user-facing update status or manual refresh control yet.
+
+Historical next step: **E11 production root-key provisioning and update-status/retry observability**;
+completed in the record below.
+
+### E11 refresh observability completion record — 2026-08-11
+
+- Added local refresh status storage with bounded states: `disabled`, `refreshing`, `unchanged`,
+  `activated`, and `failed`.
+- Stored only attempt/success timestamps, package version/sequence, and a capped consecutive-failure
+  count; network error text is never persisted.
+- Added one-shot five-minute retry alarms, capped at three consecutive failures, while retaining the
+  six-hour periodic alarm as the long-term retry path.
+- Added fail-closed production configuration contract: reviewed public roots use
+  `PLASMO_PUBLIC_INTELLIGENCE_ROOT_KEYS`; absent/malformed values disable refresh.
+
+Verification:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd test`: 114 passed, 1 existing performance test skipped.
+- `npm.cmd run build`: completed successfully with existing Plasmo package-metadata network/EACCES and
+  SVGO warnings.
+- Server typecheck/build passed; server tests: 50/50 passed.
+- `git diff --check`: passed.
+
+Privacy review:
+
+- Refresh status is local browser metadata only and excludes URLs, response bodies, error messages,
+  prompts, candidates, features, files, screenshots, DOM content, and inference results.
+- No private signing key is present in the extension.
+
+Known limitation:
+
+- Production root-key values must still be provisioned through reviewed build/deployment secret management.
+- No popup/status UI has been added yet.
+
+Next step: **E12 user-facing refresh status and operator-triggered refresh**, after production root-key
+provisioning.
+
+### E12 user-facing refresh status and operator-triggered refresh completion record - 2026-08-11
+
+- Added a popup trust-control row showing disabled, checking, unchanged, activated, and failed
+  intelligence refresh states.
+- Added a manual refresh button with single-flight protection and disabled-state handling.
+- Refresh status remains local and bounded to state, timestamps, package version/sequence, and a
+  maximum of three consecutive failures; network error details are never shown or persisted.
+- Popup status updates react to local storage changes, so background alarm refreshes become visible
+  without a popup reload.
+- Serialized the refreshing status transition before invoking the network refresh, preventing a fast
+  response from being overwritten by a stale status write.
+
+Verification:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd test`: 114 passed, 1 existing performance test skipped; refresh scheduler tests cover
+  disabled configuration, single-flight refresh, serialized status, and bounded failure state.
+- `npm.cmd run build`: completed successfully with existing Plasmo package-metadata network/EACCES and
+  SVGO warnings.
+- `git diff --check`: passed.
+
+Privacy review:
+
+- The popup and status storage contain no URLs, response bodies, prompts, candidates, features, files,
+  screenshots, DOM content, or inference results.
+- Manual refresh remains authenticated and fail-closed; local detection never waits for it.
+
+Known limitation:
+
+- Reviewed production root values still must be provisioned through the release/build environment.
+- A revoked already-active package requires a separately signed replacement or rollback package; the
+  client does not accept an unsigned local pointer mutation.
+
+ML V2 package metadata fixtures and cross-component compatibility checks are complete. They bind the
+shared manifest fixture to the current extension runtime artifact without changing package activation,
+classifier policy, or local inference.
+
+Next step: **deployment root-key/publisher provisioning and a signed replacement/rollback drill**.
+The drill must use reviewed signed packages and must not mutate an active package pointer directly.
+
+### Deployment readiness and local rollback drill record - 2026-08-11
+
+- Added an ephemeral shared-root fixture that signs a baseline, replacement, and explicit rollback
+  package under one root/release-key chain.
+- Added `npm.cmd run intelligence:drill`; it activated the replacement, activated a separately signed
+  higher-sequence rollback carrying the baseline rule-set version, and rejected replay of old bytes.
+- Root configuration parsing was exercised with the ephemeral public root only. No private key or
+  deployment value was committed, persisted, or logged.
+
+Verification:
+
+- Extension deployment drill: 1/1 passed.
+- Full extension suite: 115 passed with 1 existing performance test skipped.
+- Extension typecheck: passed.
+- Extension Chrome MV3 build: completed successfully with the existing non-fatal Plasmo package lookup
+  and optional SVGO notices.
+
+Remaining deployment action: provision reviewed public roots in the target staging extension build and
+complete the staging drill in `../docs/INTELLIGENCE_DEPLOYMENT_DRILL.md`.
 
 ## 9. Server S2 compatibility record — 2026-08-06
 
@@ -601,3 +770,48 @@ bundled fallback.
 
 - Server operational hardening added correlation/rate-limit headers and `/ready`; extension request payloads and telemetry consent/storage contracts are unchanged.
 - Rate-limit failures remain safe additive error responses; extension retry/failure handling remains local and fail-closed.
+
+## 11. Product hardening roadmap adoption — 2026-08-11
+
+Status: **Phase 0 / E13 complete — read-only audit verified**
+
+`../docs/Latest_info.md` is adopted as the cross-component hardening direction. Its detailed Phase
+0–12 master specification is canonical. The existing local engine, redaction, queues, classifier
+runtime, and signed intelligence client must be audited and evolved compatibly rather than replaced.
+
+| Shared phase | Extension step | Extension responsibility |
+| --- | --- | --- |
+| Phase 0 | E13 | Read-only audit of interception, sites/events, detection, classifier, policy, warnings, redaction, uploads, storage/queues, auth/bridge, intelligence, and health support. |
+| Phase 1 | E14 | Typed content-free signals and broader benchmark evidence for precision/recall/FPR/FNR, redaction, p50/p95 latency, and warning-fatigue proxies without production claims. |
+| Phase 2 | E15 | Distinct content-free `RiskAssessment` between detector signals and policy, considering category, confidence, severity, destination, completeness, settings, and reviewed context. |
+| Phase 3 | E16 | Enforce authenticated versioned organization policy locally; personal settings cannot weaken managed policy and intelligence cannot override it. |
+| Phases 4–5 | E17 | Bounded content-free health heartbeat and honest managed-browser boundary; never make the extension undeletable or infer uninstall from silence. |
+| Phases 6–7 | Existing staging step, then E18 | Preserve Ed25519/SHA-256/trust/replay/rollback/schema/data-only/atomic/LKG/bundled controls and local model fallback. |
+| Phase 8 | E19 | Separately reviewed bounded local-only parsers; discard extracted content and never upload file bodies. |
+| Phase 9 | E20 | Field-level data-flow audit and leakage-rejection tests; redacted sync and improvement consent remain independent. |
+| Phases 10–11 | E21 | Adversarial page/message/token/DOM/resume/storage/intelligence review and per-site reliability measurement. |
+| Phase 12 | E22 | Only reviewed privacy-safe lifecycle/quality signals; no uninstall inference or billing behavior. |
+
+The required post-audit contract sequence is `DetectionSignal -> RiskAssessment -> PolicyDecision ->
+ALLOW/WARN/REDACT/BLOCK`. None of these contracts may contain raw sensitive values.
+
+E13 must trace whether `secret-logistic-b2-limited-v1` affects authoritative actions/warnings or remains
+observational under every bundled and remote-runtime path. It must identify warning-producing detectors,
+enforced policy, upload depth, health support, intelligence readiness, transmitted/deletable data,
+dead paths, site risks, contradictions, and required tests. No source, fixture, artifact, package, rule,
+model, policy, storage, or bridge change is allowed.
+
+### E13 completion record — 2026-08-11
+
+- Traced interception, deterministic detection, classifier, action mapping, warnings, redaction, upload,
+  queues, bridges, intelligence runtime, and local refresh status.
+- Confirmed `secret-logistic-b2-limited-v1` is active for local scoring/redaction support/telemetry but
+  cannot create warnings or authoritative actions.
+- Confirmed there is no distinct risk engine, managed policy, organization heartbeat, site-adapter layer,
+  browser interception suite, or file-content inspection. Upload decisions use filename suffix only.
+- Verification: extension tests 115 passed with 1 normal-suite performance skip; typecheck passed;
+  dedicated shadow/performance tests 2/2 passed with 10 KiB p95 1.5252 ms and 100 KiB p95 12.6437 ms.
+- Full findings: `../docs/PHASE_0_REPOSITORY_AUDIT.md`. No runtime source was changed.
+
+Next recommended step: **E14 / shared Phase 1 detection reliability and benchmark hardening**, pending
+explicit authorization. Do not start ML retraining, billing, SSO, document parsing, or policy work first.

@@ -1,5 +1,10 @@
 import bundledRules from "./rules.json"
-import { RULE_SET_VERSION, type DetectionRule, type DetectionRuleStrategy } from "./contracts"
+import {
+  RULE_SET_VERSION,
+  type DetectionRule,
+  type DetectionRuleSet,
+  type DetectionRuleStrategy
+} from "./contracts"
 
 const categories = new Set(["sensitive-data", "prompt-injection", "risky-upload", "scam-fraud"])
 const severities = new Set(["low", "medium", "high"])
@@ -36,7 +41,7 @@ export const validateDetectionRule = (value: unknown): DetectionRule => {
   return value as unknown as DetectionRule
 }
 
-export const validateRuleSet = (value: unknown, expectedVersion = RULE_SET_VERSION) => {
+export const validateRuleSet = (value: unknown, expectedVersion = RULE_SET_VERSION): DetectionRuleSet => {
   if (!isRecord(value) || !hasOnlyKeys(value, ["version", "rules"]) || value.version !== expectedVersion || !Array.isArray(value.rules)) {
     throw new Error("Invalid detection rule set")
   }
@@ -47,5 +52,12 @@ export const validateRuleSet = (value: unknown, expectedVersion = RULE_SET_VERSI
 
 export const detectionRuleSet = validateRuleSet(bundledRules)
 
-export const rulesForDetection = (category: DetectionRule["category"], evidence: string[]) =>
-  detectionRuleSet.rules.filter((rule) => rule.status === "active" && rule.category === category && rule.constraints.evidenceLabels.some((label) => evidence.includes(label)))
+export const rulesForDetection = (
+  category: DetectionRule["category"],
+  evidence: string[],
+  ruleSet: DetectionRuleSet = detectionRuleSet
+) => ruleSet.rules.filter((rule) =>
+  rule.status === "active"
+  && rule.category === category
+  && rule.constraints.evidenceLabels.some((label) => evidence.includes(label))
+)

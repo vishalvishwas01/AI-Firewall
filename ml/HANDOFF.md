@@ -563,10 +563,127 @@ publication/retrieval changed no ML artifact, feature order, training state, met
 - The server now authenticates retrieval of signed package/trust-bundle metadata and immutable payload
   bytes; the extension verifies and stores them locally.
 - No ML artifact, training state, feature order, calibration metric, dataset, or release status changed.
-- The extension does not yet consume the remote package in the detection engine, so the active ML artifact
-  remains the separately reviewed local runtime artifact.
+- At the 2026-08-10 retrieval/activation boundary, the extension did not yet consume the remote package
+  in the detection engine. That limitation was superseded by the guarded local runtime-consumption step
+  completed on 2026-08-11 below.
 - ML verification remains unchanged: the existing virtual-environment launcher is access-denied and
   `pytest` is unavailable in that environment.
 
 Next step: **ML V2 package metadata fixtures and compatibility checks**, without producing or releasing
 another model artifact.
+
+### V2 guarded runtime-consumption record — 2026-08-11
+
+- The extension can now load a validated package model artifact for local classifier scoring.
+- Classifier output remains observational and does not change final enforcement; deterministic bundled
+  policy remains authoritative.
+- No model artifact, coefficient, feature order, training state, dataset, calibration metric, approval,
+  or production claim changed.
+- Extension verification passed with 111 tests and 1 existing performance skip.
+- The ML environment verification gap remains: the checked-in virtual-environment launcher is
+  access-denied and `pytest` is unavailable.
+
+Next step: **ML V2 package metadata fixtures and compatibility checks**, coordinated with reviewed root
+key deployment and without training or releasing another artifact.
+
+### V2 E10/S7 governance compatibility record — 2026-08-11
+
+- Extension root-key configuration and refresh scheduling add no ML artifact or feature-contract change.
+- Server release governance records package metadata, payload digests, aggregate benchmark gates, and
+  human reviewer roles without storing training rows or customer content.
+- No retraining, calibration change, coefficient change, dataset change, or production accuracy claim
+  was introduced.
+- ML verification remains limited by the inaccessible virtual environment and unavailable `pytest`.
+
+Next step: **ML V2 package metadata fixtures and compatibility checks**, with no new model release.
+
+### V2 E12/S9 compatibility record - 2026-08-11
+
+- Extension refresh status/manual refresh and server audit retention/revocation controls changed no
+  ML artifact, feature order, training state, dataset, calibration metric, or release status.
+- Revoked package versions are excluded from server latest retrieval, but any replacement or rollback
+  remains a signed release concern and does not authorize retraining or customer-data intake.
+- The next ML implementation step remains content-free package metadata fixtures and compatibility
+  checks for the shared V2 contract.
+
+Verification:
+
+- Server tests: 52/52 passed; extension tests: 114 passed with 1 existing performance skip.
+- Server and extension typechecks passed.
+- No ML environment, artifact, dataset, or Python source changed.
+
+### V2 package metadata compatibility completion record - 2026-08-11
+
+- Added `contracts/intelligence-package-compatibility-fixtures-v1.json`, containing metadata-only
+  accepted and fail-closed model package cases.
+- Added a dependency-free ML validator for extension compatibility range, required capabilities,
+  model entry shape/digest, model-version binding, runtime artifact schema/status, exact feature
+  version/order, and explicit rollback metadata.
+- Added a cross-component check that reads the shared docs manifest fixture and the current extension
+  classifier artifact, then binds both to the reviewed ML model and feature constants.
+- Integrated both checks into `validate_workspace`; no signing, publication, activation, training,
+  coefficient, threshold, dataset, or model release change was introduced.
+
+Verification:
+
+- Focused package compatibility tests: 3/3 passed with the bundled Python runtime.
+- Python compile check passed for `src` and `tests`.
+- Full discovery reached 59 tests but remains incomplete: the bundled runtime lacks the pinned
+  scientific packages, and the existing B2 governance allowlist predates nine committed M4 metadata
+  files. These are pre-existing verification constraints, not failures in the new compatibility cases.
+
+Next step: **deployment root-key/publisher provisioning and a signed replacement/rollback drill**,
+without training or releasing another model artifact.
+
+### Deployment drill compatibility record - 2026-08-11
+
+- The ephemeral extension drill activated a signed replacement and a separately signed,
+  higher-sequence rollback under one test trust chain, then rejected replay.
+- Server readiness/governance drill checks passed, including reviewed rollback metadata and revoked
+  latest-package exclusion.
+- No ML artifact, coefficient, feature order, threshold, dataset, training state, or release status
+  changed.
+
+Remaining deployment action: staging-owned root/publication provisioning and reviewed execution of
+`../docs/INTELLIGENCE_DEPLOYMENT_DRILL.md`; no model training or release is authorized.
+
+## 10. Product hardening roadmap adoption — 2026-08-11
+
+Status: **Phase 0 / M5 complete — read-only audit with verification blocker recorded**
+
+`../docs/Latest_info.md` is adopted as the cross-component hardening direction. Its detailed Phase
+0–12 master specification is canonical. This does not reopen a model release, authorize data intake,
+or permit application, telemetry, or customer content in the ML workspace.
+
+| Shared phase | ML step | ML responsibility |
+| --- | --- | --- |
+| Phase 0 | M5 | Read-only audit of governance, generators/data, features, training, evaluation/calibration, artifact handoff, release gates, compatibility, active-model evidence, and verification gaps. |
+| Phases 1–2 | M6 | Governed aggregate quality/calibration evidence and classifier signal metadata only; extension owns latency, redaction, risk aggregation, and policy. |
+| Phases 3–5 | Compatibility only | No ML policy or health implementation; artifacts cannot alter policy, consent, redaction, thresholds, or health semantics. |
+| Phase 6 | Existing deployment compatibility step, then M7 | Preserve package compatibility and reviewed release metadata; support staging replacement/rollback without training or a new release. |
+| Phase 7 | M8 | Preserve train/evaluate/calibrate/benchmark/three-role-review/package/sign/publish gates and deterministic fallback. |
+| Phase 8 | Future separate review | Local document content must not enter this workspace; any new features/model require an approved corpus plan. |
+| Phase 9 | M9 | Prove manifests/contracts reject telemetry/customer/application content as training or evaluation data. |
+| Phases 10–11 | M10 | Review poisoning, provenance, dependencies, schema confusion, malicious artifacts, authorization, reproducibility, and fail-closed verification. |
+| Phase 12 | Evidence only | Supply reviewed aggregate version/quality evidence; business analytics must not become training data. |
+
+M5 must reconcile the authorized `secret-logistic-b2-limited-v1` M4 record with actual extension use
+and public shadow-only claims without changing status, coefficients, thresholds, or artifacts. It must
+record the scientific dependency and governance-allowlist verification gaps rather than bypass them.
+No downloads, rehydration, generation, feature extraction, training, evaluation, calibration, artifact,
+signing, publication, or release work is allowed during the audit.
+
+### M5 completion record — 2026-08-11
+
+- Audited governance, generators/corpus evidence, features, training/evaluation/calibration, M4 handoff,
+  package compatibility, and current artifact/public-copy alignment.
+- Confirmed the active runtime artifact remains approved but non-enforcing for warnings; production
+  accuracy claims remain prohibited.
+- Verification blocker: `ml/venv` points to an inaccessible CPython 3.14 executable; the available
+  bundled Python is 3.12.13 and lacks pytest and pinned scientific packages. The 16-file/66-test ML suite
+  could not be rerun. No workaround weakened dependency or governance checks.
+- Full findings: `../docs/PHASE_0_REPOSITORY_AUDIT.md`. No data, model, artifact, or Python source changed.
+
+Next step: **no ML execution for Phase 1 unless the reviewed extension benchmark plan requires new
+aggregate evidence**. Repairing the pinned verification environment requires a separately authorized
+ML step.

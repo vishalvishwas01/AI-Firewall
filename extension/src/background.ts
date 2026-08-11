@@ -5,9 +5,15 @@ import {
 } from "./features/storage"
 import type { ProtectedSite } from "./features/storage"
 import { retryQueuedImprovementEvents } from "./features/improvementTelemetry"
+import {
+  initializeIntelligenceRefreshScheduler,
+  runConfiguredIntelligenceRefresh
+} from "./features/intelligence"
 
 void retryQueuedSyncLogs().catch(() => undefined)
 void retryQueuedImprovementEvents().catch(() => undefined)
+initializeIntelligenceRefreshScheduler()
+void runConfiguredIntelligenceRefresh()
 
 const hostnameMatchesSite = (hostname: string, siteHostname: string) =>
   hostname === siteHostname || hostname.endsWith(`.${siteHostname}`)
@@ -122,7 +128,11 @@ if (typeof chrome !== "undefined" && chrome.runtime?.onMessageExternal) {
       "token" in message &&
       typeof message.token === "string"
     ) {
-      void saveAuthToken(message.token).then(() => Promise.all([retryQueuedSyncLogs(), retryQueuedImprovementEvents()])).then(() => {
+      void saveAuthToken(message.token).then(() => Promise.all([
+        retryQueuedSyncLogs(),
+        retryQueuedImprovementEvents(),
+        runConfiguredIntelligenceRefresh()
+      ])).then(() => {
         sendResponse({ ok: true })
       })
       return true

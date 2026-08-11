@@ -44,6 +44,7 @@ from .contracts import (
 )
 from .generators import GENERATOR_DEFINITIONS
 from .governance import audit_workspace
+from .intelligence_package import validate_cross_component_package_metadata, validate_package_compatibility_fixtures
 
 EXPECTED_RUNTIME_PINS = {
     "numpy==2.5.1",
@@ -259,6 +260,8 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
     if catalog_definitions != code_definitions:
         raise ValueError("generator catalog does not exactly match executable definitions")
 
+    validate_package_compatibility_fixtures(root)
+    validate_cross_component_package_metadata(root)
     audit_workspace(root, stage=stage)
 
 

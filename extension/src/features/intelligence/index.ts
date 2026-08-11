@@ -12,6 +12,25 @@ export { clearStagedIntelligencePackage, getStagedIntelligencePackage, saveStage
 export { verifyAndStageIntelligencePackage } from "./staging"
 export { activateStagedIntelligencePackage } from "./activation"
 export { refreshIntelligencePackage } from "./download"
+export { loadActiveIntelligenceRuntime } from "./runtime"
+export {
+  loadConfiguredIntelligenceRootKeys,
+  parseConfiguredIntelligenceRootKeys
+} from "./rootKeys"
+export {
+  initializeIntelligenceRefreshScheduler,
+  intelligenceRefreshAlarmName,
+  intelligenceRefreshInitialDelayMinutes,
+  intelligenceRefreshPeriodMinutes,
+  intelligenceRefreshRetryAlarmName,
+  intelligenceRefreshRetryDelayMinutes,
+  runConfiguredIntelligenceRefresh
+} from "./refreshScheduler"
+export {
+  getIntelligenceRefreshStatus,
+  saveIntelligenceRefreshStatus
+} from "./refreshStatus"
+export type { IntelligenceRefreshStatus } from "./refreshStatus"
 export {
   getActiveIntelligencePackage,
   getLastKnownGoodIntelligencePackage,
@@ -24,6 +43,7 @@ export {
 } from "./trustStore"
 export type { StagedIntelligencePackage } from "./stagedStorage"
 export type { ActiveIntelligencePackage } from "./runtimeStorage"
+export type { IntelligenceRuntime } from "./runtime"
 export type { StoredIntelligenceTrustBundle } from "./trustStore"
 export type {
   IntelligenceCapability,

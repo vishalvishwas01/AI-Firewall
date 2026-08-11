@@ -107,6 +107,56 @@ export type IntelligencePublicationDocument = IntelligencePublicationInput & {
   createdAt: Date
 }
 
+export type IntelligenceReleaseReview = {
+  schemaVersion: 1
+  releaseId: string
+  packageVersion: string
+  packageSequence: number
+  trustBundleVersion: string
+  signingKeyId: string
+  payloadDigests: Record<string, string>
+  benchmarkEvidence: {
+    fixtureSetVersion: string
+    reportSha256: string
+    criticalRecall: number
+    benignFalsePositiveRate: number
+    redactionCoverage: number
+    rawLeakFreeRate: number
+  }
+  approvals: Array<{
+    approvalId: string
+    role: "security" | "privacy" | "maintainer"
+    reviewerId: string
+    decision: "approved" | "rejected"
+    reviewedAt: string
+  }>
+}
+
+export type IntelligenceReleaseAuditDocument = IntelligenceReleaseReview & {
+  packageId: "hallguard-intelligence"
+  publishedAt: string
+  createdAt: Date
+  retentionUntil: Date
+}
+
+export type IntelligenceRevocationReview = {
+  schemaVersion: 1
+  revocationId: string
+  packageVersion: string
+  packageSequence: number
+  reasonCode: "compromised" | "quality-regression" | "privacy-risk" | "administrative"
+  requestedAt: string
+  replacementRequired: true
+  approvals: IntelligenceReleaseReview["approvals"]
+}
+
+export type IntelligenceRevocationDocument = IntelligenceRevocationReview & {
+  packageId: "hallguard-intelligence"
+  status: "recorded"
+  createdAt: Date
+  retentionUntil: Date
+}
+
 export type IntelligenceTrustPublicationInput = {
   bundle: IntelligenceTrustBundle
   signature: IntelligenceSignatureEnvelope

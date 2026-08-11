@@ -41,6 +41,11 @@ export type DetectionRule = {
   status: "active" | "disabled"
 }
 
+export type DetectionRuleSet = {
+  version: string
+  rules: DetectionRule[]
+}
+
 export type RuleReleaseApproval = {
   id: string
   role: "security" | "privacy" | "maintainer"
@@ -180,6 +185,7 @@ export type AnalyzeInput = {
 export type AnalyzeContext = {
   settings?: ProtectionSettings
   classifierArtifact?: unknown
+  ruleSet?: DetectionRuleSet
 }
 
 export type AnalysisResult = {

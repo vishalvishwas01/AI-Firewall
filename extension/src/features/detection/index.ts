@@ -42,6 +42,7 @@ export type {
   DetectionAction,
   DetectionResult,
   DetectionRule,
+  DetectionRuleSet,
   DetectionRuleStrategy,
   LogisticClassifierArtifact,
   RuleConstraints,
