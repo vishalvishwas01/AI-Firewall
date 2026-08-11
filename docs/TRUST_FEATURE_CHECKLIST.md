@@ -175,3 +175,23 @@ Complete this checklist for every new detector, model, storage field, synchroniz
 - [x] Ruff, strict mypy, compilation, pytest, B1 governance, and diff checks pass.
 - [x] No corpus, feature matrix, fit, calibration, report mutation, artifact, extension runtime, storage, permission, or network behavior changed.
 - [x] B1 is complete; B2 was not started and no M3 release blocker was falsely cleared.
+
+## E14 Review Record — 2026-08-11
+
+- [x] Inspection remains local in the browser; E14 adds no content transmission or remote inspection path.
+- [x] The exported `DetectionSignal` contract is metadata-only and excludes raw matches, candidate values, prefixes, hashes, surrounding text, and other input content.
+- [x] `DetectionResult` remains a compatibility alias, and the classifier remains observational/non-enforcing; deterministic rules and the incomplete-scan guard remain authoritative.
+- [x] No storage, queue, consent, permission, network, server DTO, route, organization-policy, model, or artifact contract changed.
+- [x] The deterministic synthetic benchmark expanded from 18 to 26 cases across supported secrets, private financial/contact data, confidential content, injection/scam language, source-code references, placeholders/test credentials, and benign lookalikes.
+- [x] The benchmark gates false-positive rate, false-negative rate, redaction correctness, and raw-leak safety; the isolated local benchmark reports p50/p95 latency and retains its p95 gates.
+- [x] The classifier regression proves observational output stays content-free and cannot change the authoritative action.
+- [x] The 26-case result is a small synthetic regression snapshot, not evidence of production accuracy, representative browser/site reliability, or performance on all languages and real-world prompt distributions.
+
+## E15 Review Record — 2026-08-12
+
+- [x] Local decisions now follow `DetectionSignal -> RiskAssessment -> PolicyDecision`; detector signals no longer contain actions.
+- [x] Risk uses category, severity, confidence, completeness, sensitivity, and bounded destination/protected-site context without retaining hostnames or content.
+- [x] Risk and policy outputs exclude raw matches, candidates, prefixes, hashes, snippets, surrounding text, and file contents.
+- [x] Existing allow/warn/confirm behavior and the incomplete-scan confirmation guard remain compatible; classifier output remains non-enforcing.
+- [x] No storage, telemetry, synchronization, consent, permission, server API/DTO, model, artifact, or organization-policy contract changed.
+- [x] Public default AI sites receive a bounded `public-ai` classification; non-default configured sites remain `unknown`. Approved-internal and managed-policy decisions are deferred to E16.

@@ -1,6 +1,7 @@
 import { array, isoDate, nonEmptyString, nonNegativeInteger, object, oneOf, optional, ResponseValidationError } from "../../lib/schema"
 import { parseReportSummary } from "../reports/schemas"
 import type { Organization, OrganizationMember, OrganizationSitePolicy, OrganizationSummary, OrganizationTrendPoint, OrganizationTrends } from "./types"
+import { parseOrganizationPolicy } from "../sites/schemas"
 
 const roles = ["owner", "admin", "member"] as const
 const statuses = ["active", "invited", "revoked"] as const
@@ -18,8 +19,8 @@ export const parseOrganizationSummary = (value: unknown): OrganizationSummary =>
   return { ...report, activeMembers: nonNegativeInteger(input.activeMembers), invitedMembers: nonNegativeInteger(input.invitedMembers), revokedInvitations: nonNegativeInteger(input.revokedInvitations) }
 }
 export const parseOrganizationSitePolicy = (value: unknown): OrganizationSitePolicy => {
-  const input = object(value, ["id", "hostname", "label", "createdAt", "updatedAt"])
-  return { id: nonEmptyString(input.id, 64), hostname: nonEmptyString(input.hostname, 180), label: nonEmptyString(input.label, 120), createdAt: isoDate(input.createdAt), updatedAt: isoDate(input.updatedAt) }
+  const input = object(value, ["id", "hostname", "label", "createdAt", "updatedAt"], ["policy"])
+  return { id: nonEmptyString(input.id, 64), hostname: nonEmptyString(input.hostname, 180), label: nonEmptyString(input.label, 120), createdAt: isoDate(input.createdAt), updatedAt: isoDate(input.updatedAt), ...(input.policy === undefined ? {} : { policy: parseOrganizationPolicy(input.policy) }) }
 }
 const parseTrendPoint = (value: unknown): OrganizationTrendPoint => {
   const input = object(value, ["date", "totalLogs", "bySeverity", "byEventType", "byFeedback"])

@@ -60,6 +60,8 @@ let cachedIntelligenceRuntime: IntelligenceRuntime = { source: "bundled" }
 let composerBadge: HTMLDivElement | undefined
 let badgeTarget: Element | null = null
 let siteEnabled = false
+let destinationKind: "public-ai" | "unknown" = "unknown"
+let managedPolicy: import("../features/detection").OrganizationPolicy | undefined
 let lastDecision:
   | {
       actionLabel: string
@@ -82,7 +84,10 @@ const refreshSettings = async () => {
 const refreshProtectedSites = async () => {
   const hostname = siteName()
   const sites = await getProtectedSites()
-  siteEnabled = sites.some((site) => hostnameMatchesSite(hostname, site.hostname))
+  const matchedSite = sites.find((site) => hostnameMatchesSite(hostname, site.hostname))
+  siteEnabled = Boolean(matchedSite)
+  destinationKind = matchedSite?.isDefault ? "public-ai" : "unknown"
+  managedPolicy = matchedSite?.managed ? matchedSite.policy : undefined
   queueBadgeUpdate()
 }
 
@@ -94,7 +99,11 @@ const refreshIntelligenceRuntime = async () => {
 const analyzeWithRuntime = (
   input: Parameters<typeof analyzeForWarning>[0],
   settings: ProtectionSettings
-) => analyzeForWarning(input, settings, cachedIntelligenceRuntime)
+) => analyzeForWarning(input, settings, {
+  ...cachedIntelligenceRuntime,
+  riskContext: { destination: destinationKind, protectedSite: siteEnabled },
+  managedPolicy
+})
 
 if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
   chrome.storage.onChanged.addListener((changes, areaName) => {
@@ -495,7 +504,7 @@ const getComposerBadge = () => {
 }
 
 const badgeTextForAnalysis = (analysis: ReturnType<typeof analyzeForWarning>) => {
-  if (analysis.action === "confirm") {
+  if (["confirm", "block", "redact"].includes(analysis.action)) {
     return { state: "block", label: "HallGuard will block" }
   }
 
@@ -656,11 +665,13 @@ const showReviewModal = ({
 
   const redactedText = redactSensitiveText(sourceText, cachedSettings)
   const preview = warningPreview(redactedText)
-  const canUseRedacted = Boolean(
+  const canUseRedacted = analysis.policyDecision.redactionAllowed && Boolean(
     sourceText.trim() && redactedText.trim() && redactedText !== sourceText
   )
   const evidence = formatEvidence(detection)
   const isHigh = detection.severity === "high"
+  const isPolicyBlock = analysis.policyDecision.action === "block"
+  const allowOverride = analysis.policyDecision.allowOverride
   let selectedFeedback: WarningFeedback | undefined
   const backdrop = document.createElement("div")
   backdrop.className = "ai-firewall-modal-backdrop"
@@ -711,9 +722,9 @@ const showReviewModal = ({
             ? `<button type="button" data-action="use-redacted">Use redacted</button>`
             : ""
         }
-        <button type="button" data-action="send-anyway">${escapeHtml(
+        ${allowOverride ? `<button type="button" data-action="send-anyway">${escapeHtml(
           actionLabel === "paste" ? "Paste anyway" : actionLabel === "upload" ? "Keep upload" : "Send anyway"
-        )}</button>
+        )}</button>` : ""}
       </footer>
     </section>
   `
@@ -740,11 +751,11 @@ const showReviewModal = ({
     const logId = queueDetectionLog(
       detection,
       sourceText,
-      isHigh ? "blocked" : "ignored",
+      isHigh || isPolicyBlock ? "blocked" : "ignored",
       selectedFeedback,
       analysis
     )
-    showToast(detection, isHigh ? "blocked" : "ignored", sourceText, logId, analysis)
+    showToast(detection, isHigh || isPolicyBlock ? "blocked" : "ignored", sourceText, logId, analysis)
     close()
     onCancel?.()
   })
@@ -779,7 +790,7 @@ const showReviewModal = ({
   backdrop.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       event.preventDefault()
-      queueDetectionLog(detection, sourceText, isHigh ? "blocked" : "ignored", selectedFeedback, analysis)
+      queueDetectionLog(detection, sourceText, isHigh || isPolicyBlock ? "blocked" : "ignored", selectedFeedback, analysis)
       close()
       onCancel?.()
     }
@@ -909,7 +920,7 @@ document.addEventListener(
     const detections = analysis.warningDetections
     const top = detections.length > 0 ? topDetection(detections) : undefined
 
-    if (top?.severity === "high") {
+    if (top && (top.severity === "high" || analysis.action === "block" || analysis.action === "redact")) {
       event.preventDefault()
       const target = event.target instanceof Element ? event.target : activeComposer()
       showReviewModal({

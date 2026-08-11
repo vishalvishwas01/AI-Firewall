@@ -1,5 +1,6 @@
 import { apiRequest } from "../../lib/http"
 import type { Organization, OrganizationMember, OrganizationRole, OrganizationSitePolicy, OrganizationSummary, OrganizationTrends } from "./types"
+import type { OrganizationPolicy } from "../sites/types"
 import { parseMemberResponse, parseOrganizationCreatedResponse, parseOrganizationResponse, parseOrganizationSiteResponse, parseOrganizationSitesResponse, parseOrganizationsResponse, parseTrendsResponse } from "./schemas"
 
 export const getOrganizations = () => apiRequest<{ organizations: Organization[] }>("/orgs", {}, parseOrganizationsResponse)
@@ -11,5 +12,5 @@ export const updateOrganizationMemberRole = (organizationId: string, memberId: s
 export const removeOrganizationMember = (organizationId: string, memberId: string) => apiRequest<void>(`/orgs/${organizationId}/members/${memberId}`, { method: "DELETE" })
 export const revokeOrganizationInvitation = (organizationId: string, memberId: string) => apiRequest<{ member: OrganizationMember }>(`/orgs/${organizationId}/invitations/${memberId}/revoke`, { method: "POST" }, parseMemberResponse)
 export const getOrganizationSitePolicies = (organizationId: string) => apiRequest<{ sites: OrganizationSitePolicy[] }>(`/orgs/${organizationId}/sites`, {}, parseOrganizationSitesResponse)
-export const createOrganizationSitePolicy = (organizationId: string, hostname: string, label: string) => apiRequest<{ site: OrganizationSitePolicy }>(`/orgs/${organizationId}/sites`, { method: "POST", body: JSON.stringify({ hostname, label }) }, parseOrganizationSiteResponse)
+export const createOrganizationSitePolicy = (organizationId: string, hostname: string, label: string, policy?: OrganizationPolicy) => apiRequest<{ site: OrganizationSitePolicy }>(`/orgs/${organizationId}/sites`, { method: "POST", body: JSON.stringify({ hostname, label, ...(policy ? { policy } : {}) }) }, parseOrganizationSiteResponse)
 export const deleteOrganizationSitePolicy = (organizationId: string, siteId: string) => apiRequest<void>(`/orgs/${organizationId}/sites/${siteId}`, { method: "DELETE" })

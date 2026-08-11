@@ -457,7 +457,7 @@ staging, then complete `../docs/INTELLIGENCE_DEPLOYMENT_DRILL.md` before product
 
 ## 8. Product hardening roadmap adoption — 2026-08-11
 
-Status: **Phase 0 / S10 complete — read-only audit verified**
+Status: **Phase 3 / S11 in progress — versioned organization policy**
 
 `../docs/Latest_info.md` is adopted as the cross-component hardening direction. Its detailed Phase
 0–12 master specification is canonical where the abbreviated phase list differs. Existing services are

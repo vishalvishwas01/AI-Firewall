@@ -6,6 +6,7 @@ export type PublicReportSite = ReturnType<typeof toPublicSite> & {
   managed: boolean
   organizationId?: string
   organizationName?: string
+  policy?: OrganizationSitePolicyDocument["policy"]
 }
 
 export const toPublicSite = (site: ReportSiteDocument) => ({
@@ -39,7 +40,8 @@ export const mergeVisibleSites = (
       }),
       managed: true,
       organizationId,
-      organizationName: organizationNames.get(organizationId) ?? "Organization"
+      organizationName: organizationNames.get(organizationId) ?? "Organization",
+      ...(policy.policy ? { policy: policy.policy } : {})
     })
   }
   return [...merged.values()].sort((a, b) => Number(b.isDefault) - Number(a.isDefault) || a.label.localeCompare(b.label))

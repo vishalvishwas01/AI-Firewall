@@ -3,7 +3,8 @@ import type {
   DetectionCategory,
   FileSummary,
   ProtectionSettings,
-  Severity
+  Severity,
+  OrganizationPolicy
 } from "../../firewall/types"
 
 export const MAX_INSPECTION_BYTES = 256 * 1024
@@ -77,9 +78,16 @@ export type RuleReleaseManifest = {
   approvals: RuleReleaseApproval[]
 }
 
-export type DetectionAction = "allow" | "warn" | "confirm"
+export type DetectionAction = "allow" | "warn" | "confirm" | "redact" | "block"
 
-export type DetectionResult = {
+export type DestinationKind = "public-ai" | "approved-internal" | "unknown"
+
+/**
+ * Content-free signal emitted by a detector before risk/policy
+ * aggregation. It intentionally contains metadata only: never a match,
+ * candidate value, prefix, hash, or surrounding text.
+ */
+export type DetectionSignal = {
   category: DetectionCategory
   severity: Severity
   confidence: number
@@ -88,8 +96,10 @@ export type DetectionResult = {
   evidenceCodes: string[]
   modelVersion?: string
   ruleSetVersion: string
-  action: DetectionAction
 }
+
+/** Backward-compatible name retained for existing consumers. */
+export type DetectionResult = DetectionSignal
 
 export type CandidateFeatures = {
   length: number
@@ -186,11 +196,38 @@ export type AnalyzeContext = {
   settings?: ProtectionSettings
   classifierArtifact?: unknown
   ruleSet?: DetectionRuleSet
+  riskContext?: {
+    destination: DestinationKind
+    protectedSite: boolean
+  }
+  managedPolicy?: OrganizationPolicy
+}
+
+export type RiskAssessment = {
+  score: number
+  severity: "none" | Severity
+  categories: DetectionCategory[]
+  confidence: number
+  contentRisk: number
+  destinationRisk: number
+  contextRisk: number
+  detectionComplete: boolean
+  signalCount: number
+  evidenceCodes: string[]
+}
+
+export type PolicyDecision = {
+  action: DetectionAction
+  riskScore: number
+  reasonCodes: string[]
+  allowOverride: boolean
+  redactionAllowed: boolean
+  policyVersion?: number
 }
 
 export type AnalysisResult = {
   detections: Detection[]
-  results: DetectionResult[]
+  results: DetectionSignal[]
   candidateSignals: CandidateSignal[]
   candidateClassifications: CandidateClassification[]
   shadowComparison: ShadowComparison
@@ -198,5 +235,8 @@ export type AnalysisResult = {
   ruleSetVersion: string
   inspectedBytes: number
   incompleteScan: boolean
+  riskAssessment: RiskAssessment
+  policyDecision: PolicyDecision
+  /** Backward-compatible action derived only from policyDecision. */
   action: DetectionAction
 }

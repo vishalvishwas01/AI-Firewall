@@ -300,11 +300,16 @@ router.post("/:id/sites", async (req: AuthenticatedRequest, res, next) => {
       res.status(400).json({ error: input.error })
       return
     }
-    const { hostname, label } = input
+    const { hostname, label, policy } = input
 
     const db = await getDb()
     const now = new Date()
     const policies = organizationSitePoliciesCollection(db)
+    const existingPolicy = await policies.findOne({ organizationId: access.org._id, hostname })
+    if (existingPolicy?.policy && policy.version <= existingPolicy.policy.version) {
+      res.status(409).json({ error: "Organization policy version conflict" })
+      return
+    }
     await policies.updateOne(
       { organizationId: access.org._id, hostname },
       {
@@ -315,7 +320,8 @@ router.post("/:id/sites", async (req: AuthenticatedRequest, res, next) => {
         },
         $set: {
           label,
-          updatedAt: now
+          updatedAt: now,
+          policy
         }
       },
       { upsert: true }

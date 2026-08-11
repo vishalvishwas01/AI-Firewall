@@ -26,6 +26,35 @@ export const normalizeSiteLabel = (value: unknown) =>
 
 export const routeParam = (value: string | string[]) => Array.isArray(value) ? value[0] ?? "" : value
 
+const policyCategories = ["all", "sensitive-data", "prompt-injection", "risky-upload", "scam-fraud"] as const
+const policySeverities = ["low", "medium", "high"] as const
+const policyActions = ["warn", "redact", "block"] as const
+const policyDestinations = ["any", "public-ai", "approved-internal", "unknown"] as const
+
+export const defaultOrganizationPolicy = {
+  schemaVersion: 1 as const, version: 1, category: "all" as const, minimumSeverity: "high" as const,
+  action: "block" as const, destination: "any" as const, allowOverride: false, redactionAllowed: true
+}
+
+type ParsedOrganizationPolicy = {
+  schemaVersion: 1
+  version: number
+  category: (typeof policyCategories)[number]
+  minimumSeverity: (typeof policySeverities)[number]
+  action: (typeof policyActions)[number]
+  destination: (typeof policyDestinations)[number]
+  allowOverride: boolean
+  redactionAllowed: boolean
+}
+
+export const parseOrganizationPolicy = (value: unknown): ParsedOrganizationPolicy | { error: string } => {
+  const body = exactObject(value, ["schemaVersion", "version", "category", "minimumSeverity", "action", "destination", "allowOverride", "redactionAllowed"])
+  if (body.schemaVersion !== 1 || typeof body.version !== "number" || !Number.isInteger(body.version) || body.version < 1) return { error: "Invalid organization policy" }
+  if (!isOneOf(body.category, policyCategories) || !isOneOf(body.minimumSeverity, policySeverities) || !isOneOf(body.action, policyActions) || !isOneOf(body.destination, policyDestinations) || typeof body.allowOverride !== "boolean" || typeof body.redactionAllowed !== "boolean") return { error: "Invalid organization policy" }
+  if (body.action === "redact" && !body.redactionAllowed) return { error: "Redaction policy must allow redaction" }
+  return { schemaVersion: 1 as const, version: body.version, category: body.category, minimumSeverity: body.minimumSeverity, action: body.action, destination: body.destination, allowOverride: body.allowOverride, redactionAllowed: body.redactionAllowed }
+}
+
 export const isOneOf = <T extends readonly string[]>(value: unknown, allowed: T): value is T[number] =>
   typeof value === "string" && allowed.includes(value)
 
@@ -36,10 +65,12 @@ export const parseOrganizationInput = (value: unknown) => {
 }
 
 export const parseOrganizationSiteInput = (value: unknown) => {
-  const body = exactObject(value, ["hostname", "label"], "Invalid organization site request")
+  const body = exactObject(value, ["hostname", "label"], ["policy"], "Invalid organization site request")
   const hostname = normalizeHostname(body.hostname)
   const label = normalizeSiteLabel(body.label)
-  return hostname && hostname.length <= 180 && label && label.length <= 80 && hostname.includes(".") ? { hostname, label } : { error: "Enter a domain and website name" }
+  if (!(hostname && hostname.length <= 180 && label && label.length <= 80 && hostname.includes("."))) return { error: "Enter a domain and website name" }
+  const policy = body.policy === undefined ? defaultOrganizationPolicy : parseOrganizationPolicy(body.policy)
+  return "error" in policy ? policy : { hostname, label, policy }
 }
 
 export const parseMemberInput = (value: unknown) => {

@@ -29,6 +29,16 @@ export type OrganizationSitePolicyDocument = {
   label: string
   createdAt: Date
   updatedAt: Date
+  policy?: {
+    schemaVersion: 1
+    version: number
+    category: "all" | "sensitive-data" | "prompt-injection" | "risky-upload" | "scam-fraud"
+    minimumSeverity: "low" | "medium" | "high"
+    action: "warn" | "redact" | "block"
+    destination: "any" | "public-ai" | "approved-internal" | "unknown"
+    allowOverride: boolean
+    redactionAllowed: boolean
+  }
 }
 
 export const organizationsCollection = (db: Db): Collection<OrganizationDocument> =>

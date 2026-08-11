@@ -8,6 +8,17 @@ export type DetectionCategory =
   | "risky-upload"
   | "scam-fraud"
 
+export type OrganizationPolicy = {
+  schemaVersion: 1
+  version: number
+  category: DetectionCategory | "all"
+  minimumSeverity: Severity
+  action: "warn" | "redact" | "block"
+  destination: "any" | "public-ai" | "approved-internal" | "unknown"
+  allowOverride: boolean
+  redactionAllowed: boolean
+}
+
 export type UserDecision = "warned" | "blocked" | "ignored" | "allowed" | "redacted-copied"
 
 export type WarningFeedback = "correct-warning" | "false-alarm" | "missed-risk"
@@ -30,6 +41,7 @@ export type ProtectedSite = {
   managed?: boolean
   organizationId?: string
   organizationName?: string
+  policy?: OrganizationPolicy
 }
 
 export type Detection = {

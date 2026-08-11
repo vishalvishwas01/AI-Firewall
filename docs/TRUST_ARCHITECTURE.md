@@ -15,13 +15,14 @@ This document explains why HallGuard can inspect sensitive AI interactions witho
 ## Data Flow
 
 1. The content script observes an action on a protected HTTPS page.
-2. Detection rules run inside the extension.
-3. The warning UI explains the category, severity, and evidence labels.
-4. Before history or queue storage, sensitive values are replaced with defined placeholders.
-5. The redacted local record is capped at 240 characters and local history is capped at 50 records.
-6. If `Redacted report sync` is enabled and the user is authenticated, the redacted record enters a queue capped at 100 records.
-7. The server validates the snippet independently and rejects covered raw values before MongoDB storage.
-8. Individual reports are scoped to the authenticated user. Organization reporting returns aggregate metadata only.
+2. Detection rules emit content-free signals inside the extension.
+3. A local risk assessment aggregates signal severity/confidence, scan completeness, sensitivity, and bounded destination/protected-site context; local policy then selects the action.
+4. The warning UI explains the category, severity, and evidence labels.
+5. Before history or queue storage, sensitive values are replaced with defined placeholders.
+6. The redacted local record is capped at 240 characters and local history is capped at 50 records.
+7. If `Redacted report sync` is enabled and the user is authenticated, the redacted record enters a queue capped at 100 records.
+8. The server validates the snippet independently and rejects covered raw values before MongoDB storage.
+9. Individual reports are scoped to the authenticated user. Organization reporting returns aggregate metadata only.
 
 Improvement telemetry follows a separate path:
 
@@ -102,12 +103,14 @@ As of 2026-08-01, HallGuard includes local layered-engine contracts and a shadow
 - local Unicode and zero-width normalization;
 - a UTF-8-aware 256 KiB bounded analysis API;
 - bounded candidate extraction and derived numerical/bucketed features;
-- risk/action result contracts and sensitivity thresholds.
+- distinct content-free detection-signal, risk-assessment, and policy-decision contracts plus sensitivity thresholds;
 - strict artifact validation, deterministic TypeScript inference, and deterministic-rule fallback.
 
 Candidate/classification outputs contain no candidate value, literal prefix, hash, or surrounding text. No new fields leave the browser, and existing report storage is unchanged. The bootstrap artifact is not an accuracy claim and cannot create warnings or actions.
 
 The content script now consumes layered deterministic results for composer, paste, send, upload-metadata, and relevant assistant-output checks. High-risk actions remain confirmation-gated. Content above the 256 KiB inspection limit produces a local incomplete-scan warning and requires confirmation for paste/send. The classifier remains shadow-only and is excluded from warning decisions.
+
+As of E15, deterministic signals no longer carry an action. `analyze()` routes them through a local `RiskAssessment` and then `PolicyDecision`; the top-level action is a compatibility projection of that decision. Risk metadata contains only bounded scores, categories, confidence, evidence codes, completeness, counts, sensitivity effects, and destination/protected-site classifications. Default AI sites are classified as public AI; other configured sites remain unknown until reviewed managed policy exists. Existing allow/warn/confirm behavior is intentionally preserved, and organization policy remains deferred to E16.
 
 As of E5, users may separately opt in to privacy-safe improvement telemetry. This adds no classifier enforcement and does not change report synchronization. The telemetry contract is numeric/bucketed and exact-field allowlisted; raw or redacted prompt snippets, candidate values, literal prefixes, exact hashes, surrounding text, file bodies, screenshots, hostnames, and behavior histories are not accepted.
 

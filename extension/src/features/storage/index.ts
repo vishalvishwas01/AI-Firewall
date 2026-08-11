@@ -16,6 +16,7 @@ export {
 export type {
   ActivityLog,
   ProtectedSite,
+  OrganizationPolicy,
   ProtectionSettings,
   SensitivityMode,
   UserDecision,

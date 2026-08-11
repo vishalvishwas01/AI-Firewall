@@ -140,5 +140,59 @@ export const detectionBenchmarkCases: DetectionBenchmarkCase[] = [
     id: "normal-ai-request",
     text: "Summarize this public blog post into three bullet points.",
     shouldFlag: false
+  },
+  {
+    id: "access-token-assignment",
+    text: "access_token=abcd1234abcd1234",
+    shouldFlag: true,
+    expectedCategory: "sensitive-data",
+    expectedMinSeverity: "high",
+    expectedRedactedSnippet: "access_token=[REDACTED]",
+    forbiddenRedactedValues: ["abcd1234abcd1234"]
+  },
+  {
+    id: "aws-access-key",
+    text: "AWS credential AKIA1234567890ABCDEF",
+    shouldFlag: true,
+    expectedCategory: "sensitive-data",
+    expectedMinSeverity: "high",
+    expectedRedactedSnippet: "AWS credential [REDACTED_TOKEN]",
+    forbiddenRedactedValues: ["AKIA1234567890ABCDEF"]
+  },
+  {
+    id: "benign-test-key-placeholder",
+    text: "JWT_SECRET=YOUR_SECRET_HERE is a documentation placeholder.",
+    shouldFlag: false
+  },
+  {
+    id: "benign-source-code-reference",
+    text: "const client = new ApiClient(process.env.API_KEY);",
+    shouldFlag: false
+  },
+  {
+    id: "benign-short-test-token",
+    text: "Use sk-test-123 in the local unit-test fixture.",
+    shouldFlag: false
+  },
+  {
+    id: "private-financial-contact",
+    text: "Private billing contact: finance-team@example.com, phone +1 415 555 0123.",
+    shouldFlag: true,
+    expectedCategory: "sensitive-data",
+    expectedMinSeverity: "medium",
+    expectedRedactedSnippet: "Private billing contact: [REDACTED_EMAIL], phone [REDACTED_PHONE]",
+    forbiddenRedactedValues: ["finance-team@example.com", "+1 415 555 0123"]
+  },
+  {
+    id: "benign-documentation-injection-discussion",
+    text: "Explain why prompt injection defenses should reject attempts to reveal hidden instructions.",
+    shouldFlag: true,
+    expectedCategory: "prompt-injection",
+    expectedMinSeverity: "medium"
+  },
+  {
+    id: "benign-public-code-review",
+    text: "Review this public TypeScript function and suggest a clearer name for the parameter.",
+    shouldFlag: false
   }
 ]

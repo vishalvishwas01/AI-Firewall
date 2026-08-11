@@ -207,7 +207,7 @@ Status: **Planned — held behind the product-hardening audit and production-sec
 
 ## 8. Product hardening roadmap adoption — 2026-08-11
 
-Status: **Phase 0 / C6 complete — read-only audit verified**
+Status: **Phase 3 / C7 in progress — organization policy administration**
 
 `../docs/Latest_info.md` is adopted as the cross-component hardening direction. Its detailed Phase
 0–12 master specification is canonical where the earlier abbreviated phase list differs. This records

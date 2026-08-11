@@ -6,7 +6,7 @@ import type {
   ShadowComparison
 } from "./contracts"
 
-const actionRank: Record<DetectionAction, number> = { allow: 0, warn: 1, confirm: 2 }
+const actionRank: Record<DetectionAction, number> = { allow: 0, warn: 1, redact: 2, confirm: 2, block: 3 }
 
 export const classifierShadowAction = (
   classifications: CandidateClassification[]

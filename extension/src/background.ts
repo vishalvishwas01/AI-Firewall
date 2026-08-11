@@ -3,7 +3,7 @@ import {
   retryQueuedSyncLogs,
   saveProtectedSites
 } from "./features/storage"
-import type { ProtectedSite } from "./features/storage"
+import type { OrganizationPolicy, ProtectedSite } from "./features/storage"
 import { retryQueuedImprovementEvents } from "./features/improvementTelemetry"
 import {
   initializeIntelligenceRefreshScheduler,
@@ -17,6 +17,14 @@ void runConfiguredIntelligenceRefresh()
 
 const hostnameMatchesSite = (hostname: string, siteHostname: string) =>
   hostname === siteHostname || hostname.endsWith(`.${siteHostname}`)
+
+const policyFromMessage = (value: unknown): OrganizationPolicy | undefined => {
+  if (!value || typeof value !== "object") return undefined
+  const policy = value as Record<string, unknown>
+  const keys = ["schemaVersion", "version", "category", "minimumSeverity", "action", "destination", "allowOverride", "redactionAllowed"]
+  if (Object.keys(policy).some((key) => !keys.includes(key)) || policy.schemaVersion !== 1 || typeof policy.version !== "number" || !Number.isInteger(policy.version) || policy.version < 1 || !["all", "sensitive-data", "prompt-injection", "risky-upload", "scam-fraud"].includes(String(policy.category)) || !["low", "medium", "high"].includes(String(policy.minimumSeverity)) || !["warn", "redact", "block"].includes(String(policy.action)) || !["any", "public-ai", "approved-internal", "unknown"].includes(String(policy.destination)) || typeof policy.allowOverride !== "boolean" || typeof policy.redactionAllowed !== "boolean" || (policy.action === "redact" && !policy.redactionAllowed)) return undefined
+  return policy as OrganizationPolicy
+}
 
 const protectedSitesFromMessage = (value: unknown): ProtectedSite[] => {
   if (!Array.isArray(value)) return []
@@ -32,6 +40,8 @@ const protectedSitesFromMessage = (value: unknown): ProtectedSite[] => {
     ) {
       return []
     }
+    const policy = "policy" in site ? policyFromMessage(site.policy) : undefined
+    if ("policy" in site && !policy) return []
 
     return [{
       hostname: site.hostname,
@@ -44,7 +54,8 @@ const protectedSitesFromMessage = (value: unknown): ProtectedSite[] => {
         : {}),
       ...("organizationName" in site && typeof site.organizationName === "string"
         ? { organizationName: site.organizationName }
-        : {})
+        : {}),
+      ...(policy ? { policy } : {})
     }]
   })
 }

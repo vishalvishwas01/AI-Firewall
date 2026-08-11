@@ -24,5 +24,6 @@ export const toPublicSitePolicy = (site: OrganizationSitePolicyDocument) => ({
   hostname: site.hostname,
   label: site.label,
   createdAt: site.createdAt.toISOString(),
-  updatedAt: site.updatedAt.toISOString()
+  updatedAt: site.updatedAt.toISOString(),
+  ...(site.policy ? { policy: site.policy } : {})
 })

@@ -5,9 +5,9 @@ import { analyze } from "."
 
 const benchmarkEnabled = process.env.npm_lifecycle_event === "benchmark:shadow"
 
-const p95 = (values: number[]) => {
+const percentile = (values: number[], quantile: number) => {
   const sorted = [...values].sort((left, right) => left - right)
-  return sorted[Math.ceil(sorted.length * 0.95) - 1] ?? 0
+  return sorted[Math.ceil(sorted.length * quantile) - 1] ?? 0
 }
 
 const timingsFor = (text: string, iterations = 50) => {
@@ -20,12 +20,23 @@ const timingsFor = (text: string, iterations = 50) => {
 }
 
 describe("E6 isolated shadow performance", () => {
-  it.runIf(benchmarkEnabled)("meets representative local p95 latency gates", () => {
+  it.runIf(benchmarkEnabled)("reports p50/p95 and meets representative local p95 latency gates", () => {
     const tenKiB = "ordinary developer text ".repeat(427).slice(0, 10 * 1024)
     const hundredKiB = "ordinary developer text ".repeat(4267).slice(0, 100 * 1024)
-    const shortP95 = p95(timingsFor(tenKiB))
-    const longP95 = p95(timingsFor(hundredKiB))
-    console.log(JSON.stringify({ tenKiBP95Ms: shortP95, hundredKiBP95Ms: longP95 }))
+    const shortTimings = timingsFor(tenKiB)
+    const longTimings = timingsFor(hundredKiB)
+    const shortP50 = percentile(shortTimings, 0.5)
+    const shortP95 = percentile(shortTimings, 0.95)
+    const longP50 = percentile(longTimings, 0.5)
+    const longP95 = percentile(longTimings, 0.95)
+    console.log(JSON.stringify({
+      tenKiBP50Ms: shortP50,
+      tenKiBP95Ms: shortP95,
+      hundredKiBP50Ms: longP50,
+      hundredKiBP95Ms: longP95
+    }))
+    expect(shortP50).toBeLessThanOrEqual(shortP95)
+    expect(longP50).toBeLessThanOrEqual(longP95)
     expect(shortP95).toBeLessThan(10)
     expect(longP95).toBeLessThan(25)
   })

@@ -7,6 +7,6 @@ export const sendSitesToExtension = async (sites: ReportSite[]) => {
   if (!extensionId || !sendMessage) return
   await new Promise<void>((resolve) => sendMessage(extensionId, {
     type: "AI_FIREWALL_PROTECTED_SITES",
-    sites: sites.map(({ hostname, label, isDefault, source, managed, organizationId, organizationName }) => ({ hostname, label, isDefault, source, managed, organizationId, organizationName }))
+    sites: sites.map(({ hostname, label, isDefault, source, managed, organizationId, organizationName, policy }) => ({ hostname, label, isDefault, source, managed, organizationId, organizationName, policy }))
   }, () => resolve()))
 }

@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 
-import { isOneOf, normalizeEmail, normalizeHostname, normalizeName, normalizeSiteLabel, organizationRoles, parseMemberInput, parseOrganizationInput, parseOrganizationSiteInput, parseRoleInput, parseTrendQuery } from "./organizations.schemas.js"
+import { defaultOrganizationPolicy, isOneOf, normalizeEmail, normalizeHostname, normalizeName, normalizeSiteLabel, organizationRoles, parseMemberInput, parseOrganizationInput, parseOrganizationPolicy, parseOrganizationSiteInput, parseRoleInput, parseTrendQuery } from "./organizations.schemas.js"
 
 test("normalizes bounded organization and member inputs", () => {
   assert.equal(normalizeEmail(" USER@Example.COM "), "user@example.com")
@@ -21,7 +21,7 @@ test("enforces exact organization request DTOs", () => {
   assert.throws(() => parseOrganizationInput({ name: "Team", rawPrompt: "private" }))
   assert.deepEqual(parseOrganizationInput({ name: "Team" }), { name: "Team" })
   assert.deepEqual(parseOrganizationSiteInput({ hostname: "example.com", label: "Example" }), {
-    hostname: "example.com", label: "Example"
+    hostname: "example.com", label: "Example", policy: defaultOrganizationPolicy
   })
   assert.deepEqual(parseMemberInput({ email: "user@example.com", role: "admin" }), {
     email: "user@example.com", role: "admin"
@@ -30,6 +30,13 @@ test("enforces exact organization request DTOs", () => {
     error: "Choose a valid role"
   })
   assert.deepEqual(parseRoleInput({ role: "owner" }), { error: "Choose a valid role" })
+})
+
+test("validates exact versioned organization policy", () => {
+  assert.deepEqual(parseOrganizationPolicy(defaultOrganizationPolicy), defaultOrganizationPolicy)
+  assert.deepEqual(parseOrganizationPolicy({ ...defaultOrganizationPolicy, version: 0 }), { error: "Invalid organization policy" })
+  assert.throws(() => parseOrganizationPolicy({ ...defaultOrganizationPolicy, rawPrompt: "private" }))
+  assert.deepEqual(parseOrganizationPolicy({ ...defaultOrganizationPolicy, action: "redact", redactionAllowed: false }), { error: "Redaction policy must allow redaction" })
 })
 
 test("validates organization trend query values", () => {

@@ -27,6 +27,12 @@ export function TeamPage({
   const [organizationName, setOrganizationName] = useState("");
   const [policyHostname, setPolicyHostname] = useState("");
   const [policyLabel, setPolicyLabel] = useState("");
+  const [policyCategory, setPolicyCategory] = useState<"all" | "sensitive-data" | "prompt-injection" | "risky-upload" | "scam-fraud">("all");
+  const [policyMinimumSeverity, setPolicyMinimumSeverity] = useState<"low" | "medium" | "high">("high");
+  const [policyAction, setPolicyAction] = useState<"warn" | "redact" | "block">("block");
+  const [policyDestination, setPolicyDestination] = useState<"any" | "public-ai" | "approved-internal" | "unknown">("any");
+  const [policyAllowOverride, setPolicyAllowOverride] = useState(false);
+  const [policyRedactionAllowed, setPolicyRedactionAllowed] = useState(true);
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState<Exclude<OrganizationRole, "owner">>("member");
   const [loading, setLoading] = useState(true);
@@ -187,7 +193,12 @@ export function TeamPage({
     setError("");
 
     try {
-      await createOrganizationSitePolicy(selectedOrganization.id, policyHostname, policyLabel);
+      await createOrganizationSitePolicy(selectedOrganization.id, policyHostname, policyLabel, {
+        schemaVersion: 1, version: 1, category: policyCategory,
+        minimumSeverity: policyMinimumSeverity, action: policyAction,
+        destination: policyDestination, allowOverride: policyAllowOverride,
+        redactionAllowed: policyAction === "redact" ? true : policyRedactionAllowed
+      });
       setPolicyHostname("");
       setPolicyLabel("");
       await loadOrganizationDetail(selectedOrganization.id);
@@ -507,6 +518,30 @@ export function TeamPage({
                         className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm text-slate-950 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10 disabled:bg-slate-100"
                       />
                     </label>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <label className="text-sm font-semibold text-slate-950">Category
+                        <select value={policyCategory} onChange={(event) => setPolicyCategory(event.target.value as typeof policyCategory)} className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3">
+                          <option value="all">All categories</option><option value="sensitive-data">Sensitive data</option><option value="prompt-injection">Prompt injection</option><option value="risky-upload">Risky upload</option><option value="scam-fraud">Scam/fraud</option>
+                        </select>
+                      </label>
+                      <label className="text-sm font-semibold text-slate-950">Minimum severity
+                        <select value={policyMinimumSeverity} onChange={(event) => setPolicyMinimumSeverity(event.target.value as typeof policyMinimumSeverity)} className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3">
+                          <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
+                        </select>
+                      </label>
+                      <label className="text-sm font-semibold text-slate-950">Action
+                        <select value={policyAction} onChange={(event) => setPolicyAction(event.target.value as typeof policyAction)} className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3">
+                          <option value="warn">Warn</option><option value="redact">Require redaction</option><option value="block">Block</option>
+                        </select>
+                      </label>
+                      <label className="text-sm font-semibold text-slate-950">Destination
+                        <select value={policyDestination} onChange={(event) => setPolicyDestination(event.target.value as typeof policyDestination)} className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3">
+                          <option value="any">Any</option><option value="public-ai">Public AI</option><option value="approved-internal">Approved internal</option><option value="unknown">Unknown</option>
+                        </select>
+                      </label>
+                    </div>
+                    <label className="mt-4 flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={policyAllowOverride} onChange={(event) => setPolicyAllowOverride(event.target.checked)} /> Allow member override</label>
+                    <label className="mt-2 flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={policyRedactionAllowed || policyAction === "redact"} disabled={policyAction === "redact"} onChange={(event) => setPolicyRedactionAllowed(event.target.checked)} /> Allow redacted replacement</label>
                     <label className="mt-4 block text-sm font-semibold text-slate-950">
                       Website name
                       <input
@@ -546,6 +581,13 @@ export function TeamPage({
                             <div>
                               <p className="font-semibold text-slate-950">{policy.label}</p>
                               <p className="mt-1 text-xs text-slate-500">{policy.hostname}</p>
+                              {policy.policy ? (
+                                <p className="mt-1 text-xs text-slate-500">
+                                  v{policy.policy.version} · {policy.policy.category} · {policy.policy.minimumSeverity}+ · {policy.policy.action} · {policy.policy.allowOverride ? "override allowed" : "managed"}
+                                </p>
+                              ) : (
+                                <p className="mt-1 text-xs text-amber-700">Legacy site-only policy</p>
+                              )}
                             </div>
                             {canManageMembers ? (
                               <button

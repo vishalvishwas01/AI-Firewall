@@ -6,9 +6,11 @@ export type UnknownRecord = Record<string, unknown>
 export const isRecord = (value: unknown): value is UnknownRecord =>
   typeof value === "object" && value !== null && !Array.isArray(value)
 
-export const exactObject = (value: unknown, allowedKeys: readonly string[], message = "Invalid request") => {
-  if (!isRecord(value) || Object.keys(value).some((key) => !allowedKeys.includes(key))) {
-    throw new ValidationError(message)
+export const exactObject = (value: unknown, allowedKeys: readonly string[], optionalKeysOrMessage: readonly string[] | string = [], message = "Invalid request") => {
+  const optionalKeys = typeof optionalKeysOrMessage === "string" ? [] : optionalKeysOrMessage
+  const errorMessage = typeof optionalKeysOrMessage === "string" ? optionalKeysOrMessage : message
+  if (!isRecord(value) || Object.keys(value).some((key) => !allowedKeys.includes(key) && !optionalKeys.includes(key))) {
+    throw new ValidationError(errorMessage)
   }
   return value
 }

@@ -89,7 +89,8 @@ export const saveProtectedSites = async (sites: ProtectedSite[]): Promise<void> 
       source: site.source === "organization" ? "organization" as const : "personal" as const,
       managed: Boolean(site.managed),
       ...(site.organizationId ? { organizationId: site.organizationId } : {}),
-      ...(site.organizationName ? { organizationName: site.organizationName } : {})
+      ...(site.organizationName ? { organizationName: site.organizationName } : {}),
+      ...(site.policy ? { policy: site.policy } : {})
     }))
     .filter((site) => site.hostname && site.label)
 

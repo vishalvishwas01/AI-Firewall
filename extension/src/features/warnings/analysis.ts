@@ -46,7 +46,7 @@ export type WarningAnalysis = AnalysisResult & { warningDetections: Detection[] 
 export const analyzeForWarning = (
   input: AnalyzeInput,
   settings: ProtectionSettings,
-  runtime: Pick<AnalyzeContext, "classifierArtifact" | "ruleSet"> = {}
+  runtime: Pick<AnalyzeContext, "classifierArtifact" | "ruleSet" | "riskContext" | "managedPolicy"> = {}
 ): WarningAnalysis => {
   const analysis = analyze(input, { settings, ...runtime })
   const warningDetections = enrichDetections(analysis)

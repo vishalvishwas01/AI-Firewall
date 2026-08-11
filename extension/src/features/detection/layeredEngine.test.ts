@@ -69,6 +69,17 @@ describe("layered detection contracts", () => {
     expect(result.action).toBe("allow")
   })
 
+  it("keeps classifier signals observational and content-free", () => {
+    const source = "credential: J7mQ4vT9xK2pR8wN6cZ3yH5s"
+    const result = analyze({ text: source })
+
+    expect(result.shadowComparison.status).toBe("observed")
+    expect(result.results).toEqual([])
+    expect(result.action).toBe("allow")
+    expect(JSON.stringify(result.shadowComparison)).not.toContain(source)
+    expect(JSON.stringify(result.candidateClassifications)).not.toContain(source)
+  })
+
   it("combines text and upload metadata while respecting settings", () => {
     const result = analyze({ text: "normal request", files: [{ name: "production.pem" }] })
     expect(result.results[0].category).toBe("risky-upload")
@@ -79,6 +90,58 @@ describe("layered detection contracts", () => {
       { settings: { ...defaultSettings, uploadWarnings: false } }
     )
     expect(disabled.action).toBe("allow")
+  })
+
+  it("aggregates content-free risk before making the policy decision", () => {
+    const source = "password=supersecretvalue"
+    const result = analyze(
+      { text: source },
+      { riskContext: { destination: "public-ai", protectedSite: true } }
+    )
+
+    expect(result.riskAssessment.severity).toBe("high")
+    expect(result.riskAssessment.destinationRisk).toBe(15)
+    expect(result.riskAssessment.signalCount).toBe(1)
+    expect(result.results[0]).not.toHaveProperty("action")
+    expect(result.policyDecision.action).toBe("confirm")
+    expect(result.action).toBe(result.policyDecision.action)
+    expect(JSON.stringify(result.riskAssessment)).not.toContain(source)
+    expect(JSON.stringify(result.policyDecision)).not.toContain(source)
+  })
+
+  it("keeps destination context bounded and non-authoritative without a detection", () => {
+    const result = analyze(
+      { text: "ordinary request" },
+      { riskContext: { destination: "public-ai", protectedSite: true } }
+    )
+
+    expect(result.riskAssessment.score).toBe(0)
+    expect(result.riskAssessment.severity).toBe("none")
+    expect(result.policyDecision.action).toBe("allow")
+  })
+
+  it("enforces managed policy over weaker personal settings", () => {
+    const result = analyze(
+      { text: "password=supersecretvalue" },
+      {
+        settings: { ...defaultSettings, sensitiveData: false, sensitivityMode: "relaxed" },
+        ruleSet: { version: "remote-test", rules: [] },
+        riskContext: { destination: "unknown", protectedSite: true },
+        managedPolicy: { schemaVersion: 1, version: 3, category: "sensitive-data", minimumSeverity: "high", action: "block", destination: "any", allowOverride: false, redactionAllowed: true }
+      }
+    )
+
+    expect(result.results[0].category).toBe("sensitive-data")
+    expect(result.policyDecision).toMatchObject({ action: "block", allowOverride: false, policyVersion: 3 })
+  })
+
+  it("keeps incomplete-scan hard limits above managed policy", () => {
+    const result = analyze(
+      { text: "x".repeat(MAX_INSPECTION_BYTES + 1) },
+      { managedPolicy: { schemaVersion: 1, version: 1, category: "all", minimumSeverity: "low", action: "warn", destination: "any", allowOverride: true, redactionAllowed: true } }
+    )
+    expect(result.policyDecision.reasonCodes).toEqual(["incomplete-scan"])
+    expect(result.action).toBe("confirm")
   })
 
   it("exposes the agreed classifier thresholds without classifying", () => {

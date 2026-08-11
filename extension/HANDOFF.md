@@ -773,7 +773,7 @@ complete the staging drill in `../docs/INTELLIGENCE_DEPLOYMENT_DRILL.md`.
 
 ## 11. Product hardening roadmap adoption — 2026-08-11
 
-Status: **Phase 0 / E13 complete — read-only audit verified**
+Status: **Phase 3 / E16 in progress — versioned managed policy**
 
 `../docs/Latest_info.md` is adopted as the cross-component hardening direction. Its detailed Phase
 0–12 master specification is canonical. The existing local engine, redaction, queues, classifier
@@ -813,5 +813,82 @@ model, policy, storage, or bridge change is allowed.
   dedicated shadow/performance tests 2/2 passed with 10 KiB p95 1.5252 ms and 100 KiB p95 12.6437 ms.
 - Full findings: `../docs/PHASE_0_REPOSITORY_AUDIT.md`. No runtime source was changed.
 
-Next recommended step: **E14 / shared Phase 1 detection reliability and benchmark hardening**, pending
-explicit authorization. Do not start ML retraining, billing, SSO, document parsing, or policy work first.
+### E14 completion record — 2026-08-11
+
+- Added the exported, metadata-only `DetectionSignal` contract and retained `DetectionResult` as a
+  backward-compatible alias. `AnalysisResult.results` now states the content-free contract explicitly.
+- Added a regression proving active classifier output remains observational/content-free and cannot
+  change an authoritative `allow` action. Deterministic rules and the incomplete-scan guard remain
+  authoritative; the classifier was not promoted to warning or blocking authority.
+- Expanded the deterministic synthetic benchmark from 18 to 26 cases. The added coverage includes
+  access-token assignment, an AWS key, placeholder/test credentials, source-code references, private
+  financial/contact data, injection language, and a benign public-code request.
+- Added executable gates for false-positive rate, false-negative rate, redaction correctness, and raw-
+  leak safety. Benign fixtures and the measured false-positive rate serve only as a small warning-
+  fatigue proxy, not as user-level warning-fatigue evidence.
+- Updated the isolated local performance evidence to report p50 and p95 while preserving the existing
+  p95 gates of less than 10 ms for 10 KiB and less than 25 ms for 100 KiB inputs.
+
+Changed contracts and files:
+
+- `src/features/detection/contracts.ts`: introduced `DetectionSignal`; retained the compatibility alias.
+- `src/features/detection/index.ts`: exported `DetectionSignal`.
+- `src/features/detection/layeredEngine.test.ts`: added classifier authority/content-leak regression.
+- `src/features/detection/shadowPerformance.test.ts`: added p50 reporting beside p95 gates.
+- `src/firewall/benchmarkFixtures.ts`: expanded the synthetic corpus to 26 cases.
+- `src/firewall/benchmarkReport.cli.test.ts`: added metric and privacy gates.
+
+Verification:
+
+- Full extension suite: 124 passed with 1 performance test skipped by the normal suite.
+- Extension typecheck: passed.
+- Chrome MV3 build: completed successfully; restricted Plasmo package-info lookup and missing optional
+  SVGO remained non-fatal notices.
+- Deterministic benchmark: 26 cases, 16 true positives, 10 true negatives, 0 false positives, 0 false
+  negatives, 11/11 redaction checks, and 11/11 raw-leak checks.
+- Isolated shadow/performance benchmark: 2/2 passed. The 10 KiB p50/p95 timings were 1.8716/3.8012 ms;
+  the 100 KiB p50/p95 timings were 11.9813/14.7459 ms.
+
+Privacy and compatibility review:
+
+- Inspection remains local. E14 added no storage, queue, synchronization, consent, permission, network,
+  server API/DTO, organization-policy, model, artifact, or production bundle-data behavior.
+- `DetectionSignal`, candidate classifications, and shadow comparison remain content-free; they never
+  include raw matches, candidates, prefixes, hashes, or surrounding text.
+- This is a small deterministic synthetic regression suite. Its perfect fixture metrics must not be
+  generalized to production accuracy, all languages, real-world prompt distributions, browser event
+  coverage, site compatibility, or user warning fatigue.
+
+### E15 completion record — 2026-08-12
+
+Status: Complete
+
+- Added `RiskAssessment`, `PolicyDecision`, bounded destination context, and the explicit runtime path
+  `DetectionSignal -> RiskAssessment -> PolicyDecision -> action`.
+- Removed action selection from `DetectionSignal`. The top-level `AnalysisResult.action` remains a
+  compatibility projection of `policyDecision.action` for existing warning/UI consumers.
+- Risk aggregation considers signal category, severity, confidence, scan completeness, sensitivity,
+  default-public-AI destination classification, and protected-site state. It contains metadata only.
+- Default protected AI sites are classified `public-ai`; non-default configured sites remain `unknown`.
+  `approved-internal` classification and organization-policy enforcement require E16 review.
+- Existing allow/warn/confirm outcomes, incomplete-scan confirmation, and deterministic authority are
+  preserved. The classifier remains observational/non-enforcing.
+
+Contracts/modules changed: `src/features/detection/contracts.ts`, `risk.ts`, `policy.ts`, `engine.ts`,
+`index.ts`, `layeredEngine.test.ts`, `src/features/warnings/analysis.ts`, and
+`src/contents/ai-firewall.ts`.
+
+Verification: typecheck passed; full suite passed 126 tests with 1 normal-suite performance skip;
+deterministic benchmark remained 26/26 with 0 false positives/negatives and 11/11 redaction/raw-leak
+checks; shadow/performance benchmark passed 2/2 (10 KiB p50/p95 1.6673/2.0179 ms, 100 KiB p50/p95
+11.3681/14.9018 ms); Chrome MV3 build completed with the existing non-fatal restricted Plasmo lookup
+and optional-SVGO notices.
+
+Privacy review: risk/policy outputs are local and content-free. No storage, export, logging, telemetry,
+network, server, consent, permission, model, artifact, file-inspection, or organization-policy behavior
+changed.
+
+Known limitations: E15 preserves current `allow | warn | confirm` actions rather than adding managed
+block/redact policy. Non-default destinations remain unknown, and classifier signals remain shadow-only.
+
+Next step: **E16 / shared Phase 3 centrally managed policy**, pending explicit authorization.

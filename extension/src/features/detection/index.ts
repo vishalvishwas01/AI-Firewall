@@ -18,7 +18,8 @@ export { redactSensitiveText, redactSnippet } from "./redact"
 export { analyze } from "./engine"
 export { extractCandidateFeatures, extractCandidateSignals } from "./candidates"
 export { normalizeForInspection, normalizeInspectionText } from "./normalization"
-export { classifierThresholds } from "./policy"
+export { classifierThresholds, decidePolicy } from "./policy"
+export { assessRisk } from "./risk"
 export { buildShadowComparison, classifierShadowAction } from "./shadow"
 export {
   bundledClassifier,
@@ -40,11 +41,15 @@ export type {
   CandidateSignal,
   ClassifierState,
   DetectionAction,
+  DestinationKind,
+  DetectionSignal,
   DetectionResult,
   DetectionRule,
   DetectionRuleSet,
   DetectionRuleStrategy,
   LogisticClassifierArtifact,
+  PolicyDecision,
+  RiskAssessment,
   RuleConstraints,
   RuleReleaseApproval,
   RuleReleaseEntry,
@@ -57,6 +62,7 @@ export type {
   Detection,
   DetectionCategory,
   FileSummary,
+  OrganizationPolicy,
   ProtectionSettings,
   SensitivityMode,
   Severity
