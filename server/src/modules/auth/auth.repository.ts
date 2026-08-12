@@ -11,6 +11,7 @@ export const createUser = async (
   passwordHash: string,
   accountType: UserAccountType,
   name?: string,
+  companyName?: string,
 ) => {
   const now = new Date();
   const result = await usersCollection(db).insertOne({
@@ -18,6 +19,7 @@ export const createUser = async (
     passwordHash,
     accountType,
     ...(name ? { name } : {}),
+    ...(companyName ? { companyName } : {}),
     authProviders: ["password"],
     createdAt: now,
     updatedAt: now,
