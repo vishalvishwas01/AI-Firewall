@@ -57,7 +57,7 @@ export function AuthPage({ mode, accountType, onAuthenticated }: { mode: "login"
     startGoogleLogin(selectedAccountType);
   };
 
-  const alternatePath = `${selectedAccountType === "enterprise" ? "/enterprise" : ""}/${isSignup ? "login" : "signup"}`;
+  const alternatePath = isEnterprise ? `/${isSignup ? "login" : "signup"}?type=enterprise` : `/${isSignup ? "login" : "signup"}`;
 
   return (
     <section className="flex min-h-[calc(100vh-4rem)] items-center bg-slate-50 px-6 py-16 sm:px-8 lg:px-10">
