@@ -6,7 +6,7 @@ import { authRedirectKey, isExtensionAuthFlow, sendSessionToExtension } from "..
 export function AuthPage({ mode, accountType, onAuthenticated }: { mode: "login" | "signup"; accountType?: AccountType; onAuthenticated: (user: SessionUser) => void }) {
   const params = new URLSearchParams(window.location.search);
   const inviteToken = params.get("invite") ?? "";
-  const selectedAccountType: AccountType = accountType ?? (params.get("type") === "enterprise" ? "enterprise" : "individual");
+  const selectedAccountType: AccountType = inviteToken ? "individual" : (accountType ?? (params.get("type") === "enterprise" ? "enterprise" : "individual"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -39,9 +39,9 @@ export function AuthPage({ mode, accountType, onAuthenticated }: { mode: "login"
   }, [inviteToken]);
 
   const switchType = (nextType: AccountType) => {
-    const typeQuery = nextType === "enterprise" ? "&type=enterprise" : "";
-    const inviteQuery = inviteToken ? `?invite=${encodeURIComponent(inviteToken)}${typeQuery}` : nextType === "enterprise" ? "?type=enterprise" : "";
-    window.history.pushState({}, "", `/${mode}${inviteQuery}`);
+    if (inviteToken) return;
+    const query = nextType === "enterprise" ? "?type=enterprise" : "";
+    window.history.pushState({}, "", `/${mode}${query}`);
     window.dispatchEvent(new Event("popstate"));
     window.location.reload();
   };
@@ -55,9 +55,7 @@ export function AuthPage({ mode, accountType, onAuthenticated }: { mode: "login"
         ? await signup(selectedAccountType, { password, ...(isEnterprise ? { name, companyName, companyEmail } : { email }) })
         : await login(selectedAccountType, email, password);
 
-      if (inviteToken) {
-        await acceptOrganizationInvitation(inviteToken);
-      }
+      if (inviteToken) await acceptOrganizationInvitation(inviteToken);
 
       onAuthenticated(response.user);
       if (isExtensionAuthFlow()) await sendSessionToExtension(response.token);
@@ -79,18 +77,18 @@ export function AuthPage({ mode, accountType, onAuthenticated }: { mode: "login"
   };
 
   const alternatePath = isEnterprise
-    ? `/${isSignup ? "login" : "signup"}?type=enterprise${inviteToken ? `&invite=${encodeURIComponent(inviteToken)}` : ""}`
+    ? `/${isSignup ? "login" : "signup"}?type=enterprise`
     : `/${isSignup ? "login" : "signup"}${inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : ""}`;
 
   return (
     <section className="flex min-h-[calc(100vh-4rem)] items-center bg-slate-50 px-6 py-16 sm:px-8 lg:px-10">
       <div className="mx-auto w-full max-w-lg">
-        <div className="mb-6 grid grid-cols-2 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+        {!inviteToken ? <div className="mb-6 grid grid-cols-2 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
           <button type="button" onClick={() => switchType("individual")} className={`rounded-md px-4 py-2 text-sm font-semibold ${!isEnterprise ? "bg-slate-950 text-white" : "text-slate-600"}`}>Individual</button>
           <button type="button" onClick={() => switchType("enterprise")} className={`rounded-md px-4 py-2 text-sm font-semibold ${isEnterprise ? "bg-slate-950 text-white" : "text-slate-600"}`}>Enterprise</button>
-        </div>
+        </div> : null}
         <div className="mb-6">
-          <p className="text-sm font-semibold uppercase tracking-wider text-teal-700">{isEnterprise ? "Enterprise workspace" : "Personal protection"}</p>
+          <p className="text-sm font-semibold uppercase tracking-wider text-teal-700">{inviteToken ? "Organization invitation" : isEnterprise ? "Enterprise workspace" : "Personal protection"}</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-normal text-slate-950">{inviteToken ? "Join your organization." : isSignup ? (isEnterprise ? "Create your enterprise account." : "Create your personal account.") : (isEnterprise ? "Enterprise login." : "Welcome back.")}</h1>
           <p className="mt-4 text-base leading-7 text-slate-600">{invitedOrganization ? `You have been invited to ${invitedOrganization}. Use ${invitedEmail} to accept the invitation.` : isEnterprise ? "Manage teams, members, policies, and reports from one workspace." : "Use HallGuard locally and view your personal redacted warning reports."}</p>
         </div>
@@ -98,7 +96,7 @@ export function AuthPage({ mode, accountType, onAuthenticated }: { mode: "login"
           {isEnterprise && isSignup ? <>
             <div><label htmlFor="name" className="text-sm font-semibold text-slate-950">Your name</label><input id="name" type="text" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm" /></div>
             <div className="mt-5"><label htmlFor="companyName" className="text-sm font-semibold text-slate-950">Company name</label><input id="companyName" type="text" autoComplete="organization" required value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm" /></div>
-            <div className="mt-5"><label htmlFor="companyEmail" className="text-sm font-semibold text-slate-950">Company email</label><input id="companyEmail" type="email" autoComplete="email" required readOnly={Boolean(inviteToken)} value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm disabled:bg-slate-100" /></div>
+            <div className="mt-5"><label htmlFor="companyEmail" className="text-sm font-semibold text-slate-950">Company email</label><input id="companyEmail" type="email" autoComplete="email" required readOnly={Boolean(inviteToken)} value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm" /></div>
           </> : <div><label htmlFor="email" className="text-sm font-semibold text-slate-950">{isEnterprise ? "Company email" : "Email"}</label><input id="email" type="email" autoComplete="email" required readOnly={Boolean(inviteToken)} value={email} onChange={(e) => setEmail(e.target.value)} className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm" /></div>}
           <div className="mt-5"><label htmlFor="password" className="text-sm font-semibold text-slate-950">Password</label><input id="password" type="password" autoComplete={isSignup ? "new-password" : "current-password"} minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm" /></div>
           {error ? <div className="mt-5 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">{error}</div> : null}
