@@ -10,6 +10,7 @@ import { getGoogleAuthorizationUrl, verifyGoogleCode } from "./google.service.js
 import { env } from "../../config/env.js";
 
 const accountTypeFromQuery = (value: unknown): UserAccountType => value === "enterprise" ? "enterprise" : "individual";
+const authErrorUrl = (authPath: string, error: string) => `${env.clientOrigin}/${authPath}${authPath.includes("?") ? "&" : "?"}error=${error}`;
 
 export const signup = async (req: Request, res: Response) => {
   const credentials = parseSignupCredentials(req.body);
@@ -69,18 +70,18 @@ export const googleCallback = async (req: Request, res: Response) => {
     const accountType = accountTypeFromQuery(req.query.state);
     const authPath = accountType === "enterprise" ? "login?type=enterprise" : "login";
     if (!code) {
-      res.redirect(`${env.clientOrigin}/${authPath}&error=google_oauth_failed`);
+      res.redirect(authErrorUrl(authPath, "google_oauth_failed"));
       return;
     }
     const identity = await verifyGoogleCode(code);
     if (!identity.emailVerified) {
-      res.redirect(`${env.clientOrigin}/${authPath}&error=google_email_not_verified`);
+      res.redirect(authErrorUrl(authPath, "google_email_not_verified"));
       return;
     }
     const db = await getDb();
     const user = await authenticateGoogleUser(db, identity.googleId, identity.email, accountType);
     if (!user) {
-      res.redirect(`${env.clientOrigin}/${authPath}&error=account_type_mismatch`);
+      res.redirect(authErrorUrl(authPath, "account_type_mismatch"));
       return;
     }
     const token = signAuthToken({ id: user._id!, email: user.email });
