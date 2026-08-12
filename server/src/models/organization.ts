@@ -83,6 +83,31 @@ export const pendingInvitationRevocationFilter = (memberId: ObjectId, organizati
   status: "invited" as const
 })
 
+export const activateOrganizationInvitations = async (
+  db: Db,
+  userId: ObjectId,
+  email: string
+) => {
+  const now = new Date()
+  return organizationMembersCollection(db).updateMany(
+    pendingInvitationActivationFilter(userId, email),
+    {
+      $set: {
+        userId,
+        status: "active",
+        acceptedAt: now,
+        updatedAt: now
+      },
+      $unset: {
+        revokedAt: "",
+        invitationTokenHash: "",
+        invitationExpiresAt: "",
+        invitationSentAt: ""
+      }
+    }
+  )
+}
+
 export const ensureOrganizationIndexes = async (db: Db) => {
   await organizationsCollection(db).createIndex({ ownerUserId: 1, createdAt: -1 })
   await organizationMembersCollection(db).createIndex({ userId: 1, organizationId: 1 })
