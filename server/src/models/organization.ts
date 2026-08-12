@@ -71,42 +71,11 @@ export const organizationSitePoliciesCollection = (
 export const extensionHealthCollection = (db: Db): Collection<ExtensionHealthDocument> =>
   db.collection<ExtensionHealthDocument>("extension_health")
 
-export const pendingInvitationActivationFilter = (userId: ObjectId, email: string) => ({
-  email: email.trim().toLowerCase(),
-  status: "invited" as const,
-  $or: [{ userId: { $exists: false as const } }, { userId }]
-})
-
 export const pendingInvitationRevocationFilter = (memberId: ObjectId, organizationId: ObjectId) => ({
   _id: memberId,
   organizationId,
   status: "invited" as const
 })
-
-export const activateOrganizationInvitations = async (
-  db: Db,
-  userId: ObjectId,
-  email: string
-) => {
-  const now = new Date()
-  return organizationMembersCollection(db).updateMany(
-    pendingInvitationActivationFilter(userId, email),
-    {
-      $set: {
-        userId,
-        status: "active",
-        acceptedAt: now,
-        updatedAt: now
-      },
-      $unset: {
-        revokedAt: "",
-        invitationTokenHash: "",
-        invitationExpiresAt: "",
-        invitationSentAt: ""
-      }
-    }
-  )
-}
 
 export const ensureOrganizationIndexes = async (db: Db) => {
   await organizationsCollection(db).createIndex({ ownerUserId: 1, createdAt: -1 })
