@@ -19,5 +19,12 @@ export const signup = (accountType: AccountType, data: { email?: string; passwor
 export const login = (accountType: AccountType, email: string, password: string) =>
   apiRequest<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify({ email, password, accountType }) }, parseAuthResponse)
 
+export const acceptOrganizationInvitation = (token: string) =>
+  apiRequest<{ organizationName: string; role: string }>(`/orgs/invitations/${encodeURIComponent(token)}/accept`, { method: "POST" })
+
 export const logout = () => apiRequest<void>("/auth/logout", { method: "POST" })
-export const startGoogleLogin = (accountType: AccountType) => { window.location.href = `${apiBaseUrl}/auth/google?accountType=${accountType}` }
+export const startGoogleLogin = (accountType: AccountType) => {
+  const invite = new URLSearchParams(window.location.search).get("invite")
+  const inviteQuery = invite ? `&invite=${encodeURIComponent(invite)}` : ""
+  window.location.href = `${apiBaseUrl}/auth/google?accountType=${accountType}${inviteQuery}`
+}
