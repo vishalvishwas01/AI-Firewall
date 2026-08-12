@@ -32,6 +32,8 @@ export const env = {
   googleClientId: process.env.GOOGLE_CLIENT_ID,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
   googleCallbackUrl: process.env.GOOGLE_CALLBACK_URL,
+  resendApiKey: process.env.RESEND_API_KEY ?? "",
+  emailFrom: process.env.EMAIL_FROM ?? "",
   intelligencePublisherEmails: parseIntelligencePublisherEmails(
     process.env.INTELLIGENCE_PUBLISHER_EMAILS
   ),
