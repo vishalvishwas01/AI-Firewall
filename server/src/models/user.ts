@@ -4,6 +4,8 @@ export type UserDocument = {
   _id?: ObjectId
   email: string
   passwordHash: string
+  googleId?: string
+  authProviders: ("password" | "google")[]
   createdAt: Date
   updatedAt: Date
 }

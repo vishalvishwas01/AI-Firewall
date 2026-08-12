@@ -1,54 +1,125 @@
-import type { Request, Response } from "express"
+import type { Request, Response } from "express";
 
-import { getDb } from "../../db/mongo.js"
-import { sendJson } from "../../shared/validation.js"
+import { getDb } from "../../db/mongo.js";
+import { sendJson } from "../../shared/validation.js";
 import {
   authCookieName,
   authCookieOptions,
   authenticatedUserFromRequest,
-  signAuthToken
-} from "../../middleware/auth.js"
-import { authenticateUser, publicUser, registerUser } from "./auth.service.js"
-import { isAuthCredentials, parseLoginCredentials, parseSignupCredentials } from "./auth.schemas.js"
+  signAuthToken,
+} from "../../middleware/auth.js";
+import {
+  authenticateGoogleUser,
+  authenticateUser,
+  publicUser,
+  registerUser,
+} from "./auth.service.js";
+import {
+  isAuthCredentials,
+  parseLoginCredentials,
+  parseSignupCredentials,
+} from "./auth.schemas.js";
+import {
+  getGoogleAuthorizationUrl,
+  verifyGoogleCode,
+} from "./google.service.js";
+import { env } from "../../config/env.js";
 
 export const signup = async (req: Request, res: Response) => {
-  const credentials = parseSignupCredentials(req.body)
+  const credentials = parseSignupCredentials(req.body);
   if (!isAuthCredentials(credentials)) {
-    res.status(400).json({ error: credentials.error })
-    return
+    res.status(400).json({ error: credentials.error });
+    return;
   }
-  const result = await registerUser(await getDb(), credentials.email, credentials.password)
+  const result = await registerUser(
+    await getDb(),
+    credentials.email,
+    credentials.password,
+  );
   if (result.conflict) {
-    res.status(409).json({ error: "An account already exists for this email" })
-    return
+    res.status(409).json({ error: "An account already exists for this email" });
+    return;
   }
-  const token = signAuthToken({ id: result.user._id!, email: result.user.email })
-  res.cookie(authCookieName, token, authCookieOptions)
-  sendJson(res.status(201), ["user", "token"], { user: publicUser(result.user), token })
-}
+  const token = signAuthToken({
+    id: result.user._id!,
+    email: result.user.email,
+  });
+  res.cookie(authCookieName, token, authCookieOptions);
+  sendJson(res.status(201), ["user", "token"], {
+    user: publicUser(result.user),
+    token,
+  });
+};
 
 export const login = async (req: Request, res: Response) => {
-  const credentials = parseLoginCredentials(req.body)
+  const credentials = parseLoginCredentials(req.body);
   if (!isAuthCredentials(credentials)) {
-    res.status(401).json({ error: credentials.error })
-    return
+    res.status(401).json({ error: credentials.error });
+    return;
   }
-  const user = await authenticateUser(await getDb(), credentials.email, credentials.password)
+  const user = await authenticateUser(
+    await getDb(),
+    credentials.email,
+    credentials.password,
+  );
   if (!user) {
-    res.status(401).json({ error: "Invalid email or password" })
-    return
+    res.status(401).json({ error: "Invalid email or password" });
+    return;
   }
-  const token = signAuthToken({ id: user._id!, email: user.email })
-  res.cookie(authCookieName, token, authCookieOptions)
-  sendJson(res, ["user", "token"], { user: publicUser(user), token })
-}
+  const token = signAuthToken({ id: user._id!, email: user.email });
+  res.cookie(authCookieName, token, authCookieOptions);
+  sendJson(res, ["user", "token"], { user: publicUser(user), token });
+};
 
 export const logout = (_req: Request, res: Response) => {
-  res.clearCookie(authCookieName, { ...authCookieOptions, maxAge: undefined })
-  res.status(204).end()
-}
+  res.clearCookie(authCookieName, { ...authCookieOptions, maxAge: undefined });
+  res.status(204).end();
+};
 
 export const session = (req: Request, res: Response) => {
-  const user = authenticatedUserFromRequest(req)
-  sendJson(res, ["user"], { user: user ? { id: user.id.toHexString(), email: user.email } : null })
-}
+  const user = authenticatedUserFromRequest(req);
+  sendJson(res, ["user"], {
+    user: user ? { id: user.id.toHexString(), email: user.email } : null,
+  });
+};
+
+export const googleStart = (_req: Request, res: Response) => {
+  const url = getGoogleAuthorizationUrl();
+  res.redirect(url);
+};
+
+export const googleCallback = async (req: Request, res: Response) => {
+  try {
+    const code =
+      typeof req.query.code === "string" ? req.query.code : undefined;
+
+    if (!code) {
+      res.redirect(`${env.clientOrigin}/login?error=google_oauth_failed`);
+      return;
+    }
+
+    const identity = await verifyGoogleCode(code);
+
+    if (!identity.emailVerified) {
+      res.redirect(`${env.clientOrigin}/login?error=google_email_not_verified`);
+      return;
+    }
+
+    const user = await authenticateGoogleUser(
+      await getDb(),
+      identity.googleId,
+      identity.email,
+    );
+
+    const token = signAuthToken({
+      id: user._id!,
+      email: user.email,
+    });
+
+    res.cookie(authCookieName, token, authCookieOptions);
+
+    res.redirect(`${env.clientOrigin}/auth/google/success`);
+  } catch {
+    res.redirect(`${env.clientOrigin}/login?error=google_oauth_failed`);
+  }
+};

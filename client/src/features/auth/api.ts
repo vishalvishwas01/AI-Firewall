@@ -15,3 +15,4 @@ export const getSession = async () => {
 export const signup = (email: string, password: string) => apiRequest<AuthResponse>("/auth/signup", { method: "POST", body: JSON.stringify({ email, password }) }, parseAuthResponse)
 export const login = (email: string, password: string) => apiRequest<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }, parseAuthResponse)
 export const logout = () => apiRequest<void>("/auth/logout", { method: "POST" })
+export const startGoogleLogin = () => {window.location.href = `${apiBaseUrl}/auth/google`}
