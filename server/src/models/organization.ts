@@ -17,6 +17,10 @@ export type OrganizationMemberDocument = {
   email: string
   role: OrganizationRole
   status: "active" | "invited" | "revoked"
+  invitationTokenHash?: string
+  invitationExpiresAt?: Date
+  invitationSentAt?: Date
+  acceptedAt?: Date
   revokedAt?: Date
   createdAt: Date
   updatedAt: Date
@@ -79,33 +83,16 @@ export const pendingInvitationRevocationFilter = (memberId: ObjectId, organizati
   status: "invited" as const
 })
 
-export const activateOrganizationInvitations = async (
-  db: Db,
-  userId: ObjectId,
-  email: string
-) => {
-  const now = new Date()
-  return organizationMembersCollection(db).updateMany(
-    pendingInvitationActivationFilter(userId, email),
-    {
-      $set: {
-        userId,
-        status: "active",
-        updatedAt: now
-      },
-      $unset: {
-        revokedAt: ""
-      }
-    }
-  )
-}
-
 export const ensureOrganizationIndexes = async (db: Db) => {
   await organizationsCollection(db).createIndex({ ownerUserId: 1, createdAt: -1 })
   await organizationMembersCollection(db).createIndex({ userId: 1, organizationId: 1 })
   await organizationMembersCollection(db).createIndex(
     { organizationId: 1, email: 1 },
     { unique: true }
+  )
+  await organizationMembersCollection(db).createIndex(
+    { invitationTokenHash: 1 },
+    { unique: true, sparse: true }
   )
   await organizationSitePoliciesCollection(db).createIndex(
     { organizationId: 1, hostname: 1 },
