@@ -145,7 +145,7 @@ export function AuthPage({ mode, accountType, user, onAuthenticated }: { mode: "
           <div className="mb-6">
             <p className="text-sm font-semibold uppercase tracking-wider text-teal-700">Organization invitation</p>
             <h1 className="mt-3 text-4xl font-semibold tracking-normal text-slate-950">Accept your invitation.</h1>
-            <p className="mt-4 text-base leading-7 text-slate-600">You are signed in as <strong>{user.email}</strong>. The invitation is for <strong>{invitedEmail}</strong> to join <strong>{invitedOrganization}</strong> as a {invitedRole}.</p>
+            <p className="mt-4 text-base leading-7 text-slate-600">You are signed in as <strong>{user?.email}</strong>. The invitation is for <strong>{invitedEmail}</strong> to join <strong>{invitedOrganization}</strong> as a {invitedRole}.</p>
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             {error ? <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">{error}</div> : null}
