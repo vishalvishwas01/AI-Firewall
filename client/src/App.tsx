@@ -39,8 +39,7 @@ function App() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [sessionLoading, setSessionLoading] = useState(true);
   const [path, setPath] = useState(window.location.pathname);
-  const authMode =
-    path === "/signup" ? "signup" : path === "/login" ? "login" : null;
+  const authMode = path === "/signup" ? "signup" : path === "/login" ? "login" : null;
   const isReports = path === "/reports";
   const isTeam = path === "/team";
   const isPrivacy = path === "/privacy";
@@ -76,6 +75,13 @@ function App() {
     window.history.replaceState({}, "", redirectPath);
     setPath(redirectPath);
   }, [isGoogleAuthSuccess, sessionLoading]);
+
+useEffect(() => {
+  if (sessionLoading || !user || !authMode) return;
+
+  window.history.replaceState({}, "", "/");
+  setPath("/");
+}, [user, sessionLoading, authMode]);
 
   useEffect(() => {
     const handleLocationChange = () => setPath(window.location.pathname);

@@ -50,7 +50,7 @@ export function AuthPage({
       }
       const redirectPath = window.sessionStorage.getItem(authRedirectKey);
       window.sessionStorage.removeItem(authRedirectKey);
-      window.history.pushState({}, "", redirectPath ?? "/");
+      window.history.replaceState({}, "", redirectPath ?? "/");
       window.dispatchEvent(new Event("popstate"));
     } catch (authError) {
       setError(
