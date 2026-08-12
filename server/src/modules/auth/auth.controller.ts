@@ -1,29 +1,14 @@
 import type { Request, Response } from "express";
-
+import type { UserAccountType } from "../../models/user.js";
 import { getDb } from "../../db/mongo.js";
 import { sendJson } from "../../shared/validation.js";
-import {
-  authCookieName,
-  authCookieOptions,
-  authenticatedUserFromRequest,
-  signAuthToken,
-} from "../../middleware/auth.js";
-import {
-  authenticateGoogleUser,
-  authenticateUser,
-  publicUser,
-  registerEnterpriseUser,
-  registerUser,
-} from "./auth.service.js";
-import {
-  isAuthCredentials,
-  parseLoginCredentials,
-  parseSignupCredentials,
-} from "./auth.schemas.js";
+import { authCookieName, authCookieOptions, authenticatedUserFromRequest, signAuthToken } from "../../middleware/auth.js";
+import { authenticateGoogleUser, authenticateUser, publicUser, registerEnterpriseUser, registerUser } from "./auth.service.js";
+import { isAuthCredentials, parseLoginCredentials, parseSignupCredentials } from "./auth.schemas.js";
 import { getGoogleAuthorizationUrl, verifyGoogleCode } from "./google.service.js";
 import { env } from "../../config/env.js";
 
-const accountTypeFromQuery = (value: unknown) => value === "enterprise" ? "enterprise" as const : "individual" as const;
+const accountTypeFromQuery = (value: unknown): UserAccountType => value === "enterprise" ? "enterprise" : "individual";
 
 export const signup = async (req: Request, res: Response) => {
   const credentials = parseSignupCredentials(req.body);
@@ -34,13 +19,7 @@ export const signup = async (req: Request, res: Response) => {
 
   const db = await getDb();
   const result = credentials.accountType === "enterprise"
-    ? await registerEnterpriseUser(
-        db,
-        credentials.email,
-        credentials.password,
-        credentials.name!,
-        typeof credentials.companyEmail === "string" ? credentials.companyEmail.split("@")[0] || "Company" : "Company",
-      )
+    ? await registerEnterpriseUser(db, credentials.email, credentials.password, credentials.name!, credentials.companyName!)
     : await registerUser(db, credentials.email, credentials.password, "individual", credentials.name);
 
   if (result.conflict) {
@@ -50,10 +29,7 @@ export const signup = async (req: Request, res: Response) => {
 
   const token = signAuthToken({ id: result.user._id!, email: result.user.email });
   res.cookie(authCookieName, token, authCookieOptions);
-  sendJson(res.status(201), ["user", "token"], {
-    user: await publicUser(db, result.user),
-    token,
-  });
+  sendJson(res.status(201), ["user", "token"], { user: await publicUser(db, result.user), token });
 };
 
 export const login = async (req: Request, res: Response) => {
@@ -85,31 +61,29 @@ export const session = async (req: Request, res: Response) => {
 };
 
 export const googleStart = (req: Request, res: Response) => {
-  const accountType = accountTypeFromQuery(req.query.accountType);
-  res.redirect(getGoogleAuthorizationUrl(accountType));
+  res.redirect(getGoogleAuthorizationUrl(accountTypeFromQuery(req.query.accountType)));
 };
 
 export const googleCallback = async (req: Request, res: Response) => {
   try {
     const code = typeof req.query.code === "string" ? req.query.code : undefined;
-    const state = typeof req.query.state === "string" ? req.query.state : "individual";
-    const accountType = accountTypeFromQuery(state);
-
+    const accountType = accountTypeFromQuery(req.query.state);
+    const authPath = accountType === "enterprise" ? "enterprise/login" : "login";
     if (!code) {
-      res.redirect(`${env.clientOrigin}/${accountType === "enterprise" ? "enterprise/login" : "login"}?error=google_oauth_failed`);
+      res.redirect(`${env.clientOrigin}/${authPath}?error=google_oauth_failed`);
       return;
     }
 
     const identity = await verifyGoogleCode(code);
     if (!identity.emailVerified) {
-      res.redirect(`${env.clientOrigin}/${accountType === "enterprise" ? "enterprise/login" : "login"}?error=google_email_not_verified`);
+      res.redirect(`${env.clientOrigin}/${authPath}?error=google_email_not_verified`);
       return;
     }
 
     const db = await getDb();
     const user = await authenticateGoogleUser(db, identity.googleId, identity.email, accountType);
     if (!user) {
-      res.redirect(`${env.clientOrigin}/${accountType === "enterprise" ? "enterprise/login" : "login"}?error=account_type_mismatch`);
+      res.redirect(`${env.clientOrigin}/${authPath}?error=account_type_mismatch`);
       return;
     }
 
