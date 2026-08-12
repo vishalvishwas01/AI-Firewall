@@ -58,7 +58,6 @@ export function AuthPage({ mode, accountType, onAuthenticated }: { mode: "login"
   };
 
   const alternatePath = `${selectedAccountType === "enterprise" ? "/enterprise" : ""}/${isSignup ? "login" : "signup"}`;
-  const accountTabPath = (type: AccountType) => `/${mode}${type === "enterprise" ? "?type=enterprise" : ""}`;
 
   return (
     <section className="flex min-h-[calc(100vh-4rem)] items-center bg-slate-50 px-6 py-16 sm:px-8 lg:px-10">
@@ -81,10 +80,9 @@ export function AuthPage({ mode, accountType, onAuthenticated }: { mode: "login"
           <div className="mt-5"><label htmlFor="password" className="text-sm font-semibold text-slate-950">Password</label><input id="password" type="password" autoComplete={isSignup ? "new-password" : "current-password"} minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm" /></div>
           {error ? <div className="mt-5 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">{error}</div> : null}
           <button type="submit" disabled={submitting} className="button-primary mt-6 w-full disabled:opacity-60">{submitting ? "Please wait" : isSignup ? "Create account" : "Login"}</button>
-          <button type="button" disabled={googleSubmitting} onClick={handleGoogleLogin} className="button-secondary mt-4 w-full disabled:opacity-60">{googleSubmitting ? "Please wait" : "Continue with Google"}</button>
+          {(!isEnterprise || !isSignup) ? <button type="button" disabled={googleSubmitting} onClick={handleGoogleLogin} className="button-secondary mt-4 w-full disabled:opacity-60">{googleSubmitting ? "Please wait" : "Continue with Google"}</button> : null}
           <p className="mt-5 text-center text-sm text-slate-600">{isSignup ? "Already have an account?" : "Need an account?"}{" "}<a className="font-semibold text-slate-950 underline underline-offset-4" href={alternatePath}>{isSignup ? "Login" : "Sign up"}</a></p>
         </form>
-        <div className="mt-4 hidden"><a href={accountTabPath("individual")}>Individual</a><a href={accountTabPath("enterprise")}>Enterprise</a></div>
       </div>
     </section>
   );
