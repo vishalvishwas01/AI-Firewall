@@ -1,5 +1,5 @@
 import { apiBaseUrl, apiRequest, parseResponse, TransportError } from "../../lib/http"
-import type { AuthResponse, SessionUser } from "./types"
+import type { AccountType, AuthResponse, SessionUser } from "./types"
 import { parseAuthResponse, parseSessionResponse } from "./schemas"
 
 export const getSession = async () => {
@@ -12,7 +12,12 @@ export const getSession = async () => {
     throw new TransportError("network_error")
   }
 }
-export const signup = (email: string, password: string) => apiRequest<AuthResponse>("/auth/signup", { method: "POST", body: JSON.stringify({ email, password }) }, parseAuthResponse)
-export const login = (email: string, password: string) => apiRequest<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }, parseAuthResponse)
+
+export const signup = (accountType: AccountType, data: { email?: string; password: string; name?: string; companyName?: string; companyEmail?: string }) =>
+  apiRequest<AuthResponse>("/auth/signup", { method: "POST", body: JSON.stringify({ ...data, accountType }) }, parseAuthResponse)
+
+export const login = (accountType: AccountType, email: string, password: string) =>
+  apiRequest<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify({ email, password, accountType }) }, parseAuthResponse)
+
 export const logout = () => apiRequest<void>("/auth/logout", { method: "POST" })
-export const startGoogleLogin = () => {window.location.href = `${apiBaseUrl}/auth/google`}
+export const startGoogleLogin = (accountType: AccountType) => { window.location.href = `${apiBaseUrl}/auth/google?accountType=${accountType}` }
