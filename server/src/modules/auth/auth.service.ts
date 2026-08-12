@@ -30,8 +30,13 @@ export const authenticateUser = async (
   password: string,
 ) => {
   const user = await findUserByEmail(db, email);
-  if (!user || !bcrypt.compare(password, user.passwordHash))
+  if (
+    !user ||
+    !user.passwordHash ||
+    !(await bcrypt.compare(password, user.passwordHash))
+  ) {
     return undefined;
+  }
   await activateOrganizationInvitations(db, userId(user), user.email);
   return user;
 };

@@ -7,7 +7,13 @@ import {
 
 dotenv.config()
 
-const required = ["MONGODB_URI", "JWT_SECRET"] as const
+const required = [
+  "MONGODB_URI",
+  "JWT_SECRET",
+  "GOOGLE_CLIENT_ID",
+  "GOOGLE_CLIENT_SECRET",
+  "GOOGLE_CALLBACK_URL",
+] as const;
 
 for (const key of required) {
   if (!process.env[key]) {
@@ -23,9 +29,9 @@ export const env = {
   jwtSecret: process.env.JWT_SECRET!,
   clientOrigin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173",
   extensionOrigin: process.env.EXTENSION_ORIGIN ?? "",
-  googleClientId: process.env.GOOGLE_CLIENT_ID!,
-  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-  googleCallbackUrl: process.env.GOOGLE_CALLBACK_URL!,
+  googleClientId: process.env.GOOGLE_CLIENT_ID,
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  googleCallbackUrl: process.env.GOOGLE_CALLBACK_URL,
   intelligencePublisherEmails: parseIntelligencePublisherEmails(
     process.env.INTELLIGENCE_PUBLISHER_EMAILS
   ),

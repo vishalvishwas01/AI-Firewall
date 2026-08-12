@@ -119,7 +119,9 @@ export const googleCallback = async (req: Request, res: Response) => {
     res.cookie(authCookieName, token, authCookieOptions);
 
     res.redirect(`${env.clientOrigin}/auth/google/success`);
-  } catch {
+  } catch (error) {
+    console.error("Google OAuth callback failed", error);
+
     res.redirect(`${env.clientOrigin}/login?error=google_oauth_failed`);
   }
 };
