@@ -26,7 +26,7 @@ export const signup = async (req: Request, res: Response) => {
     res.status(409).json({ error: "An account already exists for this email" });
     return;
   }
-  const token = signAuthToken({ id: result.user._id!, email: result.user.email });
+  const token = signAuthToken({ id: result.user._id!, email: result.user.email, accountType: result.user.accountType ?? credentials.accountType });
   res.cookie(authCookieName, token, authCookieOptions);
   sendJson(res.status(201), ["user", "token"], { user: await publicUser(db, result.user), token });
 };
@@ -43,7 +43,7 @@ export const login = async (req: Request, res: Response) => {
     res.status(401).json({ error: "Invalid email, password, or account type" });
     return;
   }
-  const token = signAuthToken({ id: user._id!, email: user.email });
+  const token = signAuthToken({ id: user._id!, email: user.email, accountType: user.accountType ?? credentials.accountType });
   res.cookie(authCookieName, token, authCookieOptions);
   sendJson(res, ["user", "token"], { user: await publicUser(db, user), token });
 };
@@ -84,7 +84,7 @@ export const googleCallback = async (req: Request, res: Response) => {
       res.redirect(authErrorUrl(authPath, "account_type_mismatch"));
       return;
     }
-    const token = signAuthToken({ id: user._id!, email: user.email });
+    const token = signAuthToken({ id: user._id!, email: user.email, accountType: user.accountType ?? accountType });
     res.cookie(authCookieName, token, authCookieOptions);
     res.redirect(`${env.clientOrigin}/auth/google/success`);
   } catch (error) {
