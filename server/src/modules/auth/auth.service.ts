@@ -6,8 +6,14 @@ import type { UserDocument, UserAccountType } from "../../models/user.js";
 import { createGoogleUser, createUser, findUserByEmail, findUserByGoogleId, userId, linkGoogleAccount } from "./auth.repository.js";
 
 export const hasTeamAccess = async (db: Db, user: UserDocument) => {
-  if (user.accountType === "enterprise") return true;
-  const membership = await organizationMembersCollection(db).findOne({ userId: userId(user), status: "active" });
+  if (user.accountType !== "enterprise") return false;
+
+  const membership = await organizationMembersCollection(db).findOne({
+    userId: userId(user),
+    status: "active",
+    role: { $in: ["owner", "admin"] }
+  });
+
   return Boolean(membership);
 };
 
