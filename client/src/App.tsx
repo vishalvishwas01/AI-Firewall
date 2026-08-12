@@ -76,6 +76,12 @@ function App() {
 
   useEffect(() => {
     if (sessionLoading || !user || !authMode) return;
+
+    // Keep authenticated users on an invitation URL until they explicitly
+    // accept or decline it. A normal /login or /signup URL still redirects home.
+    const hasInvitation = Boolean(new URLSearchParams(window.location.search).get("invite"));
+    if (hasInvitation) return;
+
     window.history.replaceState({}, "", "/");
     setPath("/");
   }, [user, sessionLoading, authMode]);
@@ -113,7 +119,7 @@ function App() {
       <main className="min-h-screen bg-slate-50 text-slate-950">
         <SiteHeader user={user} sessionLoading={sessionLoading} onLogout={handleLogout} />
         <div id="page-content" tabIndex={-1}>
-          <AuthPage mode={authMode} onAuthenticated={setUser} />
+          <AuthPage mode={authMode} user={user} onAuthenticated={setUser} />
         </div>
       </main>
     );
