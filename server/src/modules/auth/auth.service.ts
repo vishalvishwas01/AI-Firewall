@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import type { Db } from "mongodb";
 
-import { activateOrganizationInvitations, organizationMembersCollection, organizationsCollection } from "../../models/organization.js";
+import { organizationMembersCollection, organizationsCollection } from "../../models/organization.js";
 import type { UserDocument, UserAccountType } from "../../models/user.js";
 import { createGoogleUser, createUser, findUserByEmail, findUserByGoogleId, userId, linkGoogleAccount } from "./auth.repository.js";
 
@@ -29,7 +29,6 @@ export const publicUser = async (db: Db, user: UserDocument) => ({
 export const registerUser = async (db: Db, email: string, password: string, accountType: UserAccountType, name?: string) => {
   if (await findUserByEmail(db, email)) return { conflict: true as const };
   const user = await createUser(db, email, await bcrypt.hash(password, 12), accountType, name);
-  await activateOrganizationInvitations(db, userId(user), user.email);
   return { user };
 };
 
@@ -47,7 +46,6 @@ export const registerEnterpriseUser = async (db: Db, email: string, password: st
 export const authenticateUser = async (db: Db, email: string, password: string, accountType: UserAccountType) => {
   const user = await findUserByEmail(db, email);
   if (!user || (user.accountType ?? "individual") !== accountType || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) return undefined;
-  await activateOrganizationInvitations(db, userId(user), user.email);
   return user;
 };
 
@@ -62,6 +60,5 @@ export const authenticateGoogleUser = async (db: Db, googleId: string, email: st
       user = await createGoogleUser(db, email, googleId, accountType);
     }
   } else if ((user.accountType ?? "individual") !== accountType) return undefined;
-  await activateOrganizationInvitations(db, userId(user), user.email);
   return user;
 };
