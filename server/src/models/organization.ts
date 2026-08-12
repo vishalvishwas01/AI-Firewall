@@ -41,6 +41,16 @@ export type OrganizationSitePolicyDocument = {
   }
 }
 
+export type ExtensionHealthDocument = {
+  userId: ObjectId
+  extensionVersion: string
+  policyVersion?: number
+  intelligenceVersion?: string
+  status: "active" | "protection-unavailable"
+  lastSeen: Date
+  updatedAt: Date
+}
+
 export const organizationsCollection = (db: Db): Collection<OrganizationDocument> =>
   db.collection<OrganizationDocument>("organizations")
 
@@ -53,6 +63,9 @@ export const organizationSitePoliciesCollection = (
   db: Db
 ): Collection<OrganizationSitePolicyDocument> =>
   db.collection<OrganizationSitePolicyDocument>("organization_site_policies")
+
+export const extensionHealthCollection = (db: Db): Collection<ExtensionHealthDocument> =>
+  db.collection<ExtensionHealthDocument>("extension_health")
 
 export const pendingInvitationActivationFilter = (userId: ObjectId, email: string) => ({
   email: email.trim().toLowerCase(),
@@ -102,4 +115,6 @@ export const ensureOrganizationIndexes = async (db: Db) => {
     organizationId: 1,
     label: 1
   })
+  await extensionHealthCollection(db).createIndex({ userId: 1 }, { unique: true })
+  await extensionHealthCollection(db).createIndex({ updatedAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 })
 }

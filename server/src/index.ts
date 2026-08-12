@@ -17,6 +17,7 @@ import { improvementTelemetryRouter } from "./modules/improvementTelemetry/telem
 import { ensureImprovementTelemetryIndexes } from "./modules/improvementTelemetry/telemetry.repository.js"
 import { ensureIntelligencePackageIndexes } from "./modules/intelligence/intelligence.repository.js"
 import { intelligenceRouter } from "./modules/intelligence/intelligence.routes.js"
+import { extensionHealthRouter } from "./modules/extensionHealth/health.routes.js"
 import { errorBoundary, normalizeErrorResponses } from "./shared/errors.js"
 import { rejectReadMethodBodies, sendJson, validateNoQuery } from "./shared/validation.js"
 import { authRateLimiter, globalRateLimiter, requestIdMiddleware, structuredRequestLogger } from "./shared/operational.js"
@@ -52,7 +53,7 @@ app.use(
         return callback(null, true)
       }
 
-      return callback(new Error(`Origin not allowed: ${origin}`))
+      return callback(new Error("Origin not allowed"))
     },
   })
 )
@@ -87,6 +88,7 @@ app.use("/orgs", orgsRouter)
 app.use("/admin", adminRouter)
 app.use("/improvement-events", improvementTelemetryRouter)
 app.use("/intelligence", intelligenceRouter)
+app.use("/extension-health", extensionHealthRouter)
 
 app.use(errorBoundary)
 

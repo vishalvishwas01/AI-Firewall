@@ -592,6 +592,14 @@ function PrivacyPolicyPage() {
               packaged with the Chrome Web Store submission. API responses are
               treated as data and are not executed.
             </p>
+            <h3>Signed intelligence data</h3>
+            <p>
+              Reviewed rule and model data can update without replacing extension code. The extension
+              verifies trusted Ed25519 signatures, SHA-256 payload bindings, compatibility, expiry,
+              revocation, and increasing release sequence before local activation. Model inference stays
+              local, and signed data cannot change telemetry consent, redaction rules, organization policy,
+              or software enforcement thresholds.
+            </p>
           </PolicySection>
 
           <PolicySection title="8. Sharing and disclosure">

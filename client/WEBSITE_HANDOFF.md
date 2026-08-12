@@ -207,7 +207,7 @@ Status: **Planned — held behind the product-hardening audit and production-sec
 
 ## 8. Product hardening roadmap adoption — 2026-08-11
 
-Status: **Phase 3 / C7 in progress — organization policy administration**
+Status: **Phases 6–7 / C8a complete — intelligence status aligned**
 
 `../docs/Latest_info.md` is adopted as the cross-component hardening direction. Its detailed Phase
 0–12 master specification is canonical where the earlier abbreviated phase list differs. This records
@@ -238,5 +238,27 @@ analytics, or deployment.
   `../docs/PHASE_0_REPOSITORY_AUDIT.md`.
 - Verification: client tests 9/9 and typecheck passed; no runtime source was changed.
 
-Next step: **wait for reviewed Phase 1 extension contracts/evidence**. C5 remains planned and C7 may not
-start until its server/extension dependencies are explicitly authorized.
+### C7 completion record — 2026-08-12
+
+Status: Complete
+
+- Added organization-policy administration for category, severity, action, destination, override, and
+  redaction controls plus version/status display and version-increment updates.
+- Extended exact response parsing and the authenticated extension bridge with policy metadata.
+- Verification: typecheck/build passed; 9 tests passed.
+- Privacy: configuration metadata only; no content, analytics, telemetry, or detection logic added.
+
+### C8 completion record — 2026-08-12
+
+Status: Complete
+
+- Added organization-member `Active`, `Stale`, and `Protection unavailable` states and explicit text
+  that stale does not prove uninstall. Typecheck passed; 9 tests passed.
+### C8a completion record — 2026-08-12
+
+Status: Complete
+
+- Trust copy now explains verified signed-data updates, local inference, and the policy/consent/redaction
+  boundary without implying that signatures alone constitute approval.
+- Verification: client typecheck passed; 9 tests passed.
+- Next: C8b document-protection claim alignment, pending authorization.

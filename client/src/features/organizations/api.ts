@@ -1,7 +1,7 @@
 import { apiRequest } from "../../lib/http"
-import type { Organization, OrganizationMember, OrganizationRole, OrganizationSitePolicy, OrganizationSummary, OrganizationTrends } from "./types"
+import type { ExtensionHealth, Organization, OrganizationMember, OrganizationRole, OrganizationSitePolicy, OrganizationSummary, OrganizationTrends } from "./types"
 import type { OrganizationPolicy } from "../sites/types"
-import { parseMemberResponse, parseOrganizationCreatedResponse, parseOrganizationResponse, parseOrganizationSiteResponse, parseOrganizationSitesResponse, parseOrganizationsResponse, parseTrendsResponse } from "./schemas"
+import { parseExtensionHealthResponse, parseMemberResponse, parseOrganizationCreatedResponse, parseOrganizationResponse, parseOrganizationSiteResponse, parseOrganizationSitesResponse, parseOrganizationsResponse, parseTrendsResponse } from "./schemas"
 
 export const getOrganizations = () => apiRequest<{ organizations: Organization[] }>("/orgs", {}, parseOrganizationsResponse)
 export const createOrganization = (name: string) => apiRequest<{ organization: Organization }>("/orgs", { method: "POST", body: JSON.stringify({ name }) }, parseOrganizationCreatedResponse)
@@ -14,3 +14,4 @@ export const revokeOrganizationInvitation = (organizationId: string, memberId: s
 export const getOrganizationSitePolicies = (organizationId: string) => apiRequest<{ sites: OrganizationSitePolicy[] }>(`/orgs/${organizationId}/sites`, {}, parseOrganizationSitesResponse)
 export const createOrganizationSitePolicy = (organizationId: string, hostname: string, label: string, policy?: OrganizationPolicy) => apiRequest<{ site: OrganizationSitePolicy }>(`/orgs/${organizationId}/sites`, { method: "POST", body: JSON.stringify({ hostname, label, ...(policy ? { policy } : {}) }) }, parseOrganizationSiteResponse)
 export const deleteOrganizationSitePolicy = (organizationId: string, siteId: string) => apiRequest<void>(`/orgs/${organizationId}/sites/${siteId}`, { method: "DELETE" })
+export const getOrganizationExtensionHealth = (organizationId: string) => apiRequest<{ health: ExtensionHealth[] }>(`/orgs/${organizationId}/extension-health`, {}, parseExtensionHealthResponse)

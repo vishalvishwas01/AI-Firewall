@@ -3,6 +3,7 @@ import { webcrypto } from "node:crypto"
 import { describe, expect, it, vi } from "vitest"
 
 import { activateStagedIntelligencePackage } from "./activation"
+import { analyze, defaultSettings } from "../detection"
 import { loadActiveIntelligenceRuntime } from "./runtime"
 import { getActiveIntelligencePackage } from "./runtimeStorage"
 import { parseConfiguredIntelligenceRootKeys } from "./rootKeys"
@@ -32,7 +33,7 @@ describe("signed intelligence deployment drill", () => {
         extensionVersion: "0.1.0",
         activePackageSequence: (await getActiveIntelligencePackage())?.manifest.sequence ?? 0,
         activeTrustBundleSequence: input.trustBundle.sequence,
-        supportedCapabilities: ["rules-v1"],
+        supportedCapabilities: ["rules-v1", "model-v2", "candidate-features-v1"],
         trustedRootKeys: rootConfiguration
       })
       expect(staged).toBeDefined()
@@ -42,8 +43,18 @@ describe("signed intelligence deployment drill", () => {
     const baseline = await buildIntelligenceFixture(40, { keyMaterial: keys })
     expect((await stageAndActivate(baseline))?.manifest.sequence).toBe(40)
 
-    const replacement = await buildIntelligenceFixture(41, { keyMaterial: keys })
-    expect((await stageAndActivate(replacement))?.manifest.sequence).toBe(41)
+    const replacement = await buildIntelligenceFixture(41, { keyMaterial: keys, includeModel: true })
+    const activeReplacement = await stageAndActivate(replacement)
+    expect(activeReplacement?.manifest.sequence).toBe(41)
+    const replacementRuntime = await loadActiveIntelligenceRuntime(now)
+    expect(replacementRuntime.classifierArtifact?.modelVersion).toBe(replacement.manifest.versions.modelVersion)
+    const managedPolicy = { schemaVersion: 1 as const, version: 7, category: "sensitive-data" as const, minimumSeverity: "high" as const, action: "block" as const, destination: "any" as const, allowOverride: false, redactionAllowed: true }
+    const protectedAnalysis = analyze(
+      { text: "password=supersecretvalue" },
+      { ...replacementRuntime, settings: { ...defaultSettings, sensitiveData: false }, managedPolicy }
+    )
+    expect(protectedAnalysis.policyDecision).toMatchObject({ action: "block", policyVersion: 7 })
+    expect(protectedAnalysis.results[0].detector).toBe("rule")
 
     const rollback = await buildIntelligenceFixture(42, {
       keyMaterial: keys,
@@ -67,7 +78,7 @@ describe("signed intelligence deployment drill", () => {
       extensionVersion: "0.1.0",
       activePackageSequence: activeRollback!.manifest.sequence,
       activeTrustBundleSequence: baseline.trustBundle.sequence,
-      supportedCapabilities: ["rules-v1"],
+      supportedCapabilities: ["rules-v1", "model-v2", "candidate-features-v1"],
       trustedRootKeys: rootConfiguration
     })).resolves.toBeUndefined()
   })

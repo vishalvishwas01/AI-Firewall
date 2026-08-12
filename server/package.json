@@ -9,7 +9,7 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "intelligence:drill": "node --import tsx --test src/modules/intelligence/intelligence.schemas.test.ts src/modules/intelligence/intelligence.governance.test.ts src/modules/intelligence/intelligence.repository.test.ts",
-    "test": "node --import tsx --test src/shared/errors.test.ts src/shared/operational.test.ts src/infrastructure/retention.test.ts src/data/detectionBenchmarkSnapshot.test.ts src/models/organization.test.ts src/utils/organizationTrends.test.ts src/modules/auth/auth.schemas.test.ts src/modules/logs/logs.schemas.test.ts src/modules/sites/sites.schemas.test.ts src/modules/organizations/organizations.schemas.test.ts src/modules/improvementTelemetry/telemetry.schemas.test.ts src/modules/ruleKnowledge/knowledge.test.ts src/modules/intelligence/intelligence.schemas.test.ts src/modules/intelligence/intelligence.repository.test.ts src/modules/intelligence/intelligence.governance.test.ts"
+    "test": "node --import tsx --test src/modules/extensionHealth/health.schemas.test.ts src/shared/errors.test.ts src/shared/operational.test.ts src/infrastructure/retention.test.ts src/data/detectionBenchmarkSnapshot.test.ts src/models/organization.test.ts src/utils/organizationTrends.test.ts src/modules/auth/auth.schemas.test.ts src/modules/logs/logs.schemas.test.ts src/modules/sites/sites.schemas.test.ts src/modules/organizations/organizations.schemas.test.ts src/modules/improvementTelemetry/telemetry.schemas.test.ts src/modules/ruleKnowledge/knowledge.test.ts src/modules/intelligence/intelligence.schemas.test.ts src/modules/intelligence/intelligence.repository.test.ts src/modules/intelligence/intelligence.governance.test.ts"
   },
   "keywords": [],
   "author": "",

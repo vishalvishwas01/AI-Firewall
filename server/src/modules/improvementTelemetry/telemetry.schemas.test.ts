@@ -27,6 +27,9 @@ test("rejects unknown content-bearing fields and feature strings", () => {
   assert.equal(parseImprovementEvent({ ...validEvent(), rawCandidate: "secret-value" }), undefined)
   assert.equal(parseImprovementEvent({ ...validEvent(), snippet: "redacted prompt" }), undefined)
   assert.equal(parseImprovementEvent({ ...validEvent(), features: { ...features, candidate: "secret" } }), undefined)
+  for (const key of ["prompt", "fileBody", "secret", "candidate", "freeText", "snippet"]) {
+    assert.equal(parseImprovementEvent({ ...validEvent(), [key]: "private-content" }), undefined)
+  }
 })
 
 test("rejects invalid bounds, timestamps, enums, and versions", () => {

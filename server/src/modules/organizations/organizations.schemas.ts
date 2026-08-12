@@ -52,6 +52,7 @@ export const parseOrganizationPolicy = (value: unknown): ParsedOrganizationPolic
   if (body.schemaVersion !== 1 || typeof body.version !== "number" || !Number.isInteger(body.version) || body.version < 1) return { error: "Invalid organization policy" }
   if (!isOneOf(body.category, policyCategories) || !isOneOf(body.minimumSeverity, policySeverities) || !isOneOf(body.action, policyActions) || !isOneOf(body.destination, policyDestinations) || typeof body.allowOverride !== "boolean" || typeof body.redactionAllowed !== "boolean") return { error: "Invalid organization policy" }
   if (body.action === "redact" && !body.redactionAllowed) return { error: "Redaction policy must allow redaction" }
+  if (body.action === "warn" && !body.allowOverride) return { error: "Warning policy must allow override" }
   return { schemaVersion: 1 as const, version: body.version, category: body.category, minimumSeverity: body.minimumSeverity, action: body.action, destination: body.destination, allowOverride: body.allowOverride, redactionAllowed: body.redactionAllowed }
 }
 

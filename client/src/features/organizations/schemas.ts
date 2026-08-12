@@ -1,6 +1,6 @@
 import { array, isoDate, nonEmptyString, nonNegativeInteger, object, oneOf, optional, ResponseValidationError } from "../../lib/schema"
 import { parseReportSummary } from "../reports/schemas"
-import type { Organization, OrganizationMember, OrganizationSitePolicy, OrganizationSummary, OrganizationTrendPoint, OrganizationTrends } from "./types"
+import type { ExtensionHealth, Organization, OrganizationMember, OrganizationSitePolicy, OrganizationSummary, OrganizationTrendPoint, OrganizationTrends } from "./types"
 import { parseOrganizationPolicy } from "../sites/schemas"
 
 const roles = ["owner", "admin", "member"] as const
@@ -40,3 +40,5 @@ export const parseTrendsResponse = (value: unknown) => { const input = object(va
 export const parseMemberResponse = (value: unknown) => { const input = object(value, ["member"]); return { member: parseOrganizationMember(input.member) } }
 export const parseOrganizationSitesResponse = (value: unknown) => { const input = object(value, ["sites"]); return { sites: array(input.sites, parseOrganizationSitePolicy, 2000) } }
 export const parseOrganizationSiteResponse = (value: unknown) => { const input = object(value, ["site"]); return { site: parseOrganizationSitePolicy(input.site) } }
+const parseExtensionHealth = (value: unknown): ExtensionHealth => { const input = object(value, ["email", "state"], ["memberId", "extensionVersion", "policyVersion", "intelligenceVersion", "lastSeen"]); return { email: nonEmptyString(input.email, 320), state: oneOf(input.state, ["active", "stale", "protection-unavailable"] as const), memberId: optional(input.memberId, (item) => nonEmptyString(item, 64)), extensionVersion: optional(input.extensionVersion, (item) => nonEmptyString(item, 40)), policyVersion: optional(input.policyVersion, nonNegativeInteger), intelligenceVersion: optional(input.intelligenceVersion, (item) => nonEmptyString(item, 120)), lastSeen: optional(input.lastSeen, isoDate) } }
+export const parseExtensionHealthResponse = (value: unknown) => { const input = object(value, ["health"]); return { health: array(input.health, parseExtensionHealth, 5000) } }

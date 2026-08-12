@@ -84,4 +84,5 @@ export type FileSummary = {
   name: string
   type?: string
   size?: number
+  inspectionStatus?: "scanned" | "unsupported" | "oversized" | "failed"
 }

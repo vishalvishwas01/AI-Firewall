@@ -78,6 +78,11 @@ describe("risky upload detection", () => {
     expect(detections[0].severity).toBe("high")
   })
 
+  it("fails safely when bounded local inspection is unavailable", () => {
+    const detection = detectRiskyUploads([{ name: "notes.txt", inspectionStatus: "oversized" }])[0]
+    expect(detection).toMatchObject({ severity: "high", incompleteScan: true, detector: "system" })
+  })
+
   it("marks business documents as medium severity", () => {
     const detections = detectRiskyUploads([{ name: "customers.csv" }, { name: "brief.docx" }])
 

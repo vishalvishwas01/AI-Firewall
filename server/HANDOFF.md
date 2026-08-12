@@ -457,7 +457,7 @@ staging, then complete `../docs/INTELLIGENCE_DEPLOYMENT_DRILL.md` before product
 
 ## 8. Product hardening roadmap adoption — 2026-08-11
 
-Status: **Phase 3 / S11 in progress — versioned organization policy**
+Status: **Phases 6–7 / S13 complete — local lifecycle verified; staging pending**
 
 `../docs/Latest_info.md` is adopted as the cross-component hardening direction. Its detailed Phase
 0–12 master specification is canonical where the abbreviated phase list differs. Existing services are
@@ -493,5 +493,45 @@ route, collection, environment, or runtime change is allowed.
 - Confirmed no raw-prompt inference or file-body endpoint exists.
 - Verification: server tests 53/53 and typecheck passed; no runtime source was changed.
 
-Next step: **wait for Phase 1 detection evidence and the Phase 2 risk contract before S11 policy design**.
-Staging key/publisher provisioning remains separately authorized operational work.
+### S11 completion record — 2026-08-12
+
+Status: Complete
+
+- Extended organization site-policy documents/DTOs with an optional exact versioned policy. New records
+  receive a safe default; legacy records remain readable. Owner/admin authorization is unchanged.
+- Rejects unknown fields, invalid combinations, and non-increasing version updates with conflict status.
+  Intelligence schemas contain no policy fields.
+- Verification: typecheck/build passed; 54 tests passed, including version/schema/privacy regressions.
+- Privacy: configuration metadata only; no content, inference, telemetry, or new route/collection added.
+
+### S12 completion record — 2026-08-12
+
+Status: Complete
+
+- Added authenticated bounded heartbeat ingestion, latest-per-user storage with 90-day TTL, and
+  membership-scoped organization health. State is active, stale after 36 hours, or protection-unavailable.
+- No uninstall inference or content fields. Typecheck/build passed; 56 tests passed.
+### S13 completion record — 2026-08-12
+
+Status: Complete (local verification); target staging remains pending
+
+- Reverified exact schemas, reviewed release gates, immutable publication/audit, revocation exclusion,
+  explicit rollback governance, content-free DTOs, and external signer/publisher authorization boundary.
+- Verification: server drill 13/13 and typecheck passed. No private/deployment key was handled.
+
+### S15 completion record - 2026-08-12
+
+Status: Complete for bounded hardening. Removed origin echoing from CORS errors, bounded bearer/cookie token
+inputs, and added malformed/oversized-token regression coverage. No authorization model or API contract changed.
+
+### S14 completion record - 2026-08-12
+
+Status: Complete. Audited both data boundaries; added forbidden-field regression tests. No route, collection,
+or runtime data-flow changes. Redacted reports and improvement telemetry remain separate.
+
+### S16 completion record - 2026-08-12
+
+Status: Complete for contract/audit scope. Added an exact-field, content-free lifecycle metric schema for
+activation, quality, and team-conversion signals. Billing, entitlements, uninstall inference, and raw content
+remain out of scope.
+- Next: deployment-owned staging drill; S14 privacy audit remains pending authorization.

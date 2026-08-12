@@ -6,6 +6,7 @@ import {
 } from "../features/detection"
 import { redactSensitiveText, redactSnippet } from "../features/detection"
 import type { Detection } from "../features/detection"
+import { inspectLocalFiles } from "../features/detection/fileInspection"
 import {
   analyzeForWarning,
   safeWarningEvidence,
@@ -913,7 +914,7 @@ const handleComposerReview = (
 
 document.addEventListener(
   "paste",
-  (event) => {
+  async (event) => {
     if (!siteEnabled) return
     const text = event.clipboardData?.getData("text") ?? ""
     const analysis = analyzeWithRuntime({ text }, cachedSettings)
@@ -1004,19 +1005,18 @@ document.addEventListener(
 
 document.addEventListener(
   "change",
-  (event) => {
+  async (event) => {
     if (!siteEnabled) return
     const input = event.target
     if (!(input instanceof HTMLInputElement) || input.type !== "file" || !input.files?.length) return
 
     if (!cachedSettings.uploadWarnings) return
 
-    const files = Array.from(input.files).map((file) => ({
-      name: file.name,
-      size: file.size,
-      type: file.type
-    }))
-    const analysis = analyzeWithRuntime({ files }, cachedSettings)
+    const rawFiles = Array.from(input.files)
+    const inspection = await inspectLocalFiles(rawFiles)
+    const files = inspection.map(({ summary, status }) => ({ ...summary, inspectionStatus: status }))
+    const extractedText = inspection.map((item) => item.text).filter(Boolean).join("\n")
+    const analysis = analyzeWithRuntime({ files, text: extractedText }, cachedSettings)
     const detections = analysis.warningDetections
     if (detections.length === 0) return
 

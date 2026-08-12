@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from "react"
 import { SiteHeader } from "../../../components/SiteHeader"
 import type { SessionUser } from "../../auth/types"
 import { authRedirectKey } from "../../auth/extensionBridge"
-import { addOrganizationMember, createOrganization, createOrganizationSitePolicy, deleteOrganizationSitePolicy, getOrganization, getOrganizationSitePolicies, getOrganizations, getOrganizationTrends, removeOrganizationMember, revokeOrganizationInvitation, updateOrganizationMemberRole } from "../api"
-import type { Organization, OrganizationMember, OrganizationRole, OrganizationSitePolicy, OrganizationSummary, OrganizationTrends } from "../types"
+import { addOrganizationMember, createOrganization, createOrganizationSitePolicy, deleteOrganizationSitePolicy, getOrganization, getOrganizationExtensionHealth, getOrganizationSitePolicies, getOrganizations, getOrganizationTrends, removeOrganizationMember, revokeOrganizationInvitation, updateOrganizationMemberRole } from "../api"
+import type { ExtensionHealth, Organization, OrganizationMember, OrganizationRole, OrganizationSitePolicy, OrganizationSummary, OrganizationTrends } from "../types"
 import { OrganizationLoadingState, OrganizationSelectionState, OrganizationsEmptyState, OrganizationsLoadingState } from "./OrganizationStates"
 import { getReportSites } from "../../sites/api"
 import type { ReportSite } from "../../sites/types"
@@ -24,6 +24,7 @@ export function TeamPage({
   const [trends, setTrends] = useState<OrganizationTrends | null>(null);
   const [trendDays, setTrendDays] = useState<7 | 30 | 90>(30);
   const [sitePolicies, setSitePolicies] = useState<OrganizationSitePolicy[]>([]);
+  const [extensionHealth, setExtensionHealth] = useState<ExtensionHealth[]>([]);
   const [organizationName, setOrganizationName] = useState("");
   const [policyHostname, setPolicyHostname] = useState("");
   const [policyLabel, setPolicyLabel] = useState("");
@@ -61,10 +62,11 @@ export function TeamPage({
 
   const loadOrganizationDetail = async (organizationId: string) => {
     const requestId = ++detailRequestId.current;
-    const [response, policyResponse, trendResponse] = await Promise.all([
+    const [response, policyResponse, trendResponse, healthResponse] = await Promise.all([
       getOrganization(organizationId),
       getOrganizationSitePolicies(organizationId),
-      getOrganizationTrends(organizationId, trendDays)
+      getOrganizationTrends(organizationId, trendDays),
+      getOrganizationExtensionHealth(organizationId)
     ]);
     if (requestId !== detailRequestId.current) return;
     setSelectedOrganization(response.organization);
@@ -72,6 +74,7 @@ export function TeamPage({
     setSummary(response.summary);
     setTrends(trendResponse.trends);
     setSitePolicies(policyResponse.sites);
+    setExtensionHealth(healthResponse.health);
   };
 
   const syncMergedSitesToExtension = async () => {
@@ -193,10 +196,11 @@ export function TeamPage({
     setError("");
 
     try {
+      const existingVersion = sitePolicies.find((site) => site.hostname === policyHostname.trim().toLowerCase().replace(/^www\./, ""))?.policy?.version ?? 0;
       await createOrganizationSitePolicy(selectedOrganization.id, policyHostname, policyLabel, {
-        schemaVersion: 1, version: 1, category: policyCategory,
+        schemaVersion: 1, version: existingVersion + 1, category: policyCategory,
         minimumSeverity: policyMinimumSeverity, action: policyAction,
-        destination: policyDestination, allowOverride: policyAllowOverride,
+        destination: policyDestination, allowOverride: policyAction === "warn" ? true : policyAllowOverride,
         redactionAllowed: policyAction === "redact" ? true : policyRedactionAllowed
       });
       setPolicyHostname("");
@@ -498,6 +502,13 @@ export function TeamPage({
                 </div>
 
                 <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+                  <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
+                    <h2 className="text-lg font-semibold text-slate-950">Extension protection health</h2>
+                    <p className="mt-2 text-sm text-slate-600">A stale signal can mean the browser is closed, offline, disabled, removed, or unavailable; it does not prove uninstall.</p>
+                    <div className="mt-4 divide-y divide-slate-200">
+                      {extensionHealth.map((item) => <div key={item.memberId ?? item.email} className="flex justify-between gap-3 py-2 text-sm"><span>{item.email}</span><span className="font-semibold">{item.state === "active" ? "Active" : item.state === "stale" ? "Stale" : "Protection unavailable"}</span></div>)}
+                    </div>
+                  </div>
                   <form
                     onSubmit={submitSitePolicy}
                     className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
@@ -540,7 +551,7 @@ export function TeamPage({
                         </select>
                       </label>
                     </div>
-                    <label className="mt-4 flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={policyAllowOverride} onChange={(event) => setPolicyAllowOverride(event.target.checked)} /> Allow member override</label>
+                    <label className="mt-4 flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={policyAllowOverride || policyAction === "warn"} disabled={policyAction === "warn"} onChange={(event) => setPolicyAllowOverride(event.target.checked)} /> Allow member override</label>
                     <label className="mt-2 flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={policyRedactionAllowed || policyAction === "redact"} disabled={policyAction === "redact"} onChange={(event) => setPolicyRedactionAllowed(event.target.checked)} /> Allow redacted replacement</label>
                     <label className="mt-4 block text-sm font-semibold text-slate-950">
                       Website name

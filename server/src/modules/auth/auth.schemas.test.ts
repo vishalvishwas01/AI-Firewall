@@ -44,3 +44,10 @@ test("expired bearer tokens fail closed", () => {
   const req = { cookies: {}, header: (name: string) => name === "authorization" ? `Bearer ${token}` : undefined } as never
   assert.equal(authenticatedUserFromRequest(req), undefined)
 })
+
+test("malformed and oversized bearer tokens fail closed", () => {
+  const malformed = { cookies: {}, header: (name: string) => name === "authorization" ? "Bearer nope" : undefined } as never
+  assert.equal(authenticatedUserFromRequest(malformed), undefined)
+  const oversized = { cookies: {}, header: (name: string) => name === "authorization" ? `Bearer ${"x".repeat(4097)}` : undefined } as never
+  assert.equal(authenticatedUserFromRequest(oversized), undefined)
+})

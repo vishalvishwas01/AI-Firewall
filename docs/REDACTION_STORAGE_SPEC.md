@@ -126,6 +126,14 @@ Server guarantees:
 - Improvement event creation/queue: `extension/src/features/improvementTelemetry/`
 - Improvement server allowlist and lifecycle: `server/src/modules/improvementTelemetry/`
 
+## Extension Health Metadata
+
+Authenticated health reporting is separate from warning and improvement data. It stores only the latest
+extension version, optional policy/intelligence versions, bounded status, user ownership, and server
+timestamps in `extension_health`. Records expire after 90 days. It must never accept content, sites,
+detections, prompts, snippets, candidates, files, or browsing history. Missing/stale health is not proof
+of uninstall.
+
 ## QA Examples
 
 Input:

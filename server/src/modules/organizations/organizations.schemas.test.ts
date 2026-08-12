@@ -37,6 +37,7 @@ test("validates exact versioned organization policy", () => {
   assert.deepEqual(parseOrganizationPolicy({ ...defaultOrganizationPolicy, version: 0 }), { error: "Invalid organization policy" })
   assert.throws(() => parseOrganizationPolicy({ ...defaultOrganizationPolicy, rawPrompt: "private" }))
   assert.deepEqual(parseOrganizationPolicy({ ...defaultOrganizationPolicy, action: "redact", redactionAllowed: false }), { error: "Redaction policy must allow redaction" })
+  assert.deepEqual(parseOrganizationPolicy({ ...defaultOrganizationPolicy, action: "warn", allowOverride: false }), { error: "Warning policy must allow override" })
 })
 
 test("validates organization trend query values", () => {

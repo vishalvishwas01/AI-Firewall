@@ -9,11 +9,22 @@ import {
   initializeIntelligenceRefreshScheduler,
   runConfiguredIntelligenceRefresh
 } from "./features/intelligence"
+import { initializeHealthHeartbeat, sendHealthHeartbeat } from "./features/health"
+import { loadActiveIntelligenceRuntime } from "./features/intelligence"
+import { getProtectedSites } from "./features/storage"
 
 void retryQueuedSyncLogs().catch(() => undefined)
 void retryQueuedImprovementEvents().catch(() => undefined)
 initializeIntelligenceRefreshScheduler()
 void runConfiguredIntelligenceRefresh()
+
+const reportHealth = async () => {
+  const sites = await getProtectedSites()
+  const policyVersion = sites.reduce((maximum, site) => Math.max(maximum, site.policy?.version ?? 0), 0) || undefined
+  await sendHealthHeartbeat(policyVersion, await loadActiveIntelligenceRuntime())
+}
+initializeHealthHeartbeat(reportHealth)
+void reportHealth().catch(() => undefined)
 
 const hostnameMatchesSite = (hostname: string, siteHostname: string) =>
   hostname === siteHostname || hostname.endsWith(`.${siteHostname}`)
@@ -22,7 +33,7 @@ const policyFromMessage = (value: unknown): OrganizationPolicy | undefined => {
   if (!value || typeof value !== "object") return undefined
   const policy = value as Record<string, unknown>
   const keys = ["schemaVersion", "version", "category", "minimumSeverity", "action", "destination", "allowOverride", "redactionAllowed"]
-  if (Object.keys(policy).some((key) => !keys.includes(key)) || policy.schemaVersion !== 1 || typeof policy.version !== "number" || !Number.isInteger(policy.version) || policy.version < 1 || !["all", "sensitive-data", "prompt-injection", "risky-upload", "scam-fraud"].includes(String(policy.category)) || !["low", "medium", "high"].includes(String(policy.minimumSeverity)) || !["warn", "redact", "block"].includes(String(policy.action)) || !["any", "public-ai", "approved-internal", "unknown"].includes(String(policy.destination)) || typeof policy.allowOverride !== "boolean" || typeof policy.redactionAllowed !== "boolean" || (policy.action === "redact" && !policy.redactionAllowed)) return undefined
+  if (Object.keys(policy).some((key) => !keys.includes(key)) || policy.schemaVersion !== 1 || typeof policy.version !== "number" || !Number.isInteger(policy.version) || policy.version < 1 || !["all", "sensitive-data", "prompt-injection", "risky-upload", "scam-fraud"].includes(String(policy.category)) || !["low", "medium", "high"].includes(String(policy.minimumSeverity)) || !["warn", "redact", "block"].includes(String(policy.action)) || !["any", "public-ai", "approved-internal", "unknown"].includes(String(policy.destination)) || typeof policy.allowOverride !== "boolean" || typeof policy.redactionAllowed !== "boolean" || (policy.action === "redact" && !policy.redactionAllowed) || (policy.action === "warn" && !policy.allowOverride)) return undefined
   return policy as OrganizationPolicy
 }
 

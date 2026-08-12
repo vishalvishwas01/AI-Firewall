@@ -50,11 +50,12 @@ export const authCookieOptions = {
 
 const authTokenFromRequest = (req: Request) => {
   const cookieToken = req.cookies?.[authCookieName]
-  if (typeof cookieToken === "string") return cookieToken
+  if (typeof cookieToken === "string" && cookieToken.length <= 4096) return cookieToken
 
   const authorization = req.header("authorization")
   if (authorization?.startsWith("Bearer ")) {
-    return authorization.slice("Bearer ".length)
+    const token = authorization.slice("Bearer ".length).trim()
+    if (token.length > 0 && token.length <= 4096) return token
   }
 
   return undefined

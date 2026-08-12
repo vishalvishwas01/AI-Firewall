@@ -5,6 +5,8 @@ import { getDb } from "../../db/mongo.js"
 import { requireAuth, type AuthenticatedRequest } from "../../middleware/auth.js"
 import { sendJson, validateNoBody } from "../../shared/validation.js"
 import { organizationMembersCollection, organizationSitePoliciesCollection, organizationsCollection, syncedLogsCollection, usersCollection } from "./organizations.repository.js"
+import { extensionHealthCollection } from "../../models/organization.js"
+import { healthState } from "../extensionHealth/health.schemas.js"
 import {
   addLogToOrganizationTrend,
   createOrganizationTrendWindow,
@@ -267,6 +269,21 @@ router.get("/:id", async (req: AuthenticatedRequest, res, next) => {
   }
 })
 
+router.get("/:id/extension-health", async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const access = await requireOrganizationMembership(req, routeParam(req.params.id))
+    if (!access?.org._id) { res.status(404).json({ error: "Organization not found" }); return }
+    const members = await organizationMembersCollection(await getDb()).find({ organizationId: access.org._id, status: "active", userId: { $exists: true } }).toArray()
+    const userIds = members.flatMap((member) => member.userId ? [member.userId] : [])
+    const records = userIds.length ? await extensionHealthCollection(await getDb()).find({ userId: { $in: userIds } }).toArray() : []
+    const byUser = new Map(records.map((record) => [record.userId.toHexString(), record]))
+    sendJson(res, ["health"], { health: members.map((member) => {
+      const record = member.userId ? byUser.get(member.userId.toHexString()) : undefined
+      return { memberId: member._id?.toHexString(), email: member.email, state: healthState(record?.lastSeen, record?.status), ...(record ? { extensionVersion: record.extensionVersion, policyVersion: record.policyVersion, intelligenceVersion: record.intelligenceVersion, lastSeen: record.lastSeen.toISOString() } : {}) }
+    }) })
+  } catch (error) { next(error) }
+})
+
 router.get("/:id/sites", async (req: AuthenticatedRequest, res, next) => {
   try {
     const access = await requireOrganizationMembership(req, routeParam(req.params.id))
@@ -301,12 +318,14 @@ router.post("/:id/sites", async (req: AuthenticatedRequest, res, next) => {
       return
     }
     const { hostname, label, policy } = input
+    const policyProvided = typeof req.body === "object" && req.body !== null && "policy" in req.body
 
     const db = await getDb()
     const now = new Date()
     const policies = organizationSitePoliciesCollection(db)
     const existingPolicy = await policies.findOne({ organizationId: access.org._id, hostname })
-    if (existingPolicy?.policy && policy.version <= existingPolicy.policy.version) {
+    const effectivePolicy = !policyProvided && existingPolicy?.policy ? existingPolicy.policy : policy
+    if (policyProvided && existingPolicy?.policy && effectivePolicy.version <= existingPolicy.policy.version) {
       res.status(409).json({ error: "Organization policy version conflict" })
       return
     }
@@ -321,7 +340,7 @@ router.post("/:id/sites", async (req: AuthenticatedRequest, res, next) => {
         $set: {
           label,
           updatedAt: now,
-          policy
+          policy: effectivePolicy
         }
       },
       { upsert: true }

@@ -29,6 +29,9 @@ test("parses the existing redacted log contract", () => {
 
 test("rejects unknown content-bearing fields at the API edge", () => {
   assert.throws(() => parseLogInput({ ...validInput, rawPrompt: "must not survive" }))
+  for (const key of ["prompt", "fileBody", "secret", "candidate", "freeText", "screenshot"]) {
+    assert.throws(() => parseLogInput({ ...validInput, [key]: "private-content" }), key)
+  }
 })
 
 test("rejects missing fields and unredacted sensitive snippets", () => {

@@ -6,3 +6,4 @@ export type OrganizationSummary = ReportSummary & { activeMembers: number; invit
 export type OrganizationTrendPoint = { date: string; totalLogs: number; bySeverity: ReportSummary["bySeverity"]; byEventType: ReportSummary["byEventType"]; byFeedback: ReportSummary["byFeedback"] }
 export type OrganizationTrends = { rangeDays: 7 | 30 | 90; bucket: "day"; from: string; to: string; points: OrganizationTrendPoint[] }
 export type OrganizationSitePolicy = { id: string; hostname: string; label: string; createdAt: string; updatedAt: string; policy?: import("../sites/types").OrganizationPolicy }
+export type ExtensionHealth = { memberId?: string; email: string; state: "active" | "stale" | "protection-unavailable"; extensionVersion?: string; policyVersion?: number; intelligenceVersion?: string; lastSeen?: string }

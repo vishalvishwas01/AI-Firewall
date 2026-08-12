@@ -3,7 +3,8 @@ export const trustArchitectureCopy = [
   "Settings, protected domains, feedback metadata, and up to 50 warning records with 240-character redacted snippets.",
   "Authenticated reports receive warning metadata, evidence labels, and redacted snippets only. Sync can be switched off.",
   "Raw secrets, credentials, tokens, service URLs, emails, phone numbers, card-like values, files, or full raw prompts.",
-  "Only when separately enabled, HallGuard may sync bounded derived features and feedback. It is off by default and does not upload prompt content, snippets, candidates, files, or screenshots."
+  "Only when separately enabled, HallGuard may sync bounded derived features and feedback. It is off by default and does not upload prompt content, snippets, candidates, files, or screenshots.",
+  "Reviewed intelligence updates are signed data, verified before local activation, and cannot override consent, redaction, or organization policy. Model inference remains local."
 ] as const;
 
 export const trustControlCopy = [

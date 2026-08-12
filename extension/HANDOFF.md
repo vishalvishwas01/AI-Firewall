@@ -773,7 +773,7 @@ complete the staging drill in `../docs/INTELLIGENCE_DEPLOYMENT_DRILL.md`.
 
 ## 11. Product hardening roadmap adoption — 2026-08-11
 
-Status: **Phase 3 / E16 in progress — versioned managed policy**
+Status: **Phases 6–7 / E18 complete — local lifecycle verified; staging pending**
 
 `../docs/Latest_info.md` is adopted as the cross-component hardening direction. Its detailed Phase
 0–12 master specification is canonical. The existing local engine, redaction, queues, classifier
@@ -891,4 +891,44 @@ changed.
 Known limitations: E15 preserves current `allow | warn | confirm` actions rather than adding managed
 block/redact policy. Non-default destinations remain unknown, and classifier signals remain shadow-only.
 
-Next step: **E16 / shared Phase 3 centrally managed policy**, pending explicit authorization.
+### E16 completion record — 2026-08-12
+
+Status: Complete
+
+- Added exact versioned managed-policy fields and local precedence: incomplete-scan hard limit, matching
+  organization policy, personal settings, then risk. Managed categories cannot be disabled personally.
+- Added local `warn`, `redact`, and `block` decisions. Non-overridable blocks omit bypass; redaction is
+  shown only when allowed. Intelligence remains unable to supply or override policy.
+- Extended the authenticated protected-site bridge and local storage with validated configuration-only
+  policy metadata. Legacy site-only records remain compatible and non-enforcing.
+- Verification: extension typecheck/build passed; 128 tests passed with 1 normal performance skip;
+  deterministic benchmark remained 26/26 with zero false positives/negatives and 11/11 redaction/raw-
+  leak checks. Existing non-fatal Plasmo network/SVGO notices remain.
+- Privacy: no prompts, candidates, secrets, snippets, file contents, browsing history, telemetry, consent,
+  model, or intelligence contracts changed.
+
+### E17 completion record — 2026-08-12
+
+Status: Complete
+
+- Added authenticated startup/12-hour heartbeat with extension, policy, intelligence versions and
+  bounded status only. No content/site/detection fields are sent.
+- Documented that HallGuard cannot prevent removal; enterprise anti-bypass requires external managed
+  browser/device force-install controls. Missing health never means uninstalled.
+- Verification: extension typecheck passed; 128 tests passed with 1 normal performance skip.
+### E18 completion record — 2026-08-12
+
+Status: Complete (local verification); target staging remains pending
+
+- Expanded the ephemeral drill to activate a model-bearing replacement, expose model/package/rule
+  versions, prove inference remains local, preserve managed policy, execute explicit rollback, and reject
+  replay. Existing signature, digest, trust, revocation, expiry, compatibility, schema, atomic/LKG/bundled
+  controls remain intact.
+- Verification: extension drill 1/1 and typecheck passed. No private/deployment key was retained.
+- Limitation/next: execute the deployment-owned staging drill before production; then E19 local document
+  parsing is the next development step, pending authorization.
+
+### E19 completion record - 2026-08-12
+
+Status: Complete for bounded TXT/CSV inspection. Local extraction is transient and bounded; oversized or
+failed reads fail safely. PDF/DOCX/XLSX remain metadata-only. Next: E20/S14/C9; production staging deferred.

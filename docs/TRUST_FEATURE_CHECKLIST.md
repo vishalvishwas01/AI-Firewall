@@ -195,3 +195,54 @@ Complete this checklist for every new detector, model, storage field, synchroniz
 - [x] Existing allow/warn/confirm behavior and the incomplete-scan confirmation guard remain compatible; classifier output remains non-enforcing.
 - [x] No storage, telemetry, synchronization, consent, permission, server API/DTO, model, artifact, or organization-policy contract changed.
 - [x] Public default AI sites receive a bounded `public-ai` classification; non-default configured sites remain `unknown`. Approved-internal and managed-policy decisions are deferred to E16.
+
+## E16 Review Record — 2026-08-12
+
+- [x] Organization policy is exact-field and versioned, with category, minimum severity, action, destination, override, and redaction dimensions.
+- [x] Owner/admin authorization remains server-enforced and non-increasing updates return a conflict; legacy site-only records remain readable.
+- [x] Precedence is security hard limits, matching organization policy, personal settings, then local risk; personal settings cannot disable a managed category.
+- [x] Non-overridable blocks remove the bypass action, and redaction controls are enforced locally.
+- [x] Extension bridge input is validated again before local storage; malformed/unknown policy fields fail closed.
+- [x] Intelligence packages cannot carry or override organization policy.
+- [x] Policies contain configuration metadata only; no prompt, candidate, secret, file content, snippet, or browsing history was added.
+
+## E17/S12/C8 Review Record — 2026-08-12
+
+- [x] Heartbeats contain only extension/policy/intelligence versions and bounded status; server supplies timestamps.
+- [x] Heartbeats require authentication, run at startup and no more than every 12 hours, and retain latest state for 90 days.
+- [x] Organization health is membership-scoped and exposes only `active`, `stale`, or `protection-unavailable`.
+- [x] Missing/stale heartbeats never infer uninstall; documented causes include closed/offline browser, disabled/removed extension, or browser failure.
+- [x] No prompt, hostname, candidate, secret, snippet, file, browsing history, detection result, or consent state is transmitted.
+- [x] HallGuard does not claim to prevent extension removal; enterprise anti-bypass depends on external managed-browser/device controls.
+
+## E18/S13/C8a Review Record — 2026-08-12
+
+- [x] Local drills verify Ed25519/SHA-256 trust, revocation/expiry, compatibility, schema/data-only constraints, monotonic sequence, atomic activation, replay rejection, rollback, last-known-good, and bundled fallback.
+- [x] Reviewed security/privacy/maintainer evidence gates remain required before publication.
+- [x] Active package/model/rule/trust versions are metadata-visible; model inference remains local.
+- [x] Model/package failure cannot disable bundled deterministic protection.
+- [x] Intelligence cannot change telemetry consent, redaction behavior, organization policy, executable code, or software enforcement thresholds.
+- [x] No private or deployment signing key was created, stored, logged, or committed.
+- [x] Production rollout remains blocked pending the target staging drill with deployment-owned values.
+
+## E19 Review Record - 2026-08-12
+
+- [x] TXT/CSV bodies use bounded local extraction (1 MB, 20,000 characters, 250 ms).
+- [x] Extracted text is transient detector input and is never returned, stored, logged, or transmitted.
+- [x] Oversized/failed reads fail safely; PDF/DOCX/XLSX remain metadata-only.
+
+## S14 Review Record - 2026-08-12
+
+- [x] Server report and improvement DTOs are exact-field allowlisted.
+- [x] Negative tests reject prompt, file body, secret, candidate, screenshot, snippet, and free-form fields.
+- [x] Redacted reports and opt-in improvement telemetry remain separate stores and contracts.
+
+## S15 Review Record - 2026-08-12
+
+- [x] CORS errors do not echo the rejected origin.
+- [x] Bearer/cookie token inputs are bounded and malformed values fail closed.
+
+## S16 Review Record - 2026-08-12
+
+- [x] Lifecycle metric contract is exact-field, bounded, and content-free.
+- [x] Billing, entitlements, uninstall inference, prompts, files, and free-form values are excluded.

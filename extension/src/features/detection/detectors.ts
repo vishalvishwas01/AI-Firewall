@@ -180,7 +180,18 @@ export const detectScamFraud = (text: string): Detection[] => {
 }
 
 export const detectRiskyUploads = (files: FileSummary[]): Detection[] => {
-  return files.flatMap((file) => {
+  return files.flatMap((file): Detection[] => {
+    if (file.inspectionStatus === "oversized" || file.inspectionStatus === "failed") {
+      return [{
+        category: "risky-upload",
+        severity: "high",
+        title: "Complete local file scan unavailable",
+        message: `${file.name} could not be fully inspected within HallGuard's local safety limits.`,
+        evidence: [`local file inspection ${file.inspectionStatus}`],
+        detector: "system",
+        incompleteScan: true
+      }]
+    }
     const lowerName = file.name.toLowerCase()
     const extension = Array.from(riskyUploadExtensions.keys()).find((item) =>
       lowerName.endsWith(item)
