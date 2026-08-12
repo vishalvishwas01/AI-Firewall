@@ -7,7 +7,7 @@ import {
   EyeOff,
   Github,
   Lock,
-  ShieldCheck
+  ShieldCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -15,7 +15,7 @@ import {
   privacyPoints,
   riskCards,
   supportedTools,
-  workflowSteps
+  workflowSteps,
 } from "./data/siteContent";
 import { getSession, logout } from "./features/auth/api";
 import type { SessionUser } from "./features/auth/types";
@@ -26,23 +26,26 @@ import { TrustPage as FeatureTrustPage } from "./features/trust/components/Trust
 import { getAdminBenchmark } from "./features/trust/api";
 import type { DetectionBenchmark } from "./features/trust/types";
 import { SiteHeader } from "./components/SiteHeader";
+import { authRedirectKey } from "./features/auth/extensionBridge";
 
 const fadeIn = {
   initial: { opacity: 0, y: 18 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, margin: "-80px" },
-  transition: { duration: 0.45, ease: "easeOut" as const }
+  transition: { duration: 0.45, ease: "easeOut" as const },
 } as const;
 
 function App() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [sessionLoading, setSessionLoading] = useState(true);
   const [path, setPath] = useState(window.location.pathname);
-  const authMode = path === "/signup" ? "signup" : path === "/login" ? "login" : null;
+  const authMode =
+    path === "/signup" ? "signup" : path === "/login" ? "login" : null;
   const isReports = path === "/reports";
   const isTeam = path === "/team";
   const isPrivacy = path === "/privacy";
   const isTrust = path === "/trust";
+  const isGoogleAuthSuccess = path === "/auth/google/success";
 
   useEffect(() => {
     let active = true;
@@ -62,6 +65,17 @@ function App() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isGoogleAuthSuccess || sessionLoading) return;
+
+    const redirectPath = window.sessionStorage.getItem(authRedirectKey) ?? "/";
+
+    window.sessionStorage.removeItem(authRedirectKey);
+
+    window.history.replaceState({}, "", redirectPath);
+    setPath(redirectPath);
+  }, [isGoogleAuthSuccess, sessionLoading]);
 
   useEffect(() => {
     const handleLocationChange = () => setPath(window.location.pathname);
@@ -87,7 +101,9 @@ function App() {
           sessionLoading={sessionLoading}
           onLogout={handleLogout}
         />
-        <div id="page-content" tabIndex={-1}><AuthPage mode={authMode} onAuthenticated={setUser} /></div>
+        <div id="page-content" tabIndex={-1}>
+          <AuthPage mode={authMode} onAuthenticated={setUser} />
+        </div>
       </main>
     );
   }
@@ -100,7 +116,9 @@ function App() {
           sessionLoading={sessionLoading}
           onLogout={handleLogout}
         />
-        <div id="page-content" tabIndex={-1}><ReportsPage user={user} sessionLoading={sessionLoading} /></div>
+        <div id="page-content" tabIndex={-1}>
+          <ReportsPage user={user} sessionLoading={sessionLoading} />
+        </div>
       </main>
     );
   }
@@ -113,7 +131,9 @@ function App() {
           sessionLoading={sessionLoading}
           onLogout={handleLogout}
         />
-        <div id="page-content" tabIndex={-1}><TeamPage user={user} sessionLoading={sessionLoading} /></div>
+        <div id="page-content" tabIndex={-1}>
+          <TeamPage user={user} sessionLoading={sessionLoading} />
+        </div>
       </main>
     );
   }
@@ -126,7 +146,9 @@ function App() {
           sessionLoading={sessionLoading}
           onLogout={handleLogout}
         />
-        <div id="page-content" tabIndex={-1}><PrivacyPolicyPage /></div>
+        <div id="page-content" tabIndex={-1}>
+          <PrivacyPolicyPage />
+        </div>
         <SiteFooter />
       </main>
     );
@@ -140,7 +162,9 @@ function App() {
           sessionLoading={sessionLoading}
           onLogout={handleLogout}
         />
-        <div id="page-content" tabIndex={-1}><FeatureTrustPage user={user} sessionLoading={sessionLoading} /></div>
+        <div id="page-content" tabIndex={-1}>
+          <FeatureTrustPage user={user} sessionLoading={sessionLoading} />
+        </div>
         <SiteFooter />
       </main>
     );
@@ -166,12 +190,13 @@ function App() {
   );
 }
 
-
-
-
 function HeroSection() {
   return (
-    <section id="page-content" tabIndex={-1} className="relative overflow-hidden border-b border-slate-200 bg-white">
+    <section
+      id="page-content"
+      tabIndex={-1}
+      className="relative overflow-hidden border-b border-slate-200 bg-white"
+    >
       <div className="mx-auto grid min-h-[92vh] w-full max-w-7xl items-center gap-12 px-6 py-8 sm:px-8 lg:grid-cols-[1fr_0.9fr] lg:px-10">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -210,14 +235,18 @@ function HeroSection() {
             {[
               ["Local detection", "Checks stay browser-local"],
               ["3 AI tools", "ChatGPT, Claude, Gemini"],
-              ["Redacted reports", "Account sync stores masked records"]
+              ["Redacted reports", "Account sync stores masked records"],
             ].map(([value, label]) => (
               <div
                 key={value}
                 className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3"
               >
-                <dt className="text-sm font-semibold text-slate-950">{value}</dt>
-                <dd className="mt-1 text-sm leading-5 text-slate-600">{label}</dd>
+                <dt className="text-sm font-semibold text-slate-950">
+                  {value}
+                </dt>
+                <dd className="mt-1 text-sm leading-5 text-slate-600">
+                  {label}
+                </dd>
               </div>
             ))}
           </dl>
@@ -328,7 +357,7 @@ function WorkflowSection() {
               transition={{
                 duration: 0.45,
                 ease: "easeOut",
-                delay: index * 0.06
+                delay: index * 0.06,
               }}
               className="rounded-lg border border-slate-200 bg-slate-50 p-6"
             >
@@ -406,10 +435,13 @@ function PrivacyPolicyPage() {
     const previousTitle = document.title;
     document.title = "Privacy Policy | HallGuard";
 
-    const description = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    const description = document.querySelector<HTMLMetaElement>(
+      'meta[name="description"]',
+    );
     const previousDescription = description?.content;
     if (description) {
-      description.content = "Learn how HallGuard processes, stores, protects, and shares data used by its AI permission firewall extension and website.";
+      description.content =
+        "Learn how HallGuard processes, stores, protects, and shares data used by its AI permission firewall extension and website.";
     }
 
     return () => {
@@ -433,11 +465,11 @@ function PrivacyPolicyPage() {
           Effective date: July 26, 2026 · Last updated: July 26, 2026
         </p>
         <p className="mt-8 text-base leading-7 text-slate-700">
-          This Privacy Policy explains how HallGuard collects, processes, stores,
-          uses, and shares information through the HallGuard browser extension,
-          website, accounts, reports, and team features. HallGuard is an AI
-          permission firewall designed to warn users before risky information or
-          actions reach supported AI services.
+          This Privacy Policy explains how HallGuard collects, processes,
+          stores, uses, and shares information through the HallGuard browser
+          extension, website, accounts, reports, and team features. HallGuard is
+          an AI permission firewall designed to warn users before risky
+          information or actions reach supported AI services.
         </p>
 
         <div className="mt-12 space-y-12">
@@ -488,12 +520,21 @@ function PrivacyPolicyPage() {
             <p>HallGuard uses Chrome local storage to keep:</p>
             <ul>
               <li>Protection settings and sensitivity preferences.</li>
-              <li>User-selected and organization-managed protected websites.</li>
-              <li>An authentication token for a connected HallGuard account.</li>
+              <li>
+                User-selected and organization-managed protected websites.
+              </li>
+              <li>
+                An authentication token for a connected HallGuard account.
+              </li>
               <li>Up to 50 recent redacted security-event records.</li>
               <li>Up to 100 warning-feedback records.</li>
-              <li>Up to 100 redacted records queued for account synchronization.</li>
-              <li>Up to 100 derived-feature improvement events, only when separate improvement consent is enabled.</li>
+              <li>
+                Up to 100 redacted records queued for account synchronization.
+              </li>
+              <li>
+                Up to 100 derived-feature improvement events, only when separate
+                improvement consent is enabled.
+              </li>
             </ul>
             <p>
               Users can clear local warning history from the extension. Removing
@@ -507,9 +548,9 @@ function PrivacyPolicyPage() {
               If a user creates or uses a HallGuard account, HallGuard processes
               the account email address, an internal user identifier, login
               credentials, authentication tokens, and session information.
-              Passwords are sent to the HallGuard API over the configured network
-              connection and stored only as secure password hashes, not as plain
-              text.
+              Passwords are sent to the HallGuard API over the configured
+              network connection and stored only as secure password hashes, not
+              as plain text.
             </p>
             <p>
               Team features may additionally process organization names, member
@@ -532,8 +573,8 @@ function PrivacyPolicyPage() {
               the authenticated account identifier. Raw detected credentials and
               recognized personal-data patterns are not intentionally included.
               Standard network requests may also expose technical information,
-              such as an IP address, browser information, and request timestamps,
-              to HallGuard’s hosting and infrastructure providers.
+              such as an IP address, browser information, and request
+              timestamps, to HallGuard’s hosting and infrastructure providers.
             </p>
             <h3>Optional improvement telemetry</h3>
             <p>
@@ -541,11 +582,12 @@ function PrivacyPolicyPage() {
               user enables it, HallGuard may sync a random event id, coarse time
               bucket, bounded numeric or bucketed classifier features, predicted
               category and confidence band, optional feedback, model/rule
-              versions, and action outcome. This telemetry does not upload prompt
-              content, redacted snippets, candidate values, literal prefixes,
-              exact hashes, hostnames, files, or screenshots. Disabling the
-              control stops new collection and retry; queued telemetry can be
-              cleared locally and from the authenticated account.
+              versions, and action outcome. This telemetry does not upload
+              prompt content, redacted snippets, candidate values, literal
+              prefixes, exact hashes, hostnames, files, or screenshots.
+              Disabling the control stops new collection and retry; queued
+              telemetry can be cleared locally and from the authenticated
+              account.
             </p>
           </PolicySection>
 
@@ -553,10 +595,17 @@ function PrivacyPolicyPage() {
             <p>HallGuard uses information only to:</p>
             <ul>
               <li>Detect and warn about risky AI interactions.</li>
-              <li>Apply personal and organization-managed protection settings.</li>
+              <li>
+                Apply personal and organization-managed protection settings.
+              </li>
               <li>Authenticate accounts and maintain secure sessions.</li>
-              <li>Provide local history, reports, feedback, and team features.</li>
-              <li>Maintain security, prevent abuse, debug failures, and improve detection quality.</li>
+              <li>
+                Provide local history, reports, feedback, and team features.
+              </li>
+              <li>
+                Maintain security, prevent abuse, debug failures, and improve
+                detection quality.
+              </li>
               <li>Comply with applicable law and enforce product terms.</li>
             </ul>
             <p>
@@ -582,23 +631,26 @@ function PrivacyPolicyPage() {
             <p>
               HallGuard supports built-in AI services and custom domains chosen
               by users or organizations. Its content script can therefore be
-              present on HTTPS pages, but inspection and protection are activated
-              only when the current hostname matches the protected-site list.
+              present on HTTPS pages, but inspection and protection are
+              activated only when the current hostname matches the
+              protected-site list.
             </p>
             <h3>Remote code</h3>
             <p>
               HallGuard does not download or execute remote JavaScript,
-              WebAssembly, or other executable code. Executable extension code is
-              packaged with the Chrome Web Store submission. API responses are
-              treated as data and are not executed.
+              WebAssembly, or other executable code. Executable extension code
+              is packaged with the Chrome Web Store submission. API responses
+              are treated as data and are not executed.
             </p>
             <h3>Signed intelligence data</h3>
             <p>
-              Reviewed rule and model data can update without replacing extension code. The extension
-              verifies trusted Ed25519 signatures, SHA-256 payload bindings, compatibility, expiry,
-              revocation, and increasing release sequence before local activation. Model inference stays
-              local, and signed data cannot change telemetry consent, redaction rules, organization policy,
-              or software enforcement thresholds.
+              Reviewed rule and model data can update without replacing
+              extension code. The extension verifies trusted Ed25519 signatures,
+              SHA-256 payload bindings, compatibility, expiry, revocation, and
+              increasing release sequence before local activation. Model
+              inference stays local, and signed data cannot change telemetry
+              consent, redaction rules, organization policy, or software
+              enforcement thresholds.
             </p>
           </PolicySection>
 
@@ -606,23 +658,24 @@ function PrivacyPolicyPage() {
             <p>
               HallGuard does not sell user data. Information may be disclosed
               only to infrastructure and service providers acting on HallGuard’s
-              behalf, to authorized organization administrators for team reports,
-              when required by law or necessary to protect rights and safety, or
-              as part of a merger, financing, acquisition, or transfer of the
-              service. Providers may use information only to perform their
-              contracted services and must protect it appropriately.
+              behalf, to authorized organization administrators for team
+              reports, when required by law or necessary to protect rights and
+              safety, or as part of a merger, financing, acquisition, or
+              transfer of the service. Providers may use information only to
+              perform their contracted services and must protect it
+              appropriately.
             </p>
           </PolicySection>
 
           <PolicySection title="9. Retention and deletion">
             <p>
               Local extension limits are described in Section 3. Server-side
-              account, organization, and report records are retained while needed
-              to provide HallGuard, comply with legal obligations, resolve
-              disputes, and protect the service. Users can clear local warning
-              history in the extension, disable redacted synchronization, and
-              request access to or deletion of server-held personal information
-              through the contact method in Section 14.
+              account, organization, and report records are retained while
+              needed to provide HallGuard, comply with legal obligations,
+              resolve disputes, and protect the service. Users can clear local
+              warning history in the extension, disable redacted
+              synchronization, and request access to or deletion of server-held
+              personal information through the contact method in Section 14.
             </p>
           </PolicySection>
 
@@ -639,20 +692,28 @@ function PrivacyPolicyPage() {
           <PolicySection title="11. User choices and rights">
             <p>Depending on applicable law, users may have the right to:</p>
             <ul>
-              <li>Request access to, correction of, or deletion of personal information.</li>
+              <li>
+                Request access to, correction of, or deletion of personal
+                information.
+              </li>
               <li>Object to or restrict certain processing.</li>
-              <li>Disable redacted synchronization and clear local warning history.</li>
+              <li>
+                Disable redacted synchronization and clear local warning
+                history.
+              </li>
               <li>Remove protected sites or uninstall HallGuard.</li>
-              <li>Submit a complaint to an applicable data-protection authority.</li>
+              <li>
+                Submit a complaint to an applicable data-protection authority.
+              </li>
             </ul>
           </PolicySection>
 
           <PolicySection title="12. Children’s privacy">
             <p>
-              HallGuard is not directed to children under 13, or under the higher
-              minimum age required in a user’s jurisdiction. HallGuard does not
-              knowingly collect personal information from children without
-              appropriate authorization.
+              HallGuard is not directed to children under 13, or under the
+              higher minimum age required in a user’s jurisdiction. HallGuard
+              does not knowingly collect personal information from children
+              without appropriate authorization.
             </p>
           </PolicySection>
 
@@ -668,12 +729,12 @@ function PrivacyPolicyPage() {
 
           <PolicySection title="14. Contact and privacy requests">
             <p>
-              Until a dedicated HallGuard privacy email is published, privacy and
-              data-rights requests can be submitted through the HallGuard support
-              contact shown on its Chrome Web Store listing. Include the email
-              address associated with the account and enough detail to identify
-              the request. Do not include passwords, authentication tokens, or
-              sensitive AI chat content in the request.
+              Until a dedicated HallGuard privacy email is published, privacy
+              and data-rights requests can be submitted through the HallGuard
+              support contact shown on its Chrome Web Store listing. Include the
+              email address associated with the account and enough detail to
+              identify the request. Do not include passwords, authentication
+              tokens, or sensitive AI chat content in the request.
             </p>
           </PolicySection>
         </div>
@@ -684,7 +745,7 @@ function PrivacyPolicyPage() {
 
 function PolicySection({
   title,
-  children
+  children,
 }: {
   title: string;
   children: ReactNode;
@@ -715,7 +776,10 @@ function SiteFooter() {
           />
           <span>© 2026 HallGuard. AI permission firewall.</span>
         </div>
-        <nav aria-label="Legal" className="flex items-center gap-5 font-semibold">
+        <nav
+          aria-label="Legal"
+          className="flex items-center gap-5 font-semibold"
+        >
           <a className="transition hover:text-white" href="/trust">
             Trust architecture
           </a>
@@ -758,12 +822,20 @@ function DemoSection() {
             {[
               ["Input checked", "Prompt includes API key-like text"],
               ["Decision", "User reviews warning before continuing"],
-              ["History", "Only redacted snippets are eligible for synced reports"]
+              [
+                "History",
+                "Only redacted snippets are eligible for synced reports",
+              ],
             ].map(([label, value]) => (
               <div key={label} className="flex items-start gap-3">
-                <Lock className="mt-0.5 h-5 w-5 text-teal-600" aria-hidden="true" />
+                <Lock
+                  className="mt-0.5 h-5 w-5 text-teal-600"
+                  aria-hidden="true"
+                />
                 <div>
-                  <p className="text-sm font-semibold text-slate-950">{label}</p>
+                  <p className="text-sm font-semibold text-slate-950">
+                    {label}
+                  </p>
                   <p className="mt-1 text-sm leading-6 text-slate-600">
                     {value}
                   </p>
@@ -844,7 +916,7 @@ function SectionIntro({
   eyebrow,
   title,
   body,
-  inverted = false
+  inverted = false,
 }: {
   eyebrow: string;
   title: string;
@@ -854,20 +926,23 @@ function SectionIntro({
   return (
     <motion.div {...fadeIn} className="max-w-3xl">
       <p
-        className={`text-sm font-semibold uppercase tracking-wider ${inverted ? "text-teal-200" : "text-teal-700"
-          }`}
+        className={`text-sm font-semibold uppercase tracking-wider ${
+          inverted ? "text-teal-200" : "text-teal-700"
+        }`}
       >
         {eyebrow}
       </p>
       <h2
-        className={`mt-3 text-3xl font-semibold tracking-normal sm:text-4xl ${inverted ? "text-white" : "text-slate-950"
-          }`}
+        className={`mt-3 text-3xl font-semibold tracking-normal sm:text-4xl ${
+          inverted ? "text-white" : "text-slate-950"
+        }`}
       >
         {title}
       </h2>
       <p
-        className={`mt-4 text-base leading-7 ${inverted ? "text-slate-300" : "text-slate-600"
-          }`}
+        className={`mt-4 text-base leading-7 ${
+          inverted ? "text-slate-300" : "text-slate-600"
+        }`}
       >
         {body}
       </p>
@@ -878,7 +953,7 @@ function SectionIntro({
 function InfoCard({
   title,
   description,
-  icon: Icon
+  icon: Icon,
 }: {
   title: string;
   description: string;

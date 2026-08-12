@@ -1,13 +1,17 @@
-import { useState, type FormEvent } from "react"
-import { motion } from "framer-motion"
-import { SiteHeader } from "../../../components/SiteHeader"
-import { login, signup } from "../api"
-import type { SessionUser } from "../types"
-import { authRedirectKey, isExtensionAuthFlow, sendSessionToExtension } from "../extensionBridge"
+import { useEffect, useState, type FormEvent } from "react";
+import { motion } from "framer-motion";
+import { SiteHeader } from "../../../components/SiteHeader";
+import { login, signup, startGoogleLogin } from "../api";
+import type { SessionUser } from "../types";
+import {
+  authRedirectKey,
+  isExtensionAuthFlow,
+  sendSessionToExtension,
+} from "../extensionBridge";
 
 export function AuthPage({
   mode,
-  onAuthenticated
+  onAuthenticated,
 }: {
   mode: "login" | "signup";
   onAuthenticated: (user: SessionUser) => void;
@@ -16,7 +20,20 @@ export function AuthPage({
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const isSignup = mode === "signup";
+
+  useEffect(() => {
+    const errorCode = new URLSearchParams(window.location.search).get("error");
+
+    if (errorCode === "google_oauth_failed") {
+      setError("Google sign-in failed. Please try again.");
+    }
+
+    if (errorCode === "google_email_not_verified") {
+      setError("Your Google email address is not verified.");
+    }
+  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -36,10 +53,20 @@ export function AuthPage({
       window.history.pushState({}, "", redirectPath ?? "/");
       window.dispatchEvent(new Event("popstate"));
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : "Authentication failed");
+      setError(
+        authError instanceof Error
+          ? authError.message
+          : "Authentication failed",
+      );
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    setError("");
+    setGoogleSubmitting(true);
+    startGoogleLogin();
   };
 
   return (
@@ -114,6 +141,15 @@ export function AuthPage({
             className="button-primary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? "Please wait" : isSignup ? "Create account" : "Login"}
+          </button>
+
+          <button
+            type="button"
+            disabled={googleSubmitting}
+            onClick={handleGoogleLogin}
+            className="button-secondary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {googleSubmitting ? "Please wait" : "Sign in with Google"}
           </button>
 
           <p className="mt-5 text-center text-sm text-slate-600">
