@@ -88,6 +88,7 @@ export function AuthPage({ mode, accountType, user, onAuthenticated }: { mode: "
     try {
       await acceptOrganizationInvitation(inviteToken);
       const session = await getSession();
+      if (!session.user) throw new Error("Your session expired. Please sign in again before accepting the invitation.");
       onAuthenticated(session.user);
       redirectAfterAuthentication();
     } catch (acceptError) {
@@ -111,6 +112,8 @@ export function AuthPage({ mode, accountType, user, onAuthenticated }: { mode: "
   const alternatePath = isEnterprise
     ? `/${isSignup ? "login" : "signup"}?type=enterprise${inviteToken ? `&invite=${encodeURIComponent(inviteToken)}` : ""}`
     : `/${isSignup ? "login" : "signup"}${inviteToken ? `?invite=${encodeURIComponent(inviteToken)}` : ""}`;
+
+  if (isAuthenticatedForInvitation && !user) return null;
 
   return (
     <section className="flex min-h-[calc(100vh-4rem)] items-center bg-slate-50 px-6 py-16 sm:px-8 lg:px-10">
