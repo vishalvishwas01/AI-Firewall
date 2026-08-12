@@ -12,6 +12,7 @@ import { authRouter } from "./modules/auth/auth.routes.js"
 import { logsRouter } from "./modules/logs/logs.routes.js"
 import { sitesRouter } from "./modules/sites/sites.routes.js"
 import { orgsRouter } from "./modules/organizations/organizations.routes.js"
+import { invitationsRouter } from "./modules/organizations/invitations.routes.js"
 import { adminRouter } from "./routes/admin.js"
 import { improvementTelemetryRouter } from "./modules/improvementTelemetry/telemetry.routes.js"
 import { ensureImprovementTelemetryIndexes } from "./modules/improvementTelemetry/telemetry.repository.js"
@@ -26,7 +27,6 @@ import { safeErrorLog } from "./shared/errors.js"
 
 const app = express()
 
-// app.use(cors({ origin: env.clientOrigin, credentials: true }))
 const allowedOrigins = [
   env.clientOrigin,
   env.extensionOrigin,
@@ -46,13 +46,8 @@ app.use(
   cors({
     credentials: true,
     origin(origin, callback) {
-      // Allow requests with no Origin (curl, Postman, etc.)
       if (!origin) return callback(null, true)
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true)
-      }
-
+      if (allowedOrigins.includes(origin)) return callback(null, true)
       return callback(new Error("Origin not allowed"))
     },
   })
@@ -84,6 +79,7 @@ app.get("/ready", validateNoQuery, async (_req, res) => {
 app.use("/auth", authRateLimiter, authRouter)
 app.use("/logs", logsRouter)
 app.use("/sites", sitesRouter)
+app.use("/orgs", invitationsRouter)
 app.use("/orgs", orgsRouter)
 app.use("/admin", adminRouter)
 app.use("/improvement-events", improvementTelemetryRouter)
