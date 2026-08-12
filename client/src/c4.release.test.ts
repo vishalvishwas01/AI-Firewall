@@ -16,14 +16,14 @@ test("auth requests preserve the signup, login, and logout contracts", async () 
     requests.push({ url: String(input), init })
     if (String(input).endsWith("/auth/logout")) return new Response(null, { status: 204 })
     return jsonResponse({
-      user: { id: "user-1", email: "qa@example.com" },
+      user: { id: "user-1", email: "qa@example.com", accountType: "individual", teamAccess: false },
       token: "opaque-session-token"
     })
   }
 
   try {
-    await signup("qa@example.com", "correct-horse")
-    await login("qa@example.com", "correct-horse")
+    await signup("individual", { email: "qa@example.com", password: "correct-horse" })
+    await login("individual", "qa@example.com", "correct-horse")
     await logout()
   } finally {
     globalThis.fetch = originalFetch
@@ -35,8 +35,8 @@ test("auth requests preserve the signup, login, and logout contracts", async () 
     body: init?.body,
     credentials: init?.credentials
   })), [
-    { path: "/auth/signup", method: "POST", body: JSON.stringify({ email: "qa@example.com", password: "correct-horse" }), credentials: "include" },
-    { path: "/auth/login", method: "POST", body: JSON.stringify({ email: "qa@example.com", password: "correct-horse" }), credentials: "include" },
+    { path: "/auth/signup", method: "POST", body: JSON.stringify({ email: "qa@example.com", password: "correct-horse", accountType: "individual" }), credentials: "include" },
+    { path: "/auth/login", method: "POST", body: JSON.stringify({ email: "qa@example.com", password: "correct-horse", accountType: "individual" }), credentials: "include" },
     { path: "/auth/logout", method: "POST", body: undefined, credentials: "include" }
   ])
 })
