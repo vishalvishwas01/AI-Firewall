@@ -4,7 +4,7 @@ import type { AccountType, AuthResponse, SessionUser } from "./types"
 const parseAccountType = (value: unknown): AccountType => value === "enterprise" ? "enterprise" : "individual"
 
 export const parseSessionUser = (value: unknown): SessionUser => {
-  const input = object(value, ["id", "email", "accountType", "name", "companyName", "teamAccess"])
+  const input = object(value, ["id", "email", "accountType", "teamAccess"], ["name", "companyName"])
   return {
     id: nonEmptyString(input.id, 64),
     email: nonEmptyString(input.email, 320),
