@@ -49,9 +49,19 @@ def model_package_blockers(
 
     blockers: list[str] = []
     package_keys = {
-        "packageVersion", "sequence", "status", "minExtensionVersion", "maxExtensionVersion",
-        "requiredCapabilities", "modelVersion", "modelEntryPath", "modelEntryKind",
-        "modelEntryMediaType", "modelEntrySize", "modelEntrySha256", "rollback",
+        "packageVersion",
+        "sequence",
+        "status",
+        "minExtensionVersion",
+        "maxExtensionVersion",
+        "requiredCapabilities",
+        "modelVersion",
+        "modelEntryPath",
+        "modelEntryKind",
+        "modelEntryMediaType",
+        "modelEntrySize",
+        "modelEntrySha256",
+        "rollback",
     }
     _exact_fields(package, package_keys, "package")
     artifact_keys = {"schemaVersion", "modelVersion", "featureVersion", "classifierType", "status", "featureOrder"}
@@ -60,9 +70,7 @@ def model_package_blockers(
     if not PACKAGE_VERSION_PATTERN.fullmatch(str(package["packageVersion"])):
         blockers.append("invalid-package-version")
     valid_sequence = (
-        isinstance(package["sequence"], int)
-        and not isinstance(package["sequence"], bool)
-        and package["sequence"] >= 1
+        isinstance(package["sequence"], int) and not isinstance(package["sequence"], bool) and package["sequence"] >= 1
     )
     if not valid_sequence:
         blockers.append("invalid-sequence")
@@ -181,7 +189,12 @@ def validate_package_compatibility_fixture(value: dict[str, Any]) -> None:
         artifact = dict(value["artifact"])
         overrides = case["artifactOverrides"]
         override_fields = {
-            "schemaVersion", "modelVersion", "featureVersion", "classifierType", "status", "featureOrder"
+            "schemaVersion",
+            "modelVersion",
+            "featureVersion",
+            "classifierType",
+            "status",
+            "featureOrder",
         }
         if not isinstance(overrides, dict) or not set(overrides) <= override_fields:
             raise PackageCompatibilityError(f"fixture case {case['caseId']} artifact overrides are invalid")
@@ -193,14 +206,14 @@ def validate_package_compatibility_fixture(value: dict[str, Any]) -> None:
             supported_capabilities=set(supported),
         )
         expected_blockers = case["expectedBlockers"]
-        if not isinstance(expected_blockers, list) or not all(
-            isinstance(item, str) for item in expected_blockers
-        ):
+        if not isinstance(expected_blockers, list) or not all(isinstance(item, str) for item in expected_blockers):
             raise PackageCompatibilityError(f"fixture case {case['caseId']} blockers are invalid")
         expected = tuple(expected_blockers)
-        if (blockers != expected
-                or (not case["expectedCompatible"] and not blockers)
-                or (case["expectedCompatible"] and blockers)):
+        if (
+            blockers != expected
+            or (not case["expectedCompatible"] and not blockers)
+            or (case["expectedCompatible"] and blockers)
+        ):
             raise PackageCompatibilityError(f"fixture case {case['caseId']} expectation mismatch")
 
 

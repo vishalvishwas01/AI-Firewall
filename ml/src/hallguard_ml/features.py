@@ -7,7 +7,7 @@ import re
 import unicodedata
 from collections import Counter
 from collections.abc import Mapping
-from typing import cast
+from typing import Any, cast
 
 from .contracts import FEATURE_NAMES, validate_generator_record
 
@@ -60,8 +60,7 @@ def extract_candidate_features(value: str, context_before: str = "") -> dict[str
     )
     repeated = max(Counter(normalized_value).values(), default=1)
     safe_shape = any(
-        pattern.fullmatch(normalized_value)
-        for pattern in (SAFE_UUID, SAFE_HASH, SAFE_VERSION, SAFE_TIMESTAMP)
+        pattern.fullmatch(normalized_value) for pattern in (SAFE_UUID, SAFE_HASH, SAFE_VERSION, SAFE_TIMESTAMP)
     )
     context_96 = normalized_context[-96:]
     context_160 = normalized_context[-160:]
@@ -100,7 +99,7 @@ def feature_row(record: Mapping[str, object]) -> dict[str, object]:
     text = str(record["text"])
     start = cast(int, record["candidateStart"])
     end = cast(int, record["candidateEnd"])
-    features = extract_candidate_features(text[start:end], text[max(0, start - 160):start])
+    features = extract_candidate_features(text[start:end], text[max(0, start - 160) : start])
     return {
         "recordId": record["recordId"],
         "templateGroupId": record["templateGroupId"],
@@ -112,3 +111,53 @@ def feature_row(record: Mapping[str, object]) -> dict[str, object]:
 
 def build_feature_rows(records: list[dict[str, object]]) -> list[dict[str, object]]:
     return [feature_row(record) for record in records]
+
+
+def validate_feature_golden_fixture(value: dict[str, Any]) -> None:
+    expected_top = {
+        "schemaVersion",
+        "fixtureVersion",
+        "featureVersion",
+        "normalization",
+        "featureOrder",
+        "artifactLimits",
+        "cases",
+    }
+    if set(value) != expected_top:
+        raise ValueError("feature fixture fields mismatch")
+    if (
+        value["schemaVersion"] != 1
+        or value["fixtureVersion"] != "candidate-features-v1-golden-v1"
+        or value["featureVersion"] != "candidate-features-v1"
+        or value["normalization"] != "NFKC_REMOVE_ZERO_WIDTH"
+        or tuple(value["featureOrder"]) != FEATURE_NAMES
+    ):
+        raise ValueError("feature fixture contract mismatch")
+    if value["artifactLimits"] != {
+        "classifierTypes": ["logistic-regression"],
+        "maxSerializedBytes": 5 * 1024 * 1024,
+        "maxAbsoluteParameter": 1_000_000,
+        "decimalPlaces": 12,
+    }:
+        raise ValueError("feature fixture artifact limits mismatch")
+    cases = value["cases"]
+    if not isinstance(cases, list) or not cases:
+        raise ValueError("feature fixture cases are required")
+    case_ids: set[str] = set()
+    for case in cases:
+        if not isinstance(case, dict) or set(case) != {"caseId", "value", "contextBefore", "expected"}:
+            raise ValueError("feature fixture case fields mismatch")
+        if (
+            not isinstance(case["caseId"], str)
+            or case["caseId"] in case_ids
+            or not isinstance(case["value"], str)
+            or len(case["value"]) > 256
+            or not isinstance(case["contextBefore"], str)
+            or len(case["contextBefore"]) > 160
+            or not isinstance(case["expected"], dict)
+            or tuple(case["expected"]) != FEATURE_NAMES
+        ):
+            raise ValueError("feature fixture case is invalid")
+        case_ids.add(case["caseId"])
+        if extract_candidate_features(case["value"], case["contextBefore"]) != case["expected"]:
+            raise ValueError(f"feature fixture case {case['caseId']} drifted")

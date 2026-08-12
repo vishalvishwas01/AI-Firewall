@@ -15,6 +15,28 @@ class GovernanceTests(unittest.TestCase):
     def test_current_b2_pre_intake_workspace_passes(self) -> None:
         validate_workspace(WORKSPACE_ROOT, stage="b2")
 
+    def test_b2_rejects_unknown_or_extended_supplemental_metadata(self) -> None:
+        source = WORKSPACE_ROOT / "datasets" / "manifests" / "b2-m4-runtime-compatibility-evidence-v1.json"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src").mkdir()
+            manifests = root / "datasets" / "manifests"
+            manifests.mkdir(parents=True)
+            (manifests / "unknown-m4-evidence.json").write_text("{}", encoding="utf-8")
+            with self.assertRaisesRegex(GovernanceError, "JSON metadata must use"):
+                audit_workspace(root, stage="b2")
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "src").mkdir()
+            manifests = root / "datasets" / "manifests"
+            manifests.mkdir(parents=True)
+            value = json.loads(source.read_text(encoding="utf-8"))
+            value["prompt"] = "forbidden"
+            (manifests / source.name).write_text(json.dumps(value), encoding="utf-8")
+            with self.assertRaisesRegex(GovernanceError, "supplemental review fields mismatch"):
+                audit_workspace(root, stage="b2")
+
     def test_rejects_application_runtime_imports(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

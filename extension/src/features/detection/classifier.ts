@@ -15,9 +15,16 @@ const artifactKeys = ["schemaVersion", "modelVersion", "featureVersion", "classi
 const normalizationKeys = ["mean", "scale"]
 const trainingKeys = ["kind", "datasetManifest", "seed", "generatedAt"]
 const featureNames = new Set<string>(CANDIDATE_FEATURE_NAMES)
+export const MAX_CLASSIFIER_ARTIFACT_BYTES = 5 * 1024 * 1024
+export const MAX_CLASSIFIER_PARAMETER_ABS = 1_000_000
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value)
-const onlyKeys = (value: Record<string, unknown>, keys: string[]) => Object.keys(value).every((key) => keys.includes(key))
-const finiteArray = (value: unknown, length: number) => Array.isArray(value) && value.length === length && value.every((item) => typeof item === "number" && Number.isFinite(item))
+const onlyKeys = (value: Record<string, unknown>, keys: string[]) =>
+  Object.keys(value).length === keys.length && Object.keys(value).every((key) => keys.includes(key))
+const boundedFinite = (value: unknown) => typeof value === "number"
+  && Number.isFinite(value)
+  && Math.abs(value) <= MAX_CLASSIFIER_PARAMETER_ABS
+  && Number(value.toFixed(12)) === value
+const finiteArray = (value: unknown, length: number) => Array.isArray(value) && value.length === length && value.every(boundedFinite)
 
 export const validateClassifierArtifact = (value: unknown): LogisticClassifierArtifact => {
   if (!isRecord(value) || !onlyKeys(value, artifactKeys)) throw new Error("Invalid classifier artifact shape")
@@ -27,9 +34,14 @@ export const validateClassifierArtifact = (value: unknown): LogisticClassifierAr
   if (!isRecord(normalization) || !onlyKeys(normalization, normalizationKeys) || !isRecord(training) || !onlyKeys(training, trainingKeys) || !Array.isArray(order)) throw new Error("Invalid classifier artifact metadata")
   if (value.schemaVersion !== 1 || value.featureVersion !== "candidate-features-v1" || value.classifierType !== "logistic-regression" || !["shadow", "active", "disabled"].includes(String(value.status)) || typeof value.modelVersion !== "string" || !/^[a-z0-9.-]+$/.test(value.modelVersion)) throw new Error("Unsupported classifier artifact")
   if (order.length !== CANDIDATE_FEATURE_NAMES.length || order.some((item, index) => item !== CANDIDATE_FEATURE_NAMES[index] || !featureNames.has(String(item)))) throw new Error("Classifier feature order mismatch")
-  if (!finiteArray(normalization.mean, order.length) || !finiteArray(normalization.scale, order.length) || !(normalization.scale as number[]).every((item: number) => item > 0) || !finiteArray(value.coefficients, order.length) || typeof value.intercept !== "number" || !Number.isFinite(value.intercept)) throw new Error("Invalid classifier parameters")
+  if (!finiteArray(normalization.mean, order.length) || !finiteArray(normalization.scale, order.length) || !(normalization.scale as number[]).every((item: number) => item > 0) || !finiteArray(value.coefficients, order.length) || !boundedFinite(value.intercept)) throw new Error("Invalid classifier parameters")
   if (!["bootstrap-reviewed", "offline-trained"].includes(String(training.kind)) || typeof training.datasetManifest !== "string" || !training.datasetManifest || !Number.isInteger(training.seed) || typeof training.generatedAt !== "string" || Number.isNaN(Date.parse(training.generatedAt))) throw new Error("Invalid classifier training metadata")
   return value as unknown as LogisticClassifierArtifact
+}
+
+export const validateSerializedClassifierArtifact = (bytes: Uint8Array): LogisticClassifierArtifact => {
+  if (bytes.byteLength < 2 || bytes.byteLength > MAX_CLASSIFIER_ARTIFACT_BYTES) throw new Error("Invalid classifier artifact size")
+  return validateClassifierArtifact(JSON.parse(new TextDecoder().decode(bytes)))
 }
 
 export const loadClassifierArtifact = (value: unknown): ClassifierState => {

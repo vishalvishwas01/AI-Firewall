@@ -15,36 +15,48 @@ from .contracts import (
     DETERMINISTIC_SEED,
     EVALUATION_REPORT_CONTRACT_ID,
     FEATURE_NAMES,
+    FINAL_REMEDIATION_APPROVAL_CONTRACT_ID,
     GENERATOR_CATALOG_CONTRACT_ID,
     INTAKE_APPROVAL_CONTRACT_ID,
     INTAKE_EVIDENCE_CONTRACT_ID,
+    MANUAL_DISPOSITION_CONTRACT_ID,
     POST_INTAKE_REVIEW_CONTRACT_ID,
     REMEDIATION_EVIDENCE_CONTRACT_ID,
     REMEDIATION_REVIEW_CONTRACT_ID,
-    MANUAL_DISPOSITION_CONTRACT_ID,
-    TARGETED_REVIEW_EVIDENCE_CONTRACT_ID,
-    FINAL_REMEDIATION_APPROVAL_CONTRACT_ID,
+    REPRESENTATIVE_REVIEW_CONTRACT_ID,
     REPRESENTATIVE_SET_CONTRACT_ID,
+    TARGETED_REVIEW_EVIDENCE_CONTRACT_ID,
     TRAINING_STATE_CONTRACT_ID,
     validate_corpus_review_package,
+    validate_final_remediation_approval,
     validate_generator_catalog,
     validate_intake_approval_package,
     validate_intake_evidence,
+    validate_limited_calibration_review,
+    validate_limited_evaluation,
+    validate_manual_disposition,
     validate_post_intake_review,
     validate_remediation_evidence,
     validate_remediation_review,
-    validate_manual_disposition,
-    validate_targeted_review_evidence,
-    validate_final_remediation_approval,
-    validate_representative_set_evidence,
-    REPRESENTATIVE_REVIEW_CONTRACT_ID,
     validate_representative_review,
-    validate_limited_evaluation,
-    validate_limited_calibration_review,
+    validate_representative_set_evidence,
+    validate_targeted_review_evidence,
 )
+from .features import validate_feature_golden_fixture
 from .generators import GENERATOR_DEFINITIONS
 from .governance import audit_workspace
 from .intelligence_package import validate_cross_component_package_metadata, validate_package_compatibility_fixtures
+from .representative_gap import (
+    GAP_ANALYSIS_CONTRACT_ID,
+    GAP_ANALYSIS_FILE,
+    SCOPE_AMENDMENT_CONTRACT_ID,
+    SCOPE_AMENDMENT_FILE,
+    WORKFLOW_AUTHORIZATION_CONTRACT_ID,
+    WORKFLOW_AUTHORIZATION_FILE,
+    validate_m3_workflow_authorization,
+    validate_representative_gap_analysis,
+    validate_representative_gap_scope_amendment,
+)
 
 EXPECTED_RUNTIME_PINS = {
     "numpy==2.5.1",
@@ -69,18 +81,15 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
     if requirements != EXPECTED_RUNTIME_PINS:
         raise ValueError("requirements.txt does not match pyproject runtime dependencies")
 
-    artifact_schema = json.loads(
-        (root / "contracts" / "model-artifact.schema.json").read_text(encoding="utf-8")
+    feature_fixture = json.loads(
+        (root.parent / "docs" / "contracts" / "candidate-features-v1.golden.json").read_text(encoding="utf-8")
     )
-    manifest_schema = json.loads(
-        (root / "contracts" / "dataset-manifest.schema.json").read_text(encoding="utf-8")
-    )
-    catalog_schema = json.loads(
-        (root / "contracts" / "generator-catalog.schema.json").read_text(encoding="utf-8")
-    )
-    training_state_schema = json.loads(
-        (root / "contracts" / "training-state.schema.json").read_text(encoding="utf-8")
-    )
+    validate_feature_golden_fixture(feature_fixture)
+
+    artifact_schema = json.loads((root / "contracts" / "model-artifact.schema.json").read_text(encoding="utf-8"))
+    manifest_schema = json.loads((root / "contracts" / "dataset-manifest.schema.json").read_text(encoding="utf-8"))
+    catalog_schema = json.loads((root / "contracts" / "generator-catalog.schema.json").read_text(encoding="utf-8"))
+    training_state_schema = json.loads((root / "contracts" / "training-state.schema.json").read_text(encoding="utf-8"))
     evaluation_report_schema = json.loads(
         (root / "contracts" / "evaluation-report.schema.json").read_text(encoding="utf-8")
     )
@@ -120,20 +129,23 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
     limited_evaluation_schema = json.loads(
         (root / "contracts" / "limited-evaluation.schema.json").read_text(encoding="utf-8")
     )
+    gap_analysis_schema = json.loads(
+        (root / "contracts" / "representative-gap-analysis.schema.json").read_text(encoding="utf-8")
+    )
+    scope_amendment_schema = json.loads(
+        (root / "contracts" / "representative-gap-scope-amendment.schema.json").read_text(encoding="utf-8")
+    )
+    workflow_authorization_schema = json.loads(
+        (root / "contracts" / "m3-workflow-authorization.schema.json").read_text(encoding="utf-8")
+    )
     catalog = json.loads(
-        (root / "datasets" / "manifests" / "synthetic-generators-v1.catalog.json").read_text(
-            encoding="utf-8"
-        )
+        (root / "datasets" / "manifests" / "synthetic-generators-v1.catalog.json").read_text(encoding="utf-8")
     )
     corpus_review = json.loads(
-        (root / "datasets" / "manifests" / "b1-corpus-review-v1.review.json").read_text(
-            encoding="utf-8"
-        )
+        (root / "datasets" / "manifests" / "b1-corpus-review-v1.review.json").read_text(encoding="utf-8")
     )
     intake_approval = json.loads(
-        (root / "datasets" / "manifests" / "b2-intake-approval-v1.review.json").read_text(
-            encoding="utf-8"
-        )
+        (root / "datasets" / "manifests" / "b2-intake-approval-v1.review.json").read_text(encoding="utf-8")
     )
     if ARTIFACT_CONTRACT_ID not in artifact_schema["$id"]:
         raise ValueError("artifact contract id mismatch")
@@ -167,6 +179,14 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
         raise ValueError("representative-set contract id mismatch")
     if REPRESENTATIVE_REVIEW_CONTRACT_ID not in representative_review_schema["$id"]:
         raise ValueError("representative review contract id mismatch")
+    if "hallguard-b2-limited-evaluation-v1" not in limited_evaluation_schema["$id"]:
+        raise ValueError("limited evaluation contract id mismatch")
+    if GAP_ANALYSIS_CONTRACT_ID not in gap_analysis_schema["$id"]:
+        raise ValueError("representative gap-analysis contract id mismatch")
+    if SCOPE_AMENDMENT_CONTRACT_ID not in scope_amendment_schema["$id"]:
+        raise ValueError("representative gap scope-amendment contract id mismatch")
+    if WORKFLOW_AUTHORIZATION_CONTRACT_ID not in workflow_authorization_schema["$id"]:
+        raise ValueError("M3 workflow authorization contract id mismatch")
     if artifact_schema["properties"]["featureOrder"]["const"] != list(FEATURE_NAMES):
         raise ValueError("artifact JSON schema feature order mismatch")
     if manifest_schema["properties"]["seed"]["const"] != DETERMINISTIC_SEED:
@@ -174,24 +194,26 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
     validate_generator_catalog(catalog)
     validate_corpus_review_package(corpus_review)
     validate_intake_approval_package(intake_approval)
+    gap_analysis = json.loads((root / "datasets" / "manifests" / GAP_ANALYSIS_FILE).read_text(encoding="utf-8"))
+    validate_representative_gap_analysis(gap_analysis)
+    scope_amendment = json.loads((root / "datasets" / "manifests" / SCOPE_AMENDMENT_FILE).read_text(encoding="utf-8"))
+    validate_representative_gap_scope_amendment(scope_amendment)
+    workflow_authorization = json.loads(
+        (root / "datasets" / "manifests" / WORKFLOW_AUTHORIZATION_FILE).read_text(encoding="utf-8")
+    )
+    validate_m3_workflow_authorization(workflow_authorization)
     post_intake_review = json.loads(
-        (root / "datasets" / "manifests" / "b2-post-intake-review-v1.review.json").read_text(
-            encoding="utf-8"
-        )
+        (root / "datasets" / "manifests" / "b2-post-intake-review-v1.review.json").read_text(encoding="utf-8")
     )
     validate_post_intake_review(post_intake_review)
     if stage == "b2-intake":
         intake_evidence = json.loads(
-            (root / "datasets" / "manifests" / "b2-intake-evidence-v1.intake.json").read_text(
-                encoding="utf-8"
-            )
+            (root / "datasets" / "manifests" / "b2-intake-evidence-v1.intake.json").read_text(encoding="utf-8")
         )
         validate_intake_evidence(intake_evidence)
     if stage in {"b2-remediation", "b2-final", "b2-representative"}:
         intake_evidence = json.loads(
-            (root / "datasets" / "manifests" / "b2-intake-evidence-v1.intake.json").read_text(
-                encoding="utf-8"
-            )
+            (root / "datasets" / "manifests" / "b2-intake-evidence-v1.intake.json").read_text(encoding="utf-8")
         )
         validate_intake_evidence(intake_evidence)
         remediation = json.loads(
@@ -201,15 +223,11 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
         )
         validate_remediation_evidence(remediation)
         remediation_review = json.loads(
-            (root / "datasets" / "manifests" / "b2-remediation-review-v1.review.json").read_text(
-                encoding="utf-8"
-            )
+            (root / "datasets" / "manifests" / "b2-remediation-review-v1.review.json").read_text(encoding="utf-8")
         )
         validate_remediation_review(remediation_review)
         manual_disposition = json.loads(
-            (root / "datasets" / "manifests" / "b2-manual-disposition-v1.review.json").read_text(
-                encoding="utf-8"
-            )
+            (root / "datasets" / "manifests" / "b2-manual-disposition-v1.review.json").read_text(encoding="utf-8")
         )
         validate_manual_disposition(manual_disposition)
         if stage in {"b2-final", "b2-representative"}:
@@ -227,19 +245,27 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
             validate_final_remediation_approval(final_approval)
         if stage == "b2-representative":
             representative = json.loads(
-                (root / "datasets" / "manifests" / "b2-representative-set-v1.representative.json").read_text(encoding="utf-8")
+                (root / "datasets" / "manifests" / "b2-representative-set-v1.representative.json").read_text(
+                    encoding="utf-8"
+                )
             )
             validate_representative_set_evidence(representative)
             representative_review = json.loads(
-                (root / "datasets" / "manifests" / "b2-representative-review-v1.review.json").read_text(encoding="utf-8")
+                (root / "datasets" / "manifests" / "b2-representative-review-v1.review.json").read_text(
+                    encoding="utf-8"
+                )
             )
             validate_representative_review(representative_review)
             limited_evaluation = json.loads(
-                (root / "datasets" / "manifests" / "b2-limited-evaluation-v1.evaluation.json").read_text(encoding="utf-8")
+                (root / "datasets" / "manifests" / "b2-limited-evaluation-v1.evaluation.json").read_text(
+                    encoding="utf-8"
+                )
             )
             validate_limited_evaluation(limited_evaluation)
             calibration_review = json.loads(
-                (root / "datasets" / "manifests" / "b2-limited-calibration-review-v1.review.json").read_text(encoding="utf-8")
+                (root / "datasets" / "manifests" / "b2-limited-calibration-review-v1.review.json").read_text(
+                    encoding="utf-8"
+                )
             )
             validate_limited_calibration_review(calibration_review)
         for field, profile_name in (
@@ -254,8 +280,7 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
         for item in catalog["generators"]
     }
     code_definitions = {
-        item.generator_id: (item.version, item.label, item.family, item.mutation_ids)
-        for item in GENERATOR_DEFINITIONS
+        item.generator_id: (item.version, item.label, item.family, item.mutation_ids) for item in GENERATOR_DEFINITIONS
     }
     if catalog_definitions != code_definitions:
         raise ValueError("generator catalog does not exactly match executable definitions")

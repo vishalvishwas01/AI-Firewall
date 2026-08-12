@@ -71,9 +71,7 @@ def classify_source(source_id: str, root: Path, profile: dict[str, Any]) -> dict
         family = _path_family(source_id, relative)
         family_notice_paths.setdefault(family, set())
         family_category_counts.setdefault(family, Counter())
-        categories = {
-            category for category, pattern in NOTICE_CATEGORIES.items() if pattern.search(text)
-        }
+        categories = {category for category, pattern in NOTICE_CATEGORIES.items() if pattern.search(text)}
         if categories:
             notice_paths.add(relative)
             family_notice_paths[family].add(relative)
@@ -104,8 +102,7 @@ def classify_source(source_id: str, root: Path, profile: dict[str, Any]) -> dict
                 "noticeMarkerFileCount": len(family_notice_paths[family]),
                 "excludedFileCount": len(family_notice_paths[family]),
                 "categoryFileCounts": {
-                    category: family_category_counts[family][category]
-                    for category in NOTICE_CATEGORIES
+                    category: family_category_counts[family][category] for category in NOTICE_CATEGORIES
                 },
                 "disposition": "excluded-pending-final-maintainer-review",
             }

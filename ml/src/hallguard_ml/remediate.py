@@ -71,15 +71,16 @@ def _validate_profile(profile: dict[str, Any]) -> None:
             re.compile(rule["expression"], flags)
         elif rule.get("kind") == "entropy":
             if set(rule) != {
-                "id", "kind", "alphabetExpression", "minimumLength", "maximumLength", "minimumEntropy",
+                "id",
+                "kind",
+                "alphabetExpression",
+                "minimumLength",
+                "maximumLength",
+                "minimumEntropy",
             }:
                 raise IntakeError("secondary entropy scanner rule fields are invalid")
             re.compile(rule["alphabetExpression"])
-            if not (
-                rule["minimumLength"] == 32
-                and rule["maximumLength"] == 256
-                and rule["minimumEntropy"] == 4.5
-            ):
+            if not (rule["minimumLength"] == 32 and rule["maximumLength"] == 256 and rule["minimumEntropy"] == 4.5):
                 raise IntakeError("secondary entropy scanner thresholds are invalid")
         else:
             raise IntakeError("secondary scanner rule kind is invalid")
@@ -431,11 +432,7 @@ def main() -> None:
         return
     if not args.network:
         raise IntakeError("B2 remediation requires the explicit --network flag")
-    local_archives = (
-        {"nodejs-public-corpus": args.node_archive}
-        if args.node_archive is not None
-        else None
-    )
+    local_archives = {"nodejs-public-corpus": args.node_archive} if args.node_archive is not None else None
     print(json.dumps(run_remediation(root, args.executed_on, local_archives), indent=2, sort_keys=True))
 
 

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-m3-representative-gap-analysis-v1.schema.json",
+  "title": "HallGuard M3 Representative Coverage Gap Analysis",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "analysisVersion", "analyzedOn", "status", "basis",
+    "missingStrata", "candidateSources", "privacyBoundary", "authorization",
+    "gates", "nextStep"
+  ],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "analysisVersion": {"const": "m3-representative-gap-analysis-v1"},
+    "analyzedOn": {"type": "string", "format": "date"},
+    "status": {"const": "evidence-complete-awaiting-three-role-scope-amendment"},
+    "nextStep": {"const": "m3-obtain-three-role-scope-amendment"}
+  }
+}

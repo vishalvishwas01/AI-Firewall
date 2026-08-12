@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "authorizationVersion": "m3-workflow-authorization-v1",
+  "reviewType": "HUMAN_APPROVAL",
+  "reviewedOn": "2026-08-12",
+  "status": "authorized-workflow-evidence-gated",
+  "scopeAmendmentVersion": "m3-representative-gap-scope-amendment-v1",
+  "reviewers": [
+    {
+      "role": "privacy",
+      "identity": "umang aggarwal",
+      "decision": "approve-workflow",
+      "authorizedActions": ["network-access", "exact-pin-source-rehydration", "feature-extraction-execution", "representative-dataset-replacement", "training", "release-work"]
+    },
+    {
+      "role": "security",
+      "identity": "vishal vishwas",
+      "decision": "approve-workflow",
+      "authorizedActions": ["network-access", "exact-pin-source-rehydration", "feature-extraction-execution", "representative-dataset-replacement", "training", "release-work"]
+    },
+    {
+      "role": "maintainer",
+      "identity": "tushar garg",
+      "decision": "approve-workflow",
+      "authorizedActions": ["network-access", "exact-pin-source-rehydration", "feature-extraction-execution", "representative-dataset-replacement", "training", "release-work"]
+    }
+  ],
+  "authorization": {
+    "networkAccessAuthorized": true,
+    "exactPinSourceRehydrationAuthorized": true,
+    "featureExtractionExecutionAuthorized": true,
+    "representativeDatasetReplacementAuthorized": true,
+    "trainingAuthorized": true,
+    "releaseWorkAuthorized": true,
+    "authorizationReconfirmationRequired": false
+  },
+  "evidenceGates": {
+    "exactPinsAndDigestsRequired": true,
+    "scannerAndExclusionGatesRequired": true,
+    "contentFreeOutputRequired": true,
+    "quarantineDeletionRequired": true,
+    "coverageGateRequired": true,
+    "qualityAndCalibrationGatesRequired": true,
+    "browserCompatibilityAndLatencyGatesRequired": true,
+    "signedPackageVerificationRequired": true,
+    "automaticReleaseEligibility": false,
+    "privateSigningKeyProvisioned": false,
+    "productionDeploymentAuthorized": false
+  },
+  "nextStep": "m3-implement-test-and-execute-exact-pin-expansion"
+}

@@ -26,12 +26,9 @@ EXPECTED_M1_SEED_20260801_DIGEST = "32e3562c6a42aa951ab098f999933e6cc0d60cb52820
 class GeneratorCatalogTests(unittest.TestCase):
     def test_catalog_is_content_free_pending_and_matches_code(self) -> None:
         catalog = json.loads(
-            (
-                WORKSPACE_ROOT
-                / "datasets"
-                / "manifests"
-                / "synthetic-generators-v1.catalog.json"
-            ).read_text(encoding="utf-8")
+            (WORKSPACE_ROOT / "datasets" / "manifests" / "synthetic-generators-v1.catalog.json").read_text(
+                encoding="utf-8"
+            )
         )
         validate_generator_catalog(catalog)
         self.assertEqual(catalog["reviewStatus"], "pending-human-review")
@@ -87,9 +84,18 @@ class ReproducibleGeneratorTests(unittest.TestCase):
         self.assertEqual(formats, {"raw", "env", "json", "yaml", "code", "prose"})
         self.assertTrue(
             {
-                "zero-width-context", "fullwidth-value", "multiline-config", "github-test-prefix",
-                "uuid", "hash", "semantic-version", "timestamp", "placeholder", "example-url",
-                "ordinary-identifier", "tutorial-example",
+                "zero-width-context",
+                "fullwidth-value",
+                "multiline-config",
+                "github-test-prefix",
+                "uuid",
+                "hash",
+                "semantic-version",
+                "timestamp",
+                "placeholder",
+                "example-url",
+                "ordinary-identifier",
+                "tutorial-example",
             }
             <= mutation_ids
         )

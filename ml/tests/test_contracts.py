@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import copy
+import math
 import unittest
 
 from hallguard_ml.contracts import (
+    ALLOWED_CLASSIFIER_TYPES,
     DETERMINISTIC_SEED,
     FEATURE_NAMES,
+    MAX_ARTIFACT_BYTES,
+    MAX_ARTIFACT_PARAMETER_ABS,
     THRESHOLDS,
     ContractError,
+    serialize_artifact,
     validate_artifact,
     validate_dataset_manifest,
 )
@@ -102,6 +107,40 @@ class ArtifactContractTests(unittest.TestCase):
         artifact["status"] = "active"
         with self.assertRaises(ContractError):
             validate_artifact(artifact)
+
+    def test_rejects_unsupported_nonfinite_unbounded_or_overprecise_parameters(self) -> None:
+        self.assertEqual(ALLOWED_CLASSIFIER_TYPES, ("logistic-regression",))
+        self.assertEqual(MAX_ARTIFACT_BYTES, 5 * 1024 * 1024)
+        mutations = [
+            ("classifierType", "neural-network"),
+            ("intercept", math.nan),
+            ("intercept", math.inf),
+            ("intercept", MAX_ARTIFACT_PARAMETER_ABS + 1),
+            ("intercept", 0.1234567890123),
+        ]
+        for field, invalid in mutations:
+            artifact = valid_artifact()
+            artifact[field] = invalid
+            with self.subTest(field=field, invalid=invalid), self.assertRaises(ContractError):
+                validate_artifact(artifact)
+
+        coefficient = valid_artifact()
+        coefficient["coefficients"] = [0.0] * 15 + [math.nan]
+        with self.assertRaises(ContractError):
+            validate_artifact(coefficient)
+
+    def test_canonical_serialization_is_finite_bounded_and_stable(self) -> None:
+        first = serialize_artifact(valid_artifact())
+        second = serialize_artifact(valid_artifact())
+        self.assertEqual(first, second)
+        self.assertLessEqual(len(first), MAX_ARTIFACT_BYTES)
+        self.assertNotIn(b"NaN", first)
+        self.assertNotIn(b"Infinity", first)
+
+        oversized = valid_artifact()
+        oversized["training"]["metricsReport"] = "x" * MAX_ARTIFACT_BYTES + ".metrics.json"  # type: ignore[index]
+        with self.assertRaisesRegex(ContractError, "size budget"):
+            serialize_artifact(oversized)
 
 
 class DatasetManifestContractTests(unittest.TestCase):

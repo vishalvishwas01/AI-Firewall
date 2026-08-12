@@ -1,6 +1,7 @@
 import type { CandidateFeatures, CandidateSignal } from "./contracts"
 import { isBenignCandidateValue } from "./benignShapes"
 import { normalizeInspectionTextWithSourceMap } from "./normalization"
+import { normalizeInspectionText } from "./normalization"
 
 const candidatePattern = () => /[A-Za-z0-9][A-Za-z0-9_./:+@=-]{7,255}/g
 const safeUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -22,23 +23,25 @@ const entropy = (value: string) => {
 const charClass = (char: string) => /[A-Z]/.test(char) ? 1 : /[a-z]/.test(char) ? 2 : /\d/.test(char) ? 3 : 4
 
 export const extractCandidateFeatures = (value: string, contextBefore = ""): CandidateFeatures => {
-  const length = value.length
+  const normalizedValue = normalizeInspectionText(value)
+  const normalizedContext = normalizeInspectionText(contextBefore)
+  const length = normalizedValue.length
   let transitions = 0
-  for (let index = 1; index < length; index += 1) if (charClass(value[index]) !== charClass(value[index - 1])) transitions += 1
-  const frequencies = Array.from(new Set(value)).map((char) => value.split(char).length - 1)
+  for (let index = 1; index < length; index += 1) if (charClass(normalizedValue[index]) !== charClass(normalizedValue[index - 1])) transitions += 1
+  const frequencies = Array.from(new Set(normalizedValue)).map((char) => normalizedValue.split(char).length - 1)
   const maxRepeated = Math.max(...frequencies, 1)
-  const safeShape = safeUuid.test(value) || safeHash.test(value) || safeVersion.test(value) || safeTimestamp.test(value)
-  const assignmentContext = assignmentContextPattern.test(contextBefore.slice(-96))
-  const secretKeywordContext = /\b(api.?key|token|secret|password|credential|auth)\b/i.test(contextBefore.slice(-96))
-  const structuredConfigContext = configContextPattern.test(contextBefore.slice(-160))
+  const safeShape = safeUuid.test(normalizedValue) || safeHash.test(normalizedValue) || safeVersion.test(normalizedValue) || safeTimestamp.test(normalizedValue)
+  const assignmentContext = assignmentContextPattern.test(normalizedContext.slice(-96))
+  const secretKeywordContext = /\b(api.?key|token|secret|password|credential|auth)\b/i.test(normalizedContext.slice(-96))
+  const structuredConfigContext = configContextPattern.test(normalizedContext.slice(-160))
   return {
-    length, lengthBucket: length < 16 ? 0 : length < 32 ? 1 : length < 64 ? 2 : 3, entropy: entropy(value),
-    letterRatio: ratio((value.match(/[A-Za-z]/g) ?? []).length, length), digitRatio: ratio((value.match(/\d/g) ?? []).length, length),
-    uppercaseRatio: ratio((value.match(/[A-Z]/g) ?? []).length, length), lowercaseRatio: ratio((value.match(/[a-z]/g) ?? []).length, length),
-    punctuationRatio: ratio((value.match(/[^A-Za-z0-9]/g) ?? []).length, length), separatorRatio: ratio((value.match(/[_./:+@=-]/g) ?? []).length, length),
+    length, lengthBucket: length < 16 ? 0 : length < 32 ? 1 : length < 64 ? 2 : 3, entropy: entropy(normalizedValue),
+    letterRatio: ratio((normalizedValue.match(/[A-Za-z]/g) ?? []).length, length), digitRatio: ratio((normalizedValue.match(/\d/g) ?? []).length, length),
+    uppercaseRatio: ratio((normalizedValue.match(/[A-Z]/g) ?? []).length, length), lowercaseRatio: ratio((normalizedValue.match(/[a-z]/g) ?? []).length, length),
+    punctuationRatio: ratio((normalizedValue.match(/[^A-Za-z0-9]/g) ?? []).length, length), separatorRatio: ratio((normalizedValue.match(/[_./:+@=-]/g) ?? []).length, length),
     classTransitionRatio: ratio(transitions, Math.max(length - 1, 1)), repeatedCharacterRatio: ratio(maxRepeated, length),
     safeShape: safeShape ? 1 : 0, assignmentContext: assignmentContext ? 1 : 0, secretKeywordContext: secretKeywordContext ? 1 : 0,
-    structuredConfigContext: structuredConfigContext ? 1 : 0, pathLike: value.includes("/") || value.includes("\\") ? 1 : 0
+    structuredConfigContext: structuredConfigContext ? 1 : 0, pathLike: normalizedValue.includes("/") || normalizedValue.includes("\\") ? 1 : 0
   }
 }
 

@@ -1,4 +1,4 @@
-import { validateClassifierArtifact } from "../detection/classifier"
+import { validateSerializedClassifierArtifact } from "../detection/classifier"
 import { validateRuleSet } from "../detection/rules"
 import { decodeStagedPayload } from "./verification"
 import { getStagedIntelligencePackage } from "./stagedStorage"
@@ -34,7 +34,9 @@ export const activateStagedIntelligencePackage = async (now = new Date()) => {
       if (entry.kind === "rules") {
         validateRuleSet(payload, staged.manifest.versions.ruleSetVersion)
       } else {
-        const artifact = validateClassifierArtifact(payload)
+        const bytes = decodeStagedPayload(staged.payloads[entry.path])
+        if (!bytes) return undefined
+        const artifact = validateSerializedClassifierArtifact(bytes)
         if (artifact.modelVersion !== staged.manifest.versions.modelVersion) return undefined
       }
     } catch {
@@ -44,4 +46,3 @@ export const activateStagedIntelligencePackage = async (now = new Date()) => {
 
   return promoteStagedIntelligencePackage(staged, now)
 }
-

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-m3-workflow-authorization-v1.schema.json",
+  "title": "HallGuard M3 Workflow Authorization",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "authorizationVersion", "reviewType", "reviewedOn", "status",
+    "scopeAmendmentVersion", "reviewers", "authorization", "evidenceGates", "nextStep"
+  ],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "authorizationVersion": {"const": "m3-workflow-authorization-v1"},
+    "reviewType": {"const": "HUMAN_APPROVAL"},
+    "reviewedOn": {"type": "string", "format": "date"},
+    "status": {"const": "authorized-workflow-evidence-gated"},
+    "scopeAmendmentVersion": {"const": "m3-representative-gap-scope-amendment-v1"},
+    "nextStep": {"const": "m3-implement-test-and-execute-exact-pin-expansion"}
+  }
+}

@@ -8,6 +8,7 @@ import json
 import re
 import shutil
 import stat
+import time
 import urllib.request
 import zipfile
 from collections import Counter
@@ -28,10 +29,24 @@ MAX_ARCHIVE_MEMBERS = 500_000
 MAX_FILE_BYTES = 2_000_000
 MAX_ACCEPTED_BYTES = 1_500_000_000
 USER_AGENT = "HallGuard-B2-controlled-intake/1.0"
+WINDOWS_DIRECTORY_REPLACE_ATTEMPTS = 20
+WINDOWS_DIRECTORY_REPLACE_DELAY_SECONDS = 0.1
 
 GENERIC_EXCLUDED_SEGMENTS = {
-    "benchmark", "benchmarks", "deps", "generated", "node_modules", "test", "tests", "testing",
-    "third-party", "third_party", "tools", "vendor", "vendored", "vendors",
+    "benchmark",
+    "benchmarks",
+    "deps",
+    "generated",
+    "node_modules",
+    "test",
+    "tests",
+    "testing",
+    "third-party",
+    "third_party",
+    "tools",
+    "vendor",
+    "vendored",
+    "vendors",
 }
 SENSITIVE_NAME_PARTS = ("certificate", "credential", "private-key", "private_key", "secret")
 
@@ -92,7 +107,10 @@ SOURCES = (
 def _request(url: str) -> urllib.request.Request:
     if not url.startswith(("https://api.github.com/", "https://codeload.github.com/")):
         raise IntakeError("intake URL is outside the approved GitHub endpoints")
-    return urllib.request.Request(url, headers={"Accept": "application/vnd.github+json", "User-Agent": USER_AGENT})
+    return urllib.request.Request(  # noqa: S310 - URL is restricted to the approved HTTPS endpoints above.
+        url,
+        headers={"Accept": "application/vnd.github+json", "User-Agent": USER_AGENT},
+    )
 
 
 def resolve_revision(source: SourceDefinition) -> str:
@@ -160,17 +178,15 @@ def _allowed_path(source_id: str, path: PurePosixPath) -> bool:
     if source_id == "cpython-public-corpus":
         return (parts[0] == "Lib" and suffix == ".py") or (parts[0] == "Doc" and suffix == ".rst")
     if source_id == "kubernetes-website-public-corpus":
-        return (
-            parts[:3] == ("content", "en", "docs") and suffix == ".md"
-        ) or (
+        return (parts[:3] == ("content", "en", "docs") and suffix == ".md") or (
             parts[:3] == ("content", "en", "examples") and suffix in {".yaml", ".yml", ".json"}
         )
     if source_id == "nodejs-public-corpus":
         return (
-            parts[0] == "lib" and suffix == ".js"
-        ) or (
-            parts[:2] == ("doc", "api") and suffix == ".md"
-        ) or (len(parts) == 1 and suffix == ".json")
+            (parts[0] == "lib" and suffix == ".js")
+            or (parts[:2] == ("doc", "api") and suffix == ".md")
+            or (len(parts) == 1 and suffix == ".json")
+        )
     raise IntakeError(f"unknown approved source: {source_id}")
 
 
@@ -287,7 +303,18 @@ def scan_archive(
         if license_digest is None or not license_marker_verified:
             raise IntakeError(f"license marker verification failed for {source.source_id}")
         destination.parent.mkdir(parents=True, exist_ok=True)
-        staging.replace(destination)
+        # Windows virus scanners and indexers can briefly retain a handle after
+        # the last extracted file is closed. Retry only the atomic directory
+        # promotion; all validation and fail-closed cleanup semantics remain
+        # unchanged.
+        for attempt in range(WINDOWS_DIRECTORY_REPLACE_ATTEMPTS):
+            try:
+                staging.replace(destination)
+                break
+            except PermissionError:
+                if attempt + 1 == WINDOWS_DIRECTORY_REPLACE_ATTEMPTS:
+                    raise
+                time.sleep(WINDOWS_DIRECTORY_REPLACE_DELAY_SECONDS)
     except Exception:
         shutil.rmtree(staging, ignore_errors=True)
         raise

@@ -7,29 +7,37 @@ import json
 from pathlib import Path
 
 from .contracts import (
-    ContractError,
     FEATURE_NAMES,
+    ContractError,
+    validate_b2_training_state_approval,
     validate_corpus_review_package,
     validate_dataset_manifest,
     validate_evaluation_report,
+    validate_final_remediation_approval,
     validate_generator_catalog,
     validate_generator_record,
     validate_generator_summary,
     validate_intake_approval_package,
     validate_intake_evidence,
+    validate_limited_calibration_review,
+    validate_limited_evaluation,
+    validate_limited_evaluation_approval,
+    validate_manual_disposition,
     validate_post_intake_review,
     validate_remediation_evidence,
     validate_remediation_review,
-    validate_manual_disposition,
-    validate_targeted_review_evidence,
-    validate_final_remediation_approval,
-    validate_representative_set_evidence,
     validate_representative_review,
-    validate_limited_evaluation,
-    validate_limited_evaluation_approval,
-    validate_limited_calibration_review,
-    validate_b2_training_state_approval,
+    validate_representative_set_evidence,
+    validate_targeted_review_evidence,
     validate_training_state,
+)
+from .representative_gap import (
+    GAP_ANALYSIS_FILE,
+    SCOPE_AMENDMENT_FILE,
+    WORKFLOW_AUTHORIZATION_FILE,
+    validate_m3_workflow_authorization,
+    validate_representative_gap_analysis,
+    validate_representative_gap_scope_amendment,
 )
 
 FORBIDDEN_APPLICATION_IMPORTS = ("client", "extension", "server")
@@ -58,6 +66,136 @@ B2_LIMITED_EVALUATION_FILE = Path("datasets/manifests/b2-limited-evaluation-v1.e
 B2_LIMITED_EVALUATION_APPROVAL_FILE = Path("datasets/manifests/b2-limited-evaluation-approval-v1.review.json")
 B2_LIMITED_CALIBRATION_FILE = Path("datasets/manifests/b2-limited-calibration-review-v1.review.json")
 B2_TRAINING_STATE_APPROVAL_FILE = Path("datasets/manifests/b2-training-state-approval-v1.review.json")
+M3_GAP_ANALYSIS_FILE = Path("datasets/manifests") / GAP_ANALYSIS_FILE
+M3_SCOPE_AMENDMENT_FILE = Path("datasets/manifests") / SCOPE_AMENDMENT_FILE
+M3_WORKFLOW_AUTHORIZATION_FILE = Path("datasets/manifests") / WORKFLOW_AUTHORIZATION_FILE
+SUPPLEMENTAL_REVIEW_FIELDS = {
+    "b2-calibration-publication-approval-v1.review.json": {
+        "schemaVersion",
+        "reviewVersion",
+        "reviewType",
+        "reviewedOn",
+        "sourceReview",
+        "decision",
+        "scope",
+        "reviewers",
+        "gates",
+        "governanceEffect",
+    },
+    "b2-m4-artifact-handoff-authorization-v1.mock.json": {
+        "schemaVersion",
+        "templateVersion",
+        "documentType",
+        "status",
+        "reviewedOn",
+        "artifact",
+        "artifactSha256",
+        "metricsManifest",
+        "metricsManifestSha256",
+        "scope",
+        "decision",
+        "reviewers",
+        "gates",
+        "requiredEvidence",
+        "governanceEffect",
+    },
+    "b2-m4-artifact-handoff-authorization-v1.review.json": {
+        "schemaVersion",
+        "templateVersion",
+        "documentType",
+        "status",
+        "reviewedOn",
+        "artifact",
+        "artifactSha256",
+        "metricsManifest",
+        "metricsManifestSha256",
+        "scope",
+        "decision",
+        "reviewers",
+        "gates",
+        "requiredEvidence",
+        "governanceEffect",
+    },
+    "b2-m4-human-review-v1.mock.json": {
+        "schemaVersion",
+        "reviewVersion",
+        "documentType",
+        "reviewType",
+        "reviewedOn",
+        "evidence",
+        "decision",
+        "scope",
+        "simulatedReviewers",
+        "findings",
+        "gates",
+        "governanceEffect",
+    },
+    "b2-m4-human-review-v1.review.json": {
+        "schemaVersion",
+        "reviewVersion",
+        "documentType",
+        "reviewType",
+        "reviewedOn",
+        "evidence",
+        "decision",
+        "scope",
+        "simulatedReviewers",
+        "findings",
+        "gates",
+        "governanceEffect",
+    },
+    "b2-m4-policy-change-review-v1.mock.json": {
+        "schemaVersion",
+        "reviewVersion",
+        "documentType",
+        "reviewedOn",
+        "decision",
+        "scope",
+        "findings",
+        "gates",
+        "governanceEffect",
+    },
+    "b2-m4-runtime-activation-approval-v1.review.json": {
+        "schemaVersion",
+        "reviewVersion",
+        "reviewType",
+        "reviewedOn",
+        "decision",
+        "reviewers",
+        "gates",
+        "governanceEffect",
+    },
+    "b2-m4-runtime-compatibility-evidence-v1.json": {
+        "schemaVersion",
+        "evidenceVersion",
+        "status",
+        "artifact",
+        "artifactSha256",
+        "sourceTrainingStateSha256",
+        "metricsManifestSha256",
+        "networkUsed",
+        "rawSourceIncluded",
+        "runtimeActivation",
+        "checks",
+        "knownBuildWarnings",
+        "gates",
+        "nextStep",
+    },
+    "b2-training-state-review-v1.review.json": {
+        "schemaVersion",
+        "reviewVersion",
+        "reviewType",
+        "reviewedOn",
+        "artifact",
+        "artifactSha256",
+        "decision",
+        "scope",
+        "reviewers",
+        "gates",
+        "governanceEffect",
+    },
+}
+SUPPLEMENTAL_REVIEW_FILES = {Path("datasets/manifests") / name for name in SUPPLEMENTAL_REVIEW_FIELDS}
 
 
 class GovernanceError(RuntimeError):
@@ -129,6 +267,17 @@ def _audit_manifests(root: Path) -> list[str]:
                 validate_limited_calibration_review(value)
             elif path.name == B2_TRAINING_STATE_APPROVAL_FILE.name:
                 validate_b2_training_state_approval(value)
+            elif path.name in SUPPLEMENTAL_REVIEW_FIELDS:
+                if set(value) != SUPPLEMENTAL_REVIEW_FIELDS[path.name]:
+                    raise ContractError("supplemental review fields mismatch")
+                if value.get("schemaVersion") != 1:
+                    raise ContractError("supplemental review schemaVersion is invalid")
+            elif path.name == M3_GAP_ANALYSIS_FILE.name:
+                validate_representative_gap_analysis(value)
+            elif path.name == M3_SCOPE_AMENDMENT_FILE.name:
+                validate_representative_gap_scope_amendment(value)
+            elif path.name == M3_WORKFLOW_AUTHORIZATION_FILE.name:
+                validate_m3_workflow_authorization(value)
             elif path.name.endswith(".manifest.json"):
                 validate_dataset_manifest(value)
             else:
@@ -184,6 +333,7 @@ def _audit_m2_data_boundary(root: Path) -> list[str]:
                     raise ContractError("training state root must be an object")
                 if value.get("stateVersion") == "b2-limited-logistic-training-state-v1":
                     from .b2_training_state import validate_b2_training_state
+
                     validate_b2_training_state(value)
                 else:
                     validate_training_state(value)
@@ -251,6 +401,10 @@ def _audit_b2_pre_intake_boundary(root: Path) -> list[str]:
                 or error.endswith(str(B2_LIMITED_EVALUATION_FILE))
                 or error.endswith(str(B2_LIMITED_EVALUATION_APPROVAL_FILE))
                 or error.endswith(str(B2_LIMITED_CALIBRATION_FILE))
+                or any(error.endswith(str(path)) for path in SUPPLEMENTAL_REVIEW_FILES)
+                or error.endswith(str(M3_GAP_ANALYSIS_FILE))
+                or error.endswith(str(M3_SCOPE_AMENDMENT_FILE))
+                or error.endswith(str(M3_WORKFLOW_AUTHORIZATION_FILE))
             )
         )
     ]
@@ -297,7 +451,8 @@ def _audit_b2_representative_boundary(root: Path) -> list[str]:
     errors = _audit_b2_final_boundary(root)
     output_suffix = str(Path("datasets/representative/b2-benign-features-v1.jsonl"))
     errors = [
-        error for error in errors
+        error
+        for error in errors
         if not (error.startswith("M1 forbids undeclared data file:") and error.endswith(output_suffix))
     ]
     if not (root / B2_REPRESENTATIVE_FILE).is_file():
@@ -306,7 +461,16 @@ def _audit_b2_representative_boundary(root: Path) -> list[str]:
         errors.append(f"B2 representative stage requires human review: {B2_REPRESENTATIVE_REVIEW_FILE}")
     output = root / "datasets" / "representative" / "b2-benign-features-v1.jsonl"
     if output.is_file():
-        expected_fields = {"recordId", "sourceId", "groupId", "riskStratum", "label", "synthetic", "featureVersion", "features"}
+        expected_fields = {
+            "recordId",
+            "sourceId",
+            "groupId",
+            "riskStratum",
+            "label",
+            "synthetic",
+            "featureVersion",
+            "features",
+        }
         for line_number, line in enumerate(output.read_text(encoding="utf-8").splitlines(), 1):
             try:
                 row = json.loads(line)

@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
 
 import {
   CANDIDATE_FEATURE_NAMES,
@@ -7,12 +9,39 @@ import {
   classifyCandidateSignals,
   loadClassifierArtifact,
   scoreCandidateFeatures,
-  validateClassifierArtifact
+  validateClassifierArtifact,
+  validateSerializedClassifierArtifact
 } from "."
+import { extractCandidateFeatures } from "./candidates"
 import artifactValue from "./classifier-artifact.json"
 import { defaultSettings } from "./detectors"
 
 describe("local logistic classifier artifact", () => {
+  it("matches the shared candidate-features-v1 golden fixture", () => {
+    const fixture = JSON.parse(readFileSync(
+      resolve(process.cwd(), "../docs/contracts/candidate-features-v1.golden.json"),
+      "utf8"
+    )) as {
+      schemaVersion: number
+      featureVersion: string
+      featureOrder: string[]
+      artifactLimits: { maxSerializedBytes: number; maxAbsoluteParameter: number; decimalPlaces: number }
+      cases: Array<{ caseId: string; value: string; contextBefore: string; expected: Record<string, number> }>
+    }
+    expect(fixture.schemaVersion).toBe(1)
+    expect(fixture.featureVersion).toBe("candidate-features-v1")
+    expect(fixture.featureOrder).toEqual(CANDIDATE_FEATURE_NAMES)
+    expect(fixture.artifactLimits).toMatchObject({
+      maxSerializedBytes: 5 * 1024 * 1024,
+      maxAbsoluteParameter: 1_000_000,
+      decimalPlaces: 12
+    })
+    for (const testCase of fixture.cases) {
+      expect(extractCandidateFeatures(testCase.value, testCase.contextBefore), testCase.caseId)
+        .toEqual(testCase.expected)
+    }
+  })
+
   it("loads the bundled shadow artifact with the exact feature contract", () => {
     expect(bundledClassifier.available).toBe(true)
     if (!bundledClassifier.available) return
@@ -26,6 +55,26 @@ describe("local logistic classifier artifact", () => {
     expect(loadClassifierArtifact({ ...artifactValue, featureOrder: [...artifactValue.featureOrder].reverse() }).available).toBe(false)
     expect(loadClassifierArtifact({ ...artifactValue, normalization: { ...artifactValue.normalization, scale: artifactValue.normalization.scale.map(() => 0) } }).available).toBe(false)
     expect(loadClassifierArtifact({ ...artifactValue, status: "disabled" })).toEqual({ available: false, reason: "Classifier artifact is disabled" })
+  })
+
+  it("rejects incompatible types, feature versions, and unsafe numeric parameters", () => {
+    for (const invalid of [Number.NaN, Number.POSITIVE_INFINITY, 1_000_001, 0.1234567890123]) {
+      expect(loadClassifierArtifact({ ...artifactValue, intercept: invalid }).available).toBe(false)
+    }
+    expect(loadClassifierArtifact({ ...artifactValue, classifierType: "neural-network" }).available).toBe(false)
+    expect(loadClassifierArtifact({ ...artifactValue, featureVersion: "candidate-features-v2" }).available).toBe(false)
+    expect(loadClassifierArtifact({
+      ...artifactValue,
+      coefficients: artifactValue.coefficients.map((value, index) => index === 0 ? Number.NaN : value)
+    }).available).toBe(false)
+  })
+
+  it("rejects serialized artifacts outside the reviewed five MiB budget", () => {
+    expect(() => validateSerializedClassifierArtifact(new Uint8Array([123]))).toThrow()
+    expect(() => validateSerializedClassifierArtifact(new Uint8Array(5 * 1024 * 1024 + 1))).toThrow()
+    expect(validateSerializedClassifierArtifact(
+      new TextEncoder().encode(JSON.stringify(artifactValue))
+    ).modelVersion).toBe("secret-logistic-b2-limited-v1")
   })
 
   it("scores deterministically and within probability bounds", () => {

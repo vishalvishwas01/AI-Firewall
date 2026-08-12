@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
+import math
 import re
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 DETERMINISTIC_SEED = 20260801
@@ -11,6 +14,10 @@ FEATURE_VERSION = "candidate-features-v1"
 ARTIFACT_SCHEMA_VERSION = 2
 DATASET_SCHEMA_VERSION = 1
 ARTIFACT_CONTRACT_ID = "hallguard-logistic-artifact-v2"
+MAX_ARTIFACT_BYTES = 5 * 1024 * 1024
+MAX_ARTIFACT_PARAMETER_ABS = 1_000_000
+ARTIFACT_DECIMAL_PLACES = 12
+ALLOWED_CLASSIFIER_TYPES = ("logistic-regression",)
 DATASET_CONTRACT_ID = "hallguard-dataset-manifest-v1"
 GENERATOR_CATALOG_CONTRACT_ID = "hallguard-generator-catalog-v1"
 GENERATOR_CATALOG_VERSION = "synthetic-generators-v1"
@@ -141,6 +148,11 @@ class ContractError(ValueError):
     """Raised when an ML contract is malformed or privacy-incompatible."""
 
 
+def _decimal_places(value: int | float) -> int:
+    exponent = Decimal(str(value)).as_tuple().exponent
+    return -exponent if isinstance(exponent, int) and exponent < 0 else 0
+
+
 def _exact_fields(value: dict[str, Any], expected: set[str], location: str) -> None:
     actual = set(value)
     if actual != expected:
@@ -172,8 +184,15 @@ def _date_only(value: Any, location: str) -> None:
 def _feature_vector(value: Any, location: str, *, positive: bool = False) -> None:
     if not isinstance(value, list) or len(value) != len(FEATURE_NAMES):
         raise ContractError(f"{location} must contain exactly {len(FEATURE_NAMES)} numbers")
-    if any(not isinstance(item, (int, float)) or isinstance(item, bool) for item in value):
-        raise ContractError(f"{location} must contain numbers only")
+    if any(
+        not isinstance(item, (int, float))
+        or isinstance(item, bool)
+        or not math.isfinite(item)
+        or abs(item) > MAX_ARTIFACT_PARAMETER_ABS
+        or _decimal_places(item) > ARTIFACT_DECIMAL_PLACES
+        for item in value
+    ):
+        raise ContractError(f"{location} must contain bounded finite numbers with at most 12 decimal places")
     if positive and any(item <= 0 for item in value):
         raise ContractError(f"{location} values must be positive")
 
@@ -202,7 +221,7 @@ def validate_artifact(value: dict[str, Any]) -> None:
         raise ContractError("unsupported artifact schemaVersion")
     if value["featureVersion"] != FEATURE_VERSION:
         raise ContractError("unsupported featureVersion")
-    if value["classifierType"] != "logistic-regression" or value["status"] != "shadow":
+    if value["classifierType"] not in ALLOWED_CLASSIFIER_TYPES or value["status"] != "shadow":
         raise ContractError("ML exports must be shadow logistic-regression artifacts")
     if not isinstance(value["modelVersion"], str) or not re.fullmatch(
         r"secret-logistic-[a-z0-9][a-z0-9.-]{2,63}", value["modelVersion"]
@@ -218,8 +237,14 @@ def validate_artifact(value: dict[str, Any]) -> None:
     _feature_vector(normalization["mean"], "normalization.mean")
     _feature_vector(normalization["scale"], "normalization.scale", positive=True)
     _feature_vector(value["coefficients"], "coefficients")
-    if not isinstance(value["intercept"], (int, float)) or isinstance(value["intercept"], bool):
-        raise ContractError("intercept must be numeric")
+    if (
+        not isinstance(value["intercept"], (int, float))
+        or isinstance(value["intercept"], bool)
+        or not math.isfinite(value["intercept"])
+        or abs(value["intercept"]) > MAX_ARTIFACT_PARAMETER_ABS
+        or _decimal_places(value["intercept"]) > ARTIFACT_DECIMAL_PLACES
+    ):
+        raise ContractError("intercept must be a bounded finite number with at most 12 decimal places")
     if value["thresholds"] != THRESHOLDS:
         raise ContractError("thresholds must match the reviewed sensitivity contract")
 
@@ -240,6 +265,25 @@ def validate_artifact(value: dict[str, Any]) -> None:
     if not isinstance(training["codeRevision"], str) or not re.fullmatch(r"[0-9a-f]{7,40}", training["codeRevision"]):
         raise ContractError("training.codeRevision must be a Git revision")
     _date_time(training["generatedAt"], "training.generatedAt")
+
+
+def serialize_artifact(value: dict[str, Any]) -> bytes:
+    """Validate and canonically serialize a data-only runtime artifact."""
+
+    validate_artifact(value)
+    try:
+        serialized = json.dumps(
+            value,
+            allow_nan=False,
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    except (TypeError, ValueError) as error:
+        raise ContractError("artifact is not finite canonical JSON") from error
+    if not 2 <= len(serialized) <= MAX_ARTIFACT_BYTES:
+        raise ContractError("serialized artifact exceeds the reviewed size budget")
+    return serialized
 
 
 def validate_dataset_manifest(value: dict[str, Any]) -> None:
@@ -621,9 +665,18 @@ def validate_corpus_review_package(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "packageVersion", "status", "releaseEligible", "purpose",
-            "dataPolicy", "selectionCriteria", "representativeSet", "sources",
-            "reviewChecklist", "gates", "nextStep",
+            "schemaVersion",
+            "packageVersion",
+            "status",
+            "releaseEligible",
+            "purpose",
+            "dataPolicy",
+            "selectionCriteria",
+            "representativeSet",
+            "sources",
+            "reviewChecklist",
+            "gates",
+            "nextStep",
         },
         "corpusReviewPackage",
     )
@@ -684,8 +737,17 @@ def validate_corpus_review_package(value: dict[str, Any]) -> None:
         _exact_fields(
             source,
             {
-                "sourceId", "name", "repository", "contentTypes", "intendedPaths",
-                "excludedPaths", "license", "pin", "groupStrategy", "ingestionStatus", "review",
+                "sourceId",
+                "name",
+                "repository",
+                "contentTypes",
+                "intendedPaths",
+                "excludedPaths",
+                "license",
+                "pin",
+                "groupStrategy",
+                "ingestionStatus",
+                "review",
             },
             f"corpusReviewPackage.sources[{index}]",
         )
@@ -801,9 +863,18 @@ def validate_intake_approval_package(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "packageVersion", "reviewType", "reviewedOn", "status",
-            "releaseEligible", "evidenceProvenance", "operationalPolicy", "reviewers", "sources",
-            "gates", "nextStep",
+            "schemaVersion",
+            "packageVersion",
+            "reviewType",
+            "reviewedOn",
+            "status",
+            "releaseEligible",
+            "evidenceProvenance",
+            "operationalPolicy",
+            "reviewers",
+            "sources",
+            "gates",
+            "nextStep",
         },
         "intakeApprovalPackage",
     )
@@ -825,9 +896,15 @@ def validate_intake_approval_package(value: dict[str, Any]) -> None:
     _exact_fields(
         policy,
         {
-            "quarantinePath", "retentionDays", "deleteEarlierAfterSuccessfulProcessing",
-            "rejectedFilePolicy", "incidentOwner", "networkDuringIntake", "networkDuringTraining",
-            "quarantineFeedsFeatureExtraction", "rawContentInGeneratedDatasets",
+            "quarantinePath",
+            "retentionDays",
+            "deleteEarlierAfterSuccessfulProcessing",
+            "rejectedFilePolicy",
+            "incidentOwner",
+            "networkDuringIntake",
+            "networkDuringTraining",
+            "quarantineFeedsFeatureExtraction",
+            "rawContentInGeneratedDatasets",
         },
         "intakeApprovalPackage.operationalPolicy",
     )
@@ -927,10 +1004,20 @@ def validate_intake_evidence(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "reportVersion", "status", "releaseEligible", "retrievedOn",
-            "retentionExpiresOn", "approvalPackageVersion", "rawContentCommitted",
-            "acceptedContentDeleted", "featureExtractionPerformed", "trainingPerformed", "sources",
-            "gates", "nextStep",
+            "schemaVersion",
+            "reportVersion",
+            "status",
+            "releaseEligible",
+            "retrievedOn",
+            "retentionExpiresOn",
+            "approvalPackageVersion",
+            "rawContentCommitted",
+            "acceptedContentDeleted",
+            "featureExtractionPerformed",
+            "trainingPerformed",
+            "sources",
+            "gates",
+            "nextStep",
         },
         "intakeEvidence",
     )
@@ -964,8 +1051,15 @@ def validate_intake_evidence(value: dict[str, Any]) -> None:
         raise ContractError("B2 intake evidence must cover all approved sources")
     seen: set[str] = set()
     allowed_rejection_reasons = {
-        "outside-allowlist", "excluded-path", "symlink", "oversized-file", "binary-or-non-utf8",
-        "pem-or-private-key", "known-token-shape", "credential-assignment", "email-address",
+        "outside-allowlist",
+        "excluded-path",
+        "symlink",
+        "oversized-file",
+        "binary-or-non-utf8",
+        "pem-or-private-key",
+        "known-token-shape",
+        "credential-assignment",
+        "email-address",
         "phone-number",
     }
     for index, source in enumerate(sources):
@@ -974,9 +1068,18 @@ def validate_intake_evidence(value: dict[str, Any]) -> None:
         _exact_fields(
             source,
             {
-                "sourceId", "repository", "revision", "archiveSha256", "archiveDeleted",
-                "acceptedFileCount", "acceptedByteCount", "rejectedEntryCount",
-                "rejectionReasonCounts", "acceptedTreeSha256", "scanStatus", "license",
+                "sourceId",
+                "repository",
+                "revision",
+                "archiveSha256",
+                "archiveDeleted",
+                "acceptedFileCount",
+                "acceptedByteCount",
+                "rejectedEntryCount",
+                "rejectionReasonCounts",
+                "acceptedTreeSha256",
+                "scanStatus",
+                "license",
             },
             f"intakeEvidence.sources[{index}]",
         )
@@ -1054,8 +1157,16 @@ def validate_post_intake_review(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status",
-            "evidencePackageVersion", "featureExtractionEligible", "reviewers", "gates", "nextStep",
+            "schemaVersion",
+            "reviewVersion",
+            "reviewType",
+            "reviewedOn",
+            "status",
+            "evidencePackageVersion",
+            "featureExtractionEligible",
+            "reviewers",
+            "gates",
+            "nextStep",
         },
         "postIntakeReview",
     )
@@ -1134,9 +1245,18 @@ def validate_remediation_evidence(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "reportVersion", "status", "featureExtractionEligible", "executedOn",
-            "intakeEvidenceVersion", "postIntakeReviewVersion", "scannerProfile", "poisoningPlan",
-            "sources", "gates", "nextStep",
+            "schemaVersion",
+            "reportVersion",
+            "status",
+            "featureExtractionEligible",
+            "executedOn",
+            "intakeEvidenceVersion",
+            "postIntakeReviewVersion",
+            "scannerProfile",
+            "poisoningPlan",
+            "sources",
+            "gates",
+            "nextStep",
         },
         "remediationEvidence",
     )
@@ -1178,7 +1298,10 @@ def validate_remediation_evidence(value: dict[str, Any]) -> None:
         raise ContractError("B2 remediation must cover three sources")
     seen: set[str] = set()
     scanner_rule_ids = {
-        "basic-auth-url", "cloud-secret-context", "ssh-public-key-material", "payment-card-shape",
+        "basic-auth-url",
+        "cloud-secret-context",
+        "ssh-public-key-material",
+        "payment-card-shape",
         "high-entropy-token",
     }
     for index, source in enumerate(sources):
@@ -1187,9 +1310,16 @@ def validate_remediation_evidence(value: dict[str, Any]) -> None:
         _exact_fields(
             source,
             {
-                "sourceId", "revision", "commitVerification", "archiveSha256Matched",
-                "acceptedTreeSha256Matched", "secondaryScan", "licenseInventory",
-                "archiveInput", "sourceArchiveDeletedByTool", "rehydratedContentDeleted",
+                "sourceId",
+                "revision",
+                "commitVerification",
+                "archiveSha256Matched",
+                "acceptedTreeSha256Matched",
+                "secondaryScan",
+                "licenseInventory",
+                "archiveInput",
+                "sourceArchiveDeletedByTool",
+                "rehydratedContentDeleted",
             },
             f"remediationEvidence.sources[{index}]",
         )
@@ -1208,10 +1338,7 @@ def validate_remediation_evidence(value: dict[str, Any]) -> None:
             raise ContractError(f"B2 remediation source {index} archive input is invalid")
         if (
             not isinstance(source["sourceArchiveDeletedByTool"], bool)
-            or (
-                source["archiveInput"] == "controlled-download"
-                and source["sourceArchiveDeletedByTool"] is not True
-            )
+            or (source["archiveInput"] == "controlled-download" and source["sourceArchiveDeletedByTool"] is not True)
             or (
                 source["archiveInput"] == "user-provided-read-only"
                 and source["sourceArchiveDeletedByTool"] is not False
@@ -1328,9 +1455,17 @@ def validate_remediation_review(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status",
-            "remediationEvidenceVersion", "featureExtractionEligible", "reviewers",
-            "unresolvedManualDecisions", "gates", "nextStep",
+            "schemaVersion",
+            "reviewVersion",
+            "reviewType",
+            "reviewedOn",
+            "status",
+            "remediationEvidenceVersion",
+            "featureExtractionEligible",
+            "reviewers",
+            "unresolvedManualDecisions",
+            "gates",
+            "nextStep",
         },
         "remediationReview",
     )
@@ -1446,8 +1581,16 @@ def validate_manual_disposition(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status",
-            "remediationReviewVersion", "privacy", "security", "gates", "nextStep",
+            "schemaVersion",
+            "reviewVersion",
+            "reviewType",
+            "reviewedOn",
+            "status",
+            "remediationReviewVersion",
+            "privacy",
+            "security",
+            "gates",
+            "nextStep",
         },
         "manualDisposition",
     )
@@ -1468,8 +1611,13 @@ def validate_manual_disposition(value: dict[str, Any]) -> None:
     _exact_fields(
         privacy,
         {
-            "identity", "role", "decision", "nodeArchiveDeleted", "deletionOn",
-            "scannerLimitationsAccepted", "quarantineOnlyReviewAccepted",
+            "identity",
+            "role",
+            "decision",
+            "nodeArchiveDeleted",
+            "deletionOn",
+            "scannerLimitationsAccepted",
+            "quarantineOnlyReviewAccepted",
             "contentFreeReportingAccepted",
         },
         "manualDisposition.privacy",
@@ -1492,8 +1640,12 @@ def validate_manual_disposition(value: dict[str, Any]) -> None:
     _exact_fields(
         security,
         {
-            "identity", "role", "secondaryScannerDecision", "highEntropyTokenRule",
-            "paymentCardShapeRule", "poisoningReviewPlan",
+            "identity",
+            "role",
+            "secondaryScannerDecision",
+            "highEntropyTokenRule",
+            "paymentCardShapeRule",
+            "poisoningReviewPlan",
         },
         "manualDisposition.security",
     )
@@ -1530,9 +1682,16 @@ def validate_targeted_review_evidence(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "reportVersion", "executedOn", "status",
-            "manualDispositionVersion", "featureExtractionEligible", "policy", "sources",
-            "gates", "nextStep",
+            "schemaVersion",
+            "reportVersion",
+            "executedOn",
+            "status",
+            "manualDispositionVersion",
+            "featureExtractionEligible",
+            "policy",
+            "sources",
+            "gates",
+            "nextStep",
         },
         "targetedReviewEvidence",
     )
@@ -1561,7 +1720,10 @@ def validate_targeted_review_evidence(value: dict[str, Any]) -> None:
     }
     rule_ids = {"high-entropy-token", "payment-card-shape"}
     category_ids = {
-        "spdx-identifier", "licensed-under", "copyright", "permission-grant",
+        "spdx-identifier",
+        "licensed-under",
+        "copyright",
+        "permission-grant",
         "source-code-license-statement",
     }
     sources = value["sources"]
@@ -1574,10 +1736,19 @@ def validate_targeted_review_evidence(value: dict[str, Any]) -> None:
         _exact_fields(
             source,
             {
-                "sourceId", "revision", "archiveSha256Matched", "acceptedTreeSha256Matched",
-                "scannedFileCount", "scannerHitFileCount", "scannerExcludedFileCount",
-                "scannerRuleDispositions", "licenseFamilies", "sanitizedCandidateFileCount",
-                "sanitizedTreeSha256", "archiveDeleted", "rehydratedContentDeleted",
+                "sourceId",
+                "revision",
+                "archiveSha256Matched",
+                "acceptedTreeSha256Matched",
+                "scannedFileCount",
+                "scannerHitFileCount",
+                "scannerExcludedFileCount",
+                "scannerRuleDispositions",
+                "licenseFamilies",
+                "sanitizedCandidateFileCount",
+                "sanitizedTreeSha256",
+                "archiveDeleted",
+                "rehydratedContentDeleted",
             },
             f"targetedReviewEvidence.sources[{index}]",
         )
@@ -1617,7 +1788,10 @@ def validate_targeted_review_evidence(value: dict[str, Any]) -> None:
             raise ContractError(f"B2 targeted review source {index} licence families are invalid")
         for family in families:
             if set(family) != {
-                "family", "noticeMarkerFileCount", "excludedFileCount", "categoryFileCounts",
+                "family",
+                "noticeMarkerFileCount",
+                "excludedFileCount",
+                "categoryFileCounts",
                 "disposition",
             }:
                 raise ContractError(f"B2 targeted review source {index} licence fields are invalid")
@@ -1656,8 +1830,16 @@ def validate_final_remediation_approval(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status",
-            "targetedEvidenceVersion", "reviewers", "authorization", "gates", "nextStep",
+            "schemaVersion",
+            "reviewVersion",
+            "reviewType",
+            "reviewedOn",
+            "status",
+            "targetedEvidenceVersion",
+            "reviewers",
+            "authorization",
+            "gates",
+            "nextStep",
         },
         "finalRemediationApproval",
     )
@@ -1761,9 +1943,21 @@ def validate_representative_set_evidence(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "reportVersion", "executedOn", "status", "finalApprovalVersion",
-            "featureVersion", "seed", "outputPath", "rawContentCommitted", "recordCount",
-            "datasetSha256", "sources", "coverage", "gates", "nextStep",
+            "schemaVersion",
+            "reportVersion",
+            "executedOn",
+            "status",
+            "finalApprovalVersion",
+            "featureVersion",
+            "seed",
+            "outputPath",
+            "rawContentCommitted",
+            "recordCount",
+            "datasetSha256",
+            "sources",
+            "coverage",
+            "gates",
+            "nextStep",
         },
         "representativeSetEvidence",
     )
@@ -1789,7 +1983,11 @@ def validate_representative_set_evidence(value: dict[str, Any]) -> None:
     for source in sources:
         if not isinstance(source, dict):
             raise ContractError("B2 representative source must be an object")
-        _exact_fields(source, {"sourceId", "sanitizedTreeSha256", "recordCount", "riskStratumCounts"}, "representativeSetEvidence.sources")
+        _exact_fields(
+            source,
+            {"sourceId", "sanitizedTreeSha256", "recordCount", "riskStratumCounts"},
+            "representativeSetEvidence.sources",
+        )
         if (
             not isinstance(source["sourceId"], str)
             or re.fullmatch(r"[0-9a-f]{64}", source["sanitizedTreeSha256"]) is None
@@ -1802,10 +2000,17 @@ def validate_representative_set_evidence(value: dict[str, Any]) -> None:
     coverage = value["coverage"]
     if not isinstance(coverage, dict):
         raise ContractError("B2 representative coverage must be an object")
-    _exact_fields(coverage, {"requiredRiskStrata", "observedRiskStrata", "missingRiskStrata", "representativenessClaimed"}, "representativeSetEvidence.coverage")
+    _exact_fields(
+        coverage,
+        {"requiredRiskStrata", "observedRiskStrata", "missingRiskStrata", "representativenessClaimed"},
+        "representativeSetEvidence.coverage",
+    )
     required = {
-        "ordinary-identifiers", "paths-urls-and-versions", "hashes-uuids-and-timestamps",
-        "placeholders-and-examples", "secret-keyword-context-with-benign-values",
+        "ordinary-identifiers",
+        "paths-urls-and-versions",
+        "hashes-uuids-and-timestamps",
+        "placeholders-and-examples",
+        "secret-keyword-context-with-benign-values",
         "high-entropy-benign-constants",
     }
     if (
@@ -1833,8 +2038,16 @@ def validate_representative_review(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status",
-            "representativeEvidenceVersion", "waivedRiskStrata", "reviewers", "gates", "nextStep",
+            "schemaVersion",
+            "reviewVersion",
+            "reviewType",
+            "reviewedOn",
+            "status",
+            "representativeEvidenceVersion",
+            "waivedRiskStrata",
+            "reviewers",
+            "gates",
+            "nextStep",
         },
         "representativeReview",
     )
@@ -1865,7 +2078,11 @@ def validate_representative_review(value: dict[str, Any]) -> None:
             raise ContractError("B2 representative reviewer must be an object")
         _exact_fields(reviewer, {"role", "identity", "decision", "scope"}, "representativeReview.reviewers")
         role = reviewer["role"]
-        if role not in identities or role in roles or " ".join(reviewer["identity"].lower().split()) != identities[role]:
+        if (
+            role not in identities
+            or role in roles
+            or " ".join(reviewer["identity"].lower().split()) != identities[role]
+        ):
             raise ContractError("B2 representative reviewers are invalid")
         if reviewer["decision"] != "approve-limited-representative-set" or not isinstance(reviewer["scope"], str):
             raise ContractError("B2 representative reviewer decision is invalid")
@@ -1889,7 +2106,21 @@ def validate_representative_review(value: dict[str, Any]) -> None:
 
 def validate_limited_evaluation_approval(value: dict[str, Any]) -> None:
     """Validate approval for one transient offline fit/evaluation only."""
-    _exact_fields(value, {"schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status", "scope", "reviewers", "gates", "nextStep"}, "limitedEvaluationApproval")
+    _exact_fields(
+        value,
+        {
+            "schemaVersion",
+            "reviewVersion",
+            "reviewType",
+            "reviewedOn",
+            "status",
+            "scope",
+            "reviewers",
+            "gates",
+            "nextStep",
+        },
+        "limitedEvaluationApproval",
+    )
     if (
         value["schemaVersion"] != 1
         or value["reviewVersion"] != LIMITED_EVAL_APPROVAL_VERSION
@@ -1906,7 +2137,12 @@ def validate_limited_evaluation_approval(value: dict[str, Any]) -> None:
         if not isinstance(reviewer, dict):
             raise ContractError("B2 limited evaluation reviewer must be an object")
         _exact_fields(reviewer, {"role", "identity", "decision"}, "limitedEvaluationApproval.reviewers")
-        if reviewer["role"] not in identities or reviewer["role"] in roles or " ".join(reviewer["identity"].lower().split()) != identities[reviewer["role"]] or reviewer["decision"] != "approve-offline-draft-training-for-limited-evaluation":
+        if (
+            reviewer["role"] not in identities
+            or reviewer["role"] in roles
+            or " ".join(reviewer["identity"].lower().split()) != identities[reviewer["role"]]
+            or reviewer["decision"] != "approve-offline-draft-training-for-limited-evaluation"
+        ):
             raise ContractError("B2 limited evaluation reviewer approval is invalid")
         roles.add(reviewer["role"])
     if roles != set(identities):
@@ -1926,22 +2162,94 @@ def validate_limited_evaluation_approval(value: dict[str, Any]) -> None:
 
 
 def validate_limited_evaluation(value: dict[str, Any]) -> None:
-    _exact_fields(value, {"schemaVersion", "reportVersion", "status", "approvalVersion", "networkUsed", "trainingStateCommitted", "modelReleaseEligible", "syntheticDatasetSha256", "representativeFeatureFileSha256", "counts", "confusion", "metrics", "confidenceBands", "calibrationBins", "split", "gates", "limitations", "nextStep"}, "limitedEvaluation")
-    if value["schemaVersion"] != 1 or value["reportVersion"] != LIMITED_EVALUATION_VERSION or value["status"] != "evaluation-complete-awaiting-human-review" or value["approvalVersion"] != LIMITED_EVAL_APPROVAL_VERSION or value["networkUsed"] is not False or value["trainingStateCommitted"] is not False or value["modelReleaseEligible"] is not False or value["nextStep"] != "b2-human-review-limited-evaluation":
+    _exact_fields(
+        value,
+        {
+            "schemaVersion",
+            "reportVersion",
+            "status",
+            "approvalVersion",
+            "networkUsed",
+            "trainingStateCommitted",
+            "modelReleaseEligible",
+            "syntheticDatasetSha256",
+            "representativeFeatureFileSha256",
+            "counts",
+            "confusion",
+            "metrics",
+            "confidenceBands",
+            "calibrationBins",
+            "split",
+            "gates",
+            "limitations",
+            "nextStep",
+        },
+        "limitedEvaluation",
+    )
+    if (
+        value["schemaVersion"] != 1
+        or value["reportVersion"] != LIMITED_EVALUATION_VERSION
+        or value["status"] != "evaluation-complete-awaiting-human-review"
+        or value["approvalVersion"] != LIMITED_EVAL_APPROVAL_VERSION
+        or value["networkUsed"] is not False
+        or value["trainingStateCommitted"] is not False
+        or value["modelReleaseEligible"] is not False
+        or value["nextStep"] != "b2-human-review-limited-evaluation"
+    ):
         raise ContractError("B2 limited evaluation boundary is invalid")
-    if re.fullmatch(r"[0-9a-f]{64}", value["syntheticDatasetSha256"]) is None or re.fullmatch(r"[0-9a-f]{64}", value["representativeFeatureFileSha256"]) is None:
+    if (
+        re.fullmatch(r"[0-9a-f]{64}", value["syntheticDatasetSha256"]) is None
+        or re.fullmatch(r"[0-9a-f]{64}", value["representativeFeatureFileSha256"]) is None
+    ):
         raise ContractError("B2 limited evaluation digests are invalid")
     counts = value["counts"]
-    if not isinstance(counts, dict) or set(counts) != {"records", "groups", "sensitive", "benign"} or any(not isinstance(counts[key], int) or counts[key] < 0 for key in counts) or counts["sensitive"] + counts["benign"] != counts["records"]:
+    if (
+        not isinstance(counts, dict)
+        or set(counts) != {"records", "groups", "sensitive", "benign"}
+        or any(not isinstance(counts[key], int) or counts[key] < 0 for key in counts)
+        or counts["sensitive"] + counts["benign"] != counts["records"]
+    ):
         raise ContractError("B2 limited evaluation counts are invalid")
-    expected_gates = {"offlineFitCompleted": True, "heldOutGroupIsolation": True, "rawLeakFree": True, "calibrationComputed": True, "representativeCoverageWaiverApplied": True, "calibrationHumanApproved": False, "trainingEligible": False, "releaseEligible": False}
+    expected_gates = {
+        "offlineFitCompleted": True,
+        "heldOutGroupIsolation": True,
+        "rawLeakFree": True,
+        "calibrationComputed": True,
+        "representativeCoverageWaiverApplied": True,
+        "calibrationHumanApproved": False,
+        "trainingEligible": False,
+        "releaseEligible": False,
+    }
     if value["gates"] != expected_gates:
         raise ContractError("B2 limited evaluation gates are invalid")
 
 
 def validate_limited_calibration_review(value: dict[str, Any]) -> None:
-    _exact_fields(value, {"schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status", "evaluationVersion", "reviewers", "scope", "gates", "nextStep"}, "limitedCalibrationReview")
-    if value["schemaVersion"] != 1 or value["reviewVersion"] != LIMITED_CALIBRATION_REVIEW_VERSION or value["reviewType"] != "HUMAN_APPROVAL" or value["status"] != "approve-limited-calibration" or value["evaluationVersion"] != LIMITED_EVALUATION_VERSION or value["scope"] != "limited-evaluation-only-no-production-claim" or value["nextStep"] != "b2-calibration-complete-training-still-blocked":
+    _exact_fields(
+        value,
+        {
+            "schemaVersion",
+            "reviewVersion",
+            "reviewType",
+            "reviewedOn",
+            "status",
+            "evaluationVersion",
+            "reviewers",
+            "scope",
+            "gates",
+            "nextStep",
+        },
+        "limitedCalibrationReview",
+    )
+    if (
+        value["schemaVersion"] != 1
+        or value["reviewVersion"] != LIMITED_CALIBRATION_REVIEW_VERSION
+        or value["reviewType"] != "HUMAN_APPROVAL"
+        or value["status"] != "approve-limited-calibration"
+        or value["evaluationVersion"] != LIMITED_EVALUATION_VERSION
+        or value["scope"] != "limited-evaluation-only-no-production-claim"
+        or value["nextStep"] != "b2-calibration-complete-training-still-blocked"
+    ):
         raise ContractError("B2 limited calibration review boundary is invalid")
     _date_only(value["reviewedOn"], "limitedCalibrationReview.reviewedOn")
     identities = {"privacy": "umang aggarwal", "security": "vishal vishwas", "maintainer": "tushar garg"}
@@ -1950,12 +2258,24 @@ def validate_limited_calibration_review(value: dict[str, Any]) -> None:
         if not isinstance(reviewer, dict):
             raise ContractError("B2 calibration reviewer must be an object")
         _exact_fields(reviewer, {"role", "identity", "decision"}, "limitedCalibrationReview.reviewers")
-        if reviewer["role"] not in identities or reviewer["role"] in roles or " ".join(reviewer["identity"].lower().split()) != identities[reviewer["role"]] or reviewer["decision"] != "approve-limited-calibration":
+        if (
+            reviewer["role"] not in identities
+            or reviewer["role"] in roles
+            or " ".join(reviewer["identity"].lower().split()) != identities[reviewer["role"]]
+            or reviewer["decision"] != "approve-limited-calibration"
+        ):
             raise ContractError("B2 calibration reviewer approval is invalid")
         roles.add(reviewer["role"])
     if roles != set(identities):
         raise ContractError("B2 calibration reviewers are incomplete")
-    expected_gates = {"evaluationReviewed": True, "calibrationComputed": True, "calibrationApproved": True, "productionClaimAllowed": False, "trainingStateCommitAllowed": False, "modelReleaseAllowed": False}
+    expected_gates = {
+        "evaluationReviewed": True,
+        "calibrationComputed": True,
+        "calibrationApproved": True,
+        "productionClaimAllowed": False,
+        "trainingStateCommitAllowed": False,
+        "modelReleaseAllowed": False,
+    }
     if value["gates"] != expected_gates:
         raise ContractError("B2 calibration gates are invalid")
 
@@ -1963,7 +2283,17 @@ def validate_limited_calibration_review(value: dict[str, Any]) -> None:
 def validate_b2_training_state_approval(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
-        {"schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status", "scope", "reviewers", "gates", "nextStep"},
+        {
+            "schemaVersion",
+            "reviewVersion",
+            "reviewType",
+            "reviewedOn",
+            "status",
+            "scope",
+            "reviewers",
+            "gates",
+            "nextStep",
+        },
         "b2TrainingStateApproval",
     )
     if (

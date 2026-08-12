@@ -1,13 +1,20 @@
 from __future__ import annotations
 
+import json
 import unittest
+from pathlib import Path
 
 from hallguard_ml.contracts import FEATURE_NAMES
-from hallguard_ml.features import build_feature_rows, extract_candidate_features
+from hallguard_ml.features import build_feature_rows, extract_candidate_features, validate_feature_golden_fixture
 from hallguard_ml.generators import generate_records
 
 
 class FeatureParityTests(unittest.TestCase):
+    def test_shared_golden_fixture_matches_python_extractor(self) -> None:
+        fixture_path = Path(__file__).resolve().parents[2] / "docs" / "contracts" / "candidate-features-v1.golden.json"
+        fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+        validate_feature_golden_fixture(fixture)
+
     def test_known_vector_matches_candidate_features_v1_semantics(self) -> None:
         features = extract_candidate_features("AbC123_xY", "api_key=")
         self.assertEqual(tuple(features), FEATURE_NAMES)

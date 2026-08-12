@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "analysisVersion": "m3-representative-gap-analysis-v1",
+  "analyzedOn": "2026-08-12",
+  "status": "evidence-complete-awaiting-three-role-scope-amendment",
+  "basis": {
+    "featureVersion": "candidate-features-v1",
+    "representativeEvidenceVersion": "b2-representative-set-v1",
+    "representativeReviewVersion": "b2-representative-review-v1",
+    "datasetSha256": "4cefd4c209a264353d49d9d5fbfa586cd9554cccf1180d3e8b29d69a5b40cbab",
+    "recordCount": 340,
+    "requiredRiskStrata": [
+      "ordinary-identifiers",
+      "paths-urls-and-versions",
+      "hashes-uuids-and-timestamps",
+      "placeholders-and-examples",
+      "secret-keyword-context-with-benign-values",
+      "high-entropy-benign-constants"
+    ],
+    "observedRiskStrata": [
+      "hashes-uuids-and-timestamps",
+      "ordinary-identifiers",
+      "paths-urls-and-versions"
+    ],
+    "missingRiskStrata": [
+      "high-entropy-benign-constants",
+      "placeholders-and-examples",
+      "secret-keyword-context-with-benign-values"
+    ]
+  },
+  "missingStrata": [
+    {
+      "riskStratum": "placeholders-and-examples",
+      "definition": "Explicit documentation or configuration placeholders and examples that resemble credential values but are intentionally non-secret.",
+      "selectorId": "placeholder-example-context-v1",
+      "selectorRequirements": [
+        "candidate-length-8-to-160",
+        "approved-placeholder-marker-in-value-or-bounded-context",
+        "documentation-or-example-path-family",
+        "deterministic-group-by-source-and-path-family"
+      ],
+      "mandatoryExclusions": [
+        "known-token-pattern",
+        "credential-assignment-with-non-placeholder-value",
+        "scanner-hit-file",
+        "notice-marker-file",
+        "personal-data-pattern",
+        "test-vendor-third-party-path"
+      ],
+      "eligibleSourceIds": [
+        "cpython-public-corpus",
+        "kubernetes-website-public-corpus",
+        "nodejs-public-corpus"
+      ],
+      "minimumEvidence": {"records": 60, "sources": 2, "pathFamilyGroups": 6},
+      "transientHumanReviewRequired": true
+    },
+    {
+      "riskStratum": "secret-keyword-context-with-benign-values",
+      "definition": "Benign placeholder, schema, documentation, or default values appearing within 96 normalized characters of a secret-related keyword.",
+      "selectorId": "secret-keyword-benign-context-v1",
+      "selectorRequirements": [
+        "candidate-length-8-to-160",
+        "secret-keyword-within-normalized-context-96",
+        "approved-benign-marker-or-schema-default-context",
+        "deterministic-group-by-source-and-path-family"
+      ],
+      "mandatoryExclusions": [
+        "known-token-pattern",
+        "credential-assignment-with-non-placeholder-value",
+        "scanner-hit-file",
+        "notice-marker-file",
+        "personal-data-pattern",
+        "test-vendor-third-party-path"
+      ],
+      "eligibleSourceIds": [
+        "cpython-public-corpus",
+        "kubernetes-website-public-corpus",
+        "nodejs-public-corpus"
+      ],
+      "minimumEvidence": {"records": 60, "sources": 2, "pathFamilyGroups": 6},
+      "transientHumanReviewRequired": true
+    },
+    {
+      "riskStratum": "high-entropy-benign-constants",
+      "definition": "Licensed benign constants with entropy at least 3.5 and length 16 to 160 whose surrounding source context proves a non-credential purpose.",
+      "selectorId": "high-entropy-benign-constant-v1",
+      "selectorRequirements": [
+        "candidate-length-16-to-160",
+        "candidate-entropy-at-least-3.5",
+        "non-secret-purpose-confirmed-in-transient-context",
+        "deterministic-group-by-source-and-path-family"
+      ],
+      "mandatoryExclusions": [
+        "known-token-pattern",
+        "credential-assignment",
+        "scanner-hit-file",
+        "notice-marker-file",
+        "personal-data-pattern",
+        "private-key-or-certificate-shape",
+        "test-vendor-third-party-path"
+      ],
+      "eligibleSourceIds": [
+        "cpython-public-corpus",
+        "kubernetes-website-public-corpus",
+        "nodejs-public-corpus"
+      ],
+      "minimumEvidence": {"records": 60, "sources": 2, "pathFamilyGroups": 6},
+      "transientHumanReviewRequired": true
+    }
+  ],
+  "candidateSources": [
+    {
+      "sourceId": "cpython-public-corpus",
+      "repository": "https://github.com/python/cpython",
+      "revision": "ef0affbf7c1cb8bbc136b65cc0f02985f8c568b5",
+      "archiveSha256": "ee53a24cf590635ff26039c5f37ae64f9c7d9762c38f0ae5cb084f49a9d8b9e9",
+      "sanitizedTreeSha256": "f32ee96fcead6aa1935569f0f87d6f639548f133064eb68f99b2ce398e69c0a4",
+      "spdxId": "PSF-2.0",
+      "attribution": "Python Software Foundation; PSF-2.0 and applicable file-level notices",
+      "scopeAmendmentRequired": true
+    },
+    {
+      "sourceId": "kubernetes-website-public-corpus",
+      "repository": "https://github.com/kubernetes/website",
+      "revision": "3281a6a4f4c1505e18040f3915eb226cc41987c3",
+      "archiveSha256": "eb25d270d604a1334d5ddd5d07335f2146dfaaf3171a02b41ec5473b1312722f",
+      "sanitizedTreeSha256": "9f9f61c5e4ae1a28744048d438c5605c949908060443fefb54206fd29f6613f7",
+      "spdxId": "CC-BY-4.0",
+      "attribution": "The Kubernetes Authors; Creative Commons Attribution 4.0 International",
+      "scopeAmendmentRequired": true
+    },
+    {
+      "sourceId": "nodejs-public-corpus",
+      "repository": "https://github.com/nodejs/node",
+      "revision": "15495a069fc8eaec8c70ea88781ae241a87fd25d",
+      "archiveSha256": "d1bbf0b2cd7c672c691c6ae11241670c69113066a82f6c7c289ffbcbdfab6b7e",
+      "sanitizedTreeSha256": "a43fa77d4e6cd16c3cdf673bf37e0879afba51278acb1235dd93656918046210",
+      "spdxId": "MIT",
+      "attribution": "Node.js contributors; MIT; dependencies and third-party content excluded",
+      "scopeAmendmentRequired": true
+    }
+  ],
+  "privacyBoundary": {
+    "containsCustomerContent": false,
+    "containsReportSnippets": false,
+    "containsTelemetryPayloads": false,
+    "containsProductionLogs": false,
+    "containsRealSecrets": false,
+    "containsPersonalData": false,
+    "rawContentCommitAllowed": false,
+    "derivedRowsContentFree": true,
+    "quarantineDeletionRequired": true
+  },
+  "authorization": {
+    "networkAccessAuthorized": false,
+    "sourceRehydrationAuthorized": false,
+    "featureExtractionAuthorized": false,
+    "representativeDatasetReplacementAuthorized": false,
+    "trainingAuthorized": false,
+    "releaseAuthorized": false
+  },
+  "gates": {
+    "gapAnalysisComplete": true,
+    "existingPinsAndLicensesBound": true,
+    "deterministicSelectorsSpecified": true,
+    "privacyBoundarySpecified": true,
+    "privacyScopeAmendmentApproved": false,
+    "securityScopeAmendmentApproved": false,
+    "maintainerScopeAmendmentApproved": false,
+    "networkAuthorizationRecorded": false,
+    "selectorsImplemented": false,
+    "datasetChanged": false,
+    "trainingEligible": false,
+    "releaseEligible": false
+  },
+  "nextStep": "m3-obtain-three-role-scope-amendment"
+}

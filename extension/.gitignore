@@ -5,4 +5,5 @@ dist
 .parcel-cache
 .env
 .env.*
+!.env.example
 coverage

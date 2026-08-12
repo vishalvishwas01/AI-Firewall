@@ -31,8 +31,8 @@ def _allocate(group_ids: list[str]) -> tuple[set[str], set[str], set[str]]:
     train_count = len(group_ids) - validation_count - test_count
     return (
         set(group_ids[:train_count]),
-        set(group_ids[train_count:train_count + validation_count]),
-        set(group_ids[train_count + validation_count:]),
+        set(group_ids[train_count : train_count + validation_count]),
+        set(group_ids[train_count + validation_count :]),
     )
 
 
@@ -65,11 +65,7 @@ def grouped_stratified_split(
         split_groups["test"].update(test)
 
     indexes = {
-        name: tuple(
-            index
-            for index, row in enumerate(rows)
-            if str(row["templateGroupId"]) in group_ids
-        )
+        name: tuple(index for index, row in enumerate(rows) if str(row["templateGroupId"]) in group_ids)
         for name, group_ids in split_groups.items()
     }
     if set(indexes["train"]) & set(indexes["validation"]) or set(indexes["train"]) & set(indexes["test"]):

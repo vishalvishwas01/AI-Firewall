@@ -26,7 +26,8 @@ export {
   classifyCandidateSignals,
   loadClassifierArtifact,
   scoreCandidateFeatures,
-  validateClassifierArtifact
+  validateClassifierArtifact,
+  validateSerializedClassifierArtifact
 } from "./classifier"
 export { detectionRuleSet, validateDetectionRule, validateRuleSet } from "./rules"
 export { ruleReleaseManifest, validateRuleReleaseManifest } from "./ruleRelease"

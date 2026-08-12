@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -15,10 +14,8 @@ from .contracts import (
     FEATURE_NAMES,
     FEATURE_VERSION,
     LIMITED_CALIBRATION_REVIEW_VERSION,
-    LIMITED_EVAL_APPROVAL_VERSION,
     LIMITED_EVALUATION_VERSION,
     REPRESENTATIVE_REVIEW_VERSION,
-    REPRESENTATIVE_SET_VERSION,
     ContractError,
     validate_b2_training_state_approval,
     validate_limited_calibration_review,
@@ -49,13 +46,30 @@ def validate_b2_training_state(value: dict[str, Any]) -> None:
     _exact_fields(
         value,
         {
-            "schemaVersion", "stateVersion", "modelVersion", "featureVersion",
-            "classifierType", "status", "reviewStatus", "releaseEligible",
-            "networkUsed", "rawSourceRetained", "customerOrPersonalData",
-            "syntheticDatasetSha256", "representativeFeatureFileSha256",
-            "approvalVersion", "evaluationVersion", "representativeReviewVersion",
-            "calibrationReviewVersion", "featureOrder", "split", "normalization",
-            "coefficients", "intercept", "fit", "dependencies",
+            "schemaVersion",
+            "stateVersion",
+            "modelVersion",
+            "featureVersion",
+            "classifierType",
+            "status",
+            "reviewStatus",
+            "releaseEligible",
+            "networkUsed",
+            "rawSourceRetained",
+            "customerOrPersonalData",
+            "syntheticDatasetSha256",
+            "representativeFeatureFileSha256",
+            "approvalVersion",
+            "evaluationVersion",
+            "representativeReviewVersion",
+            "calibrationReviewVersion",
+            "featureOrder",
+            "split",
+            "normalization",
+            "coefficients",
+            "intercept",
+            "fit",
+            "dependencies",
         },
         "b2TrainingState",
     )
@@ -74,7 +88,11 @@ def validate_b2_training_state(value: dict[str, Any]) -> None:
     ):
         raise ContractError("B2 training-state boundary is invalid")
     for field in ("syntheticDatasetSha256", "representativeFeatureFileSha256"):
-        if not isinstance(value[field], str) or len(value[field]) != 64 or any(c not in "0123456789abcdef" for c in value[field]):
+        if (
+            not isinstance(value[field], str)
+            or len(value[field]) != 64
+            or any(c not in "0123456789abcdef" for c in value[field])
+        ):
             raise ContractError(f"B2 training-state {field} is malformed")
     if value["approvalVersion"] != B2_TRAINING_STATE_APPROVAL_VERSION:
         raise ContractError("B2 training-state approval reference is invalid")
@@ -87,7 +105,15 @@ def validate_b2_training_state(value: dict[str, Any]) -> None:
     if tuple(value["featureOrder"]) != FEATURE_NAMES:
         raise ContractError("B2 training-state feature order mismatch")
     split = value["split"]
-    if not isinstance(split, dict) or set(split) != {"strategy", "trainGroups", "validationGroups", "testGroups", "trainRecords", "validationRecords", "testRecords"}:
+    if not isinstance(split, dict) or set(split) != {
+        "strategy",
+        "trainGroups",
+        "validationGroups",
+        "testGroups",
+        "trainRecords",
+        "validationRecords",
+        "testRecords",
+    }:
         raise ContractError("B2 training-state split metadata is invalid")
     if split["strategy"] != "label-stratified-template-group-60-20-20":
         raise ContractError("B2 training-state split strategy is invalid")
@@ -100,11 +126,22 @@ def validate_b2_training_state(value: dict[str, Any]) -> None:
         raise ContractError("B2 training-state normalization length mismatch")
     if len(value["coefficients"]) != len(FEATURE_NAMES) or not isinstance(value["intercept"], (int, float)):
         raise ContractError("B2 training-state coefficients are invalid")
-    if not isinstance(value["fit"], dict) or set(value["fit"]) != {"solver", "penalty", "l1Ratio", "c", "maxIterations", "tolerance", "iterations", "converged"}:
+    if not isinstance(value["fit"], dict) or set(value["fit"]) != {
+        "solver",
+        "penalty",
+        "l1Ratio",
+        "c",
+        "maxIterations",
+        "tolerance",
+        "iterations",
+        "converged",
+    }:
         raise ContractError("B2 training-state fit metadata is invalid")
     if value["fit"]["converged"] is not True:
         raise ContractError("B2 training-state fit must have converged")
-    if not isinstance(value["dependencies"], dict) or not {"python", "numpy", "pandas", "scikitLearn"} <= set(value["dependencies"]):
+    if not isinstance(value["dependencies"], dict) or not {"python", "numpy", "pandas", "scikitLearn"} <= set(
+        value["dependencies"]
+    ):
         raise ContractError("B2 training-state dependency metadata is invalid")
 
 
@@ -125,7 +162,9 @@ def run(root: Path) -> dict[str, Any]:
     validate_limited_calibration_review(calibration_review)
 
     dependencies = load_training_dependencies()
-    representative = [json.loads(line) for line in (root / REPRESENTATIVE_PATH).read_text(encoding="utf-8").splitlines()]
+    representative = [
+        json.loads(line) for line in (root / REPRESENTATIVE_PATH).read_text(encoding="utf-8").splitlines()
+    ]
     synthetic_records = generate_records(groups_per_generator=32)
     synthetic_rows = build_feature_rows(synthetic_records)
     benign_rows = [
@@ -179,8 +218,14 @@ def run(root: Path) -> dict[str, Any]:
         "coefficients": _rounded(classifier.coef_[0].tolist()),
         "intercept": round(float(classifier.intercept_[0]), 12),
         "fit": {
-            "solver": "lbfgs", "penalty": "l2", "l1Ratio": 0.0, "c": 1.0,
-            "maxIterations": 2000, "tolerance": 1e-10, "iterations": iterations, "converged": True,
+            "solver": "lbfgs",
+            "penalty": "l2",
+            "l1Ratio": 0.0,
+            "c": 1.0,
+            "maxIterations": 2000,
+            "tolerance": 1e-10,
+            "iterations": iterations,
+            "converged": True,
         },
         "dependencies": dependencies.versions,
     }

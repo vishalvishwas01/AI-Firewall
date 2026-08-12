@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from hallguard_ml.contracts import ContractError, validate_intake_evidence
-from hallguard_ml.intake import IntakeError, SOURCES, scan_archive
+from hallguard_ml.intake import SOURCES, IntakeError, scan_archive
 
 
 class IntakeTests(unittest.TestCase):

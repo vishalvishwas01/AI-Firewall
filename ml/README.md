@@ -203,3 +203,20 @@ state. Human calibration review is still required; no production accuracy claim 
 The three-reviewer calibration approval is recorded in
 `datasets/manifests/b2-limited-calibration-review-v1.review.json`. It does not authorize training-state
 commitment or release.
+
+## M3 representative coverage expansion
+
+The evidence-only gap analysis is recorded in
+`datasets/manifests/m3-representative-gap-analysis-v1.analysis.json` and explained in
+`M3_REPRESENTATIVE_COVERAGE_GAP.md`. It binds the three missing benign risk strata to deterministic
+selector requirements and the existing immutable source pins while keeping every execution gate closed.
+
+The next required action is a distinct privacy/security/maintainer scope amendment. Network access,
+source rehydration, selector implementation, feature extraction, representative-dataset replacement,
+training, and release are not authorized by the analysis. If the scope amendment is approved, exact-pin
+rehydration still requires a separate one-time network authorization.
+
+The scope amendment is now recorded in
+`datasets/manifests/m3-representative-gap-scope-amendment-v1.review.json`. It authorizes selector
+implementation only. The next gate is separate one-time exact-pin network authorization; rehydration,
+feature-extraction execution, dataset replacement, training, and release remain blocked.

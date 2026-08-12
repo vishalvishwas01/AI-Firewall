@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "fixtureVersion": "candidate-features-v1-golden-v1",
+  "featureVersion": "candidate-features-v1",
+  "normalization": "NFKC_REMOVE_ZERO_WIDTH",
+  "featureOrder": [
+    "length", "lengthBucket", "entropy", "letterRatio", "digitRatio",
+    "uppercaseRatio", "lowercaseRatio", "punctuationRatio", "separatorRatio",
+    "classTransitionRatio", "repeatedCharacterRatio", "safeShape",
+    "assignmentContext", "secretKeywordContext", "structuredConfigContext", "pathLike"
+  ],
+  "artifactLimits": {
+    "classifierTypes": ["logistic-regression"],
+    "maxSerializedBytes": 5242880,
+    "maxAbsoluteParameter": 1000000,
+    "decimalPlaces": 12
+  },
+  "cases": [
+    {
+      "caseId": "mixed-assignment",
+      "value": "AbC123_xY",
+      "contextBefore": "api_key=",
+      "expected": {"length": 9.0, "lengthBucket": 0.0, "entropy": 3.169925, "letterRatio": 0.555556, "digitRatio": 0.333333, "uppercaseRatio": 0.333333, "lowercaseRatio": 0.222222, "punctuationRatio": 0.111111, "separatorRatio": 0.111111, "classTransitionRatio": 0.75, "repeatedCharacterRatio": 0.111111, "safeShape": 0.0, "assignmentContext": 1.0, "secretKeywordContext": 1.0, "structuredConfigContext": 1.0, "pathLike": 0.0}
+    },
+    {
+      "caseId": "nfkc-zero-width",
+      "value": "ＳｅｃｒｅｔＶａｌｕｅ１２３",
+      "contextBefore": "api_​token=",
+      "expected": {"length": 14.0, "lengthBucket": 0.0, "entropy": 3.46772, "letterRatio": 0.785714, "digitRatio": 0.214286, "uppercaseRatio": 0.142857, "lowercaseRatio": 0.642857, "punctuationRatio": 0.0, "separatorRatio": 0.0, "classTransitionRatio": 0.307692, "repeatedCharacterRatio": 0.214286, "safeShape": 0.0, "assignmentContext": 1.0, "secretKeywordContext": 0.0, "structuredConfigContext": 1.0, "pathLike": 0.0}
+    },
+    {
+      "caseId": "safe-uuid",
+      "value": "550e8400-e29b-41d4-a716-446655440000",
+      "contextBefore": "reference=",
+      "expected": {"length": 36.0, "lengthBucket": 2.0, "entropy": 3.39054, "letterRatio": 0.138889, "digitRatio": 0.75, "uppercaseRatio": 0.0, "lowercaseRatio": 0.138889, "punctuationRatio": 0.111111, "separatorRatio": 0.111111, "classTransitionRatio": 0.428571, "repeatedCharacterRatio": 0.194444, "safeShape": 1.0, "assignmentContext": 0.0, "secretKeywordContext": 0.0, "structuredConfigContext": 1.0, "pathLike": 0.0}
+    },
+    {
+      "caseId": "path-shape",
+      "value": "config/example-v1.json",
+      "contextBefore": "file=",
+      "expected": {"length": 22.0, "lengthBucket": 1.0, "entropy": 4.186704, "letterRatio": 0.818182, "digitRatio": 0.045455, "uppercaseRatio": 0.0, "lowercaseRatio": 0.818182, "punctuationRatio": 0.136364, "separatorRatio": 0.136364, "classTransitionRatio": 0.333333, "repeatedCharacterRatio": 0.090909, "safeShape": 0.0, "assignmentContext": 0.0, "secretKeywordContext": 0.0, "structuredConfigContext": 1.0, "pathLike": 1.0}
+    },
+    {
+      "caseId": "structured-context",
+      "value": "placeholder_value_2026",
+      "contextBefore": "\ncredential: ",
+      "expected": {"length": 22.0, "lengthBucket": 1.0, "entropy": 3.754442, "letterRatio": 0.727273, "digitRatio": 0.181818, "uppercaseRatio": 0.0, "lowercaseRatio": 0.727273, "punctuationRatio": 0.090909, "separatorRatio": 0.090909, "classTransitionRatio": 0.190476, "repeatedCharacterRatio": 0.136364, "safeShape": 0.0, "assignmentContext": 0.0, "secretKeywordContext": 1.0, "structuredConfigContext": 1.0, "pathLike": 0.0}
+    },
+    {
+      "caseId": "empty",
+      "value": "",
+      "contextBefore": "",
+      "expected": {"length": 0.0, "lengthBucket": 0.0, "entropy": 0.0, "letterRatio": 0.0, "digitRatio": 0.0, "uppercaseRatio": 0.0, "lowercaseRatio": 0.0, "punctuationRatio": 0.0, "separatorRatio": 0.0, "classTransitionRatio": 0.0, "repeatedCharacterRatio": 1.0, "safeShape": 0.0, "assignmentContext": 0.0, "secretKeywordContext": 0.0, "structuredConfigContext": 0.0, "pathLike": 0.0}
+    }
+  ]
+}

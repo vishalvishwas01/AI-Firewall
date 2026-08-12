@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "amendmentVersion": "m3-representative-gap-scope-amendment-v1",
+  "reviewType": "HUMAN_APPROVAL",
+  "reviewedOn": "2026-08-12",
+  "status": "approved-selector-scope-awaiting-network-authorization",
+  "analysisVersion": "m3-representative-gap-analysis-v1",
+  "scope": {
+    "riskStrata": [
+      "high-entropy-benign-constants",
+      "placeholders-and-examples",
+      "secret-keyword-context-with-benign-values"
+    ],
+    "selectorIds": [
+      "high-entropy-benign-constant-v1",
+      "placeholder-example-context-v1",
+      "secret-keyword-benign-context-v1"
+    ],
+    "sourceIds": [
+      "cpython-public-corpus",
+      "kubernetes-website-public-corpus",
+      "nodejs-public-corpus"
+    ],
+    "transientHumanReviewRequired": true,
+    "existingPinsOnly": true,
+    "existingLicensesAndAttributionOnly": true,
+    "mandatoryExclusionsUnchanged": true,
+    "minimumEvidenceUnchanged": true,
+    "quarantineDeletionRequired": true
+  },
+  "reviewers": [
+    {
+      "role": "privacy",
+      "identity": "umang aggarwal",
+      "relayedDecision": "approve",
+      "decision": "approve-selector-scope",
+      "scope": "transient context handling, prohibited-data exclusions, content-free output, retention, and quarantine deletion"
+    },
+    {
+      "role": "security",
+      "identity": "vishal vishwas",
+      "relayedDecision": "approve",
+      "decision": "approve-selector-scope",
+      "scope": "selector definitions, entropy threshold, token and credential exclusions, scanner exclusions, poisoning controls, and minimum coverage"
+    },
+    {
+      "role": "maintainer",
+      "identity": "tushar garg",
+      "relayedDecision": "approvee",
+      "decision": "approve-selector-scope",
+      "normalizationNote": "Relayed decision 'approvee' normalized to 'approve' as an obvious spelling correction; scope was not expanded.",
+      "scope": "exact pinned source revisions, path-family scope, PSF-2.0, CC-BY-4.0 and MIT handling, notice exclusions, and attribution wording"
+    }
+  ],
+  "authorization": {
+    "selectorImplementationAuthorized": true,
+    "networkAccessAuthorized": false,
+    "sourceRehydrationAuthorized": false,
+    "featureExtractionExecutionAuthorized": false,
+    "representativeDatasetReplacementAuthorized": false,
+    "trainingAuthorized": false,
+    "releaseAuthorized": false
+  },
+  "gates": {
+    "privacyScopeAmendmentApproved": true,
+    "securityScopeAmendmentApproved": true,
+    "maintainerScopeAmendmentApproved": true,
+    "networkAuthorizationRecorded": false,
+    "sourceRehydrationEligible": false,
+    "datasetChangeEligible": false,
+    "trainingEligible": false,
+    "releaseEligible": false
+  },
+  "nextStep": "m3-request-one-time-exact-pin-network-authorization"
+}

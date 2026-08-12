@@ -2,7 +2,7 @@ import type {
   DetectionRuleSet,
   LogisticClassifierArtifact
 } from "../detection"
-import { validateClassifierArtifact } from "../detection/classifier"
+import { validateSerializedClassifierArtifact } from "../detection/classifier"
 import { validateRuleSet } from "../detection/rules"
 import type { ActiveIntelligencePackage } from "./runtimeStorage"
 import {
@@ -65,7 +65,7 @@ const runtimeFromPackage = async (
       if (entry.kind === "rules") {
         runtime.ruleSet = validateRuleSet(parsed.value, value.manifest.versions.ruleSetVersion)
       } else {
-        const classifierArtifact = validateClassifierArtifact(parsed.value)
+        const classifierArtifact = validateSerializedClassifierArtifact(parsed.bytes)
         if (classifierArtifact.modelVersion !== value.manifest.versions.modelVersion) return undefined
         runtime.classifierArtifact = classifierArtifact
       }
