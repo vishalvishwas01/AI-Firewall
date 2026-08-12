@@ -4,7 +4,6 @@ import { googleStart, googleCallback, login, logout, session, signup } from "./a
 import { validateNoBody, validateNoQuery } from "../../shared/validation.js"
 
 const router = Router()
-router.use(validateNoQuery)
 router.post("/signup", signup)
 router.post("/login", login)
 router.post("/logout", validateNoBody, logout)
