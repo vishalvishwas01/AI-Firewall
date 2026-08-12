@@ -11,7 +11,7 @@ export const parseSessionUser = (value: unknown): SessionUser => {
     accountType: parseAccountType(input.accountType),
     ...(typeof input.name === "string" ? { name: input.name } : {}),
     ...(typeof input.companyName === "string" ? { companyName: input.companyName } : {}),
-    teamAccess: input.teamAccess === true,
+    teamAccess: input.accountType === "enterprise" && input.teamAccess === true,
   }
 }
 
