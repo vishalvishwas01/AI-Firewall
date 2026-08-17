@@ -14,18 +14,36 @@ type AuthTokenPayload = { sub: string; email: string; accountType?: UserAccountT
 
 export const authCookieName = "ai_firewall_session"
 
+const jwtIssuer = "hallguard"
+const jwtAudience = "hallguard-auth"
+
 export const signAuthToken = (user: { id: ObjectId; email: string; accountType?: UserAccountType }) =>
-  jwt.sign({ sub: user.id.toHexString(), email: user.email, ...(user.accountType ? { accountType: user.accountType } : {}) }, env.jwtSecret, { expiresIn: "7d" })
+  jwt.sign(
+    { sub: user.id.toHexString(), email: user.email, ...(user.accountType ? { accountType: user.accountType } : {}) },
+    env.jwtSigningSecret,
+    { algorithm: "HS256", expiresIn: "7d", issuer: jwtIssuer, audience: jwtAudience, header: { alg: "HS256", kid: env.jwtActiveKeyId } },
+  )
 
 export const verifyAuthToken = (token: string): AuthTokenPayload | undefined => {
-  try {
-    const decoded = jwt.verify(token, env.jwtSecret)
-    if (typeof decoded === "object" && typeof decoded.sub === "string" && typeof decoded.email === "string") {
-      const accountType = decoded.accountType === "enterprise" || decoded.accountType === "individual" ? decoded.accountType : undefined
-      return { sub: decoded.sub, email: decoded.email, ...(accountType ? { accountType } : {}) }
+  const completeToken = jwt.decode(token, { complete: true })
+  const keyId = completeToken && typeof completeToken === "object" && typeof completeToken.header.kid === "string" ? completeToken.header.kid : undefined
+  const selectedKeyCandidate = keyId ? env.jwtVerificationKeys[keyId] : undefined
+  const selectedKey = typeof selectedKeyCandidate === "string" ? selectedKeyCandidate : undefined
+  if (keyId && !selectedKey) return undefined
+  const candidateKeys = selectedKey ? [selectedKey] : [...new Set(Object.values(env.jwtVerificationKeys))]
+
+  for (const secret of candidateKeys) {
+    try {
+      const decoded = jwt.verify(token, secret, keyId
+        ? { algorithms: ["HS256"], issuer: jwtIssuer, audience: jwtAudience }
+        : { algorithms: ["HS256"] })
+      if (typeof decoded === "object" && typeof decoded.sub === "string" && typeof decoded.email === "string") {
+        const accountType = decoded.accountType === "enterprise" || decoded.accountType === "individual" ? decoded.accountType : undefined
+        return { sub: decoded.sub, email: decoded.email, ...(accountType ? { accountType } : {}) }
+      }
+    } catch {
+      continue
     }
-  } catch {
-    return undefined
   }
   return undefined
 }

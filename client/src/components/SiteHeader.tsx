@@ -8,7 +8,7 @@ export function SiteHeader({ user, sessionLoading, onLogout }: { user: SessionUs
     <div className="mx-auto flex min-h-16 max-w-[1280px] flex-wrap items-center justify-between gap-3 px-4 py-2 sm:flex-nowrap sm:gap-4 sm:px-8 sm:py-0 lg:px-12 xl:px-16">
       <a href="/" className="flex items-center gap-3 font-[Manrope] font-semibold text-[#33312b]"><img src="/hallguard-icon.png" alt="" className="h-8 w-8 rounded-lg" width="32" height="32"/><span>HallGuard</span></a>
       <nav className="flex w-full basis-full flex-wrap items-center justify-start gap-2 font-[Geist] text-sm font-semibold sm:w-auto sm:basis-auto sm:flex-nowrap sm:justify-end">
-        {sessionLoading ? <span className="text-[#7b776e]">Checking session</span> : user ? <>
+        {sessionLoading ? <span className="h-10 w-24 animate-pulse rounded-lg bg-[#e5e2da]" aria-label="Loading account" /> : user ? <>
           <span className="hidden max-w-48 truncate text-[#4a463f] sm:inline">{user.name ?? user.email}</span>
           <a className={secondaryClass} href="/reports">Reports</a>
           {user.teamAccess ? <a className={secondaryClass} href="/team">Team</a> : null}
