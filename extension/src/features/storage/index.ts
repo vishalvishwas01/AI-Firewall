@@ -10,6 +10,7 @@ export {
   getSettings,
   retryQueuedSyncLogs,
   saveProtectedSites,
+  setAllProtections,
   setSetting,
   updateActivityLogFeedback
 } from "./storage"

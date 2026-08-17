@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, CircleSlash, Download, Eraser, Eye, Lock, RefreshCw, ShieldCheck, Upload } from "lucide-react"
+import { AlertTriangle, CheckCircle2, CircleSlash, Eraser, Eye, Lock, RefreshCw, ShieldCheck, Upload } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import hallGuardLogo from "data-base64:../assets/icon.png"
@@ -17,11 +17,11 @@ import {
   addWarningFeedbackRecord,
   clearActivityLogs,
   getActivityLogs,
-  getLocalReportExport,
   getProtectedSites,
   getQueuedSyncLogs,
   getSettings,
   retryQueuedSyncLogs,
+  setAllProtections,
   setSetting,
   updateActivityLogFeedback
 } from "./features/storage"
@@ -42,6 +42,7 @@ import {
   runConfiguredIntelligenceRefresh,
   type IntelligenceRefreshStatus
 } from "./features/intelligence"
+import { syncProtectedSitesFromAccount } from "./features/protectedSites"
 
 type ToggleSettingKey =
   | "sensitiveData"
@@ -166,7 +167,7 @@ const Popup = () => {
       getActivityLogs(),
       getQueuedSyncLogs(),
       getQueuedImprovementEvents(),
-      getProtectedSites().then((sites) => getCurrentSiteStatus(sites)),
+      syncProtectedSitesFromAccount().catch(() => getProtectedSites()).then((sites) => getCurrentSiteStatus(sites)),
       getAuthStatus(),
       getIntelligenceRefreshStatus()
     ]).then(([nextSettings, nextLogs, nextQueuedSyncLogs, nextImprovementEvents, nextSiteStatus, nextAuthStatus, nextIntelligenceStatus]) => {
@@ -189,6 +190,9 @@ const Popup = () => {
     ) => {
       if (areaName === "local" && changes["ai-firewall-intelligence-refresh-status"]) {
         void getIntelligenceRefreshStatus().then(setIntelligenceStatus)
+      }
+      if (areaName === "local" && changes["ai-firewall-protected-sites"]) {
+        void getProtectedSites().then((sites) => getCurrentSiteStatus(sites)).then(setSiteStatus)
       }
     }
     chrome.storage.onChanged.addListener(listener)
@@ -243,20 +247,6 @@ const Popup = () => {
     setLogs([])
   }
 
-  const exportLocalData = async () => {
-    const exported = {
-      ...(await getLocalReportExport()),
-      improvementTelemetryQueue: await getQueuedImprovementEvents()
-    }
-    const blob = new Blob([JSON.stringify(exported, null, 2)], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement("a")
-    anchor.href = url
-    anchor.download = `hallguard-local-redacted-data-${exported.exportedAt.slice(0, 10)}.json`
-    anchor.click()
-    URL.revokeObjectURL(url)
-  }
-
   const retrySync = async () => {
     await retryQueuedSyncLogs()
     const queued = await getQueuedSyncLogs()
@@ -274,6 +264,11 @@ const Popup = () => {
     await addWarningFeedbackRecord("missed-risk", siteStatus?.hostname ?? "unknown")
     setMissedRiskSaved(true)
     window.setTimeout(() => setMissedRiskSaved(false), 2200)
+  }
+
+  const toggleAllProtections = async () => {
+    if (!settings) return
+    setSettings(await setAllProtections(activeCount !== settingLabels.length))
   }
 
   const refreshIntelligence = async () => {
@@ -348,7 +343,16 @@ const Popup = () => {
       </section>
 
       <section className="panel">
-        <h2>Protections</h2>
+        <div className="section-heading">
+          <div>
+            <h2>Protections</h2>
+            <small className="master-toggle-description">Control every protection at once</small>
+          </div>
+          <label className="master-toggle">
+            <span>{activeCount === settingLabels.length ? "All on" : "Turn all on"}</span>
+            <input checked={activeCount === settingLabels.length} disabled={!settings} onChange={() => void toggleAllProtections()} type="checkbox" />
+          </label>
+        </div>
         <div className="toggle-list">
           {settingLabels.map(({ key, label, description, Icon }) => (
             <label className="toggle-row" key={key}>
@@ -504,13 +508,6 @@ const Popup = () => {
         <div className="section-heading">
           <h2>Recent warnings</h2>
           <div className="warning-actions">
-            <button
-              className="icon-button"
-              onClick={() => void exportLocalData()}
-              title="Export local redacted data"
-              type="button">
-              <Download size={16} />
-            </button>
             <button
               className="text-button"
               onClick={() => void reportMissedRisk()}

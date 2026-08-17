@@ -5,3 +5,4 @@ export {
   saveProtectedSites
 } from "../storage/storage"
 export type { ProtectedSite } from "../../firewall/types"
+export { syncProtectedSitesFromAccount } from "./accountSync"

@@ -12,11 +12,13 @@ import {
 import { initializeHealthHeartbeat, sendHealthHeartbeat } from "./features/health"
 import { loadActiveIntelligenceRuntime } from "./features/intelligence"
 import { getProtectedSites } from "./features/storage"
+import { syncProtectedSitesFromAccount } from "./features/protectedSites"
 
 void retryQueuedSyncLogs().catch(() => undefined)
 void retryQueuedImprovementEvents().catch(() => undefined)
 initializeIntelligenceRefreshScheduler()
 void runConfiguredIntelligenceRefresh()
+void syncProtectedSitesFromAccount().catch(() => undefined)
 
 const reportHealth = async () => {
   const sites = await getProtectedSites()
@@ -153,7 +155,8 @@ if (typeof chrome !== "undefined" && chrome.runtime?.onMessageExternal) {
       void saveAuthToken(message.token).then(() => Promise.all([
         retryQueuedSyncLogs(),
         retryQueuedImprovementEvents(),
-        runConfiguredIntelligenceRefresh()
+        runConfiguredIntelligenceRefresh(),
+        syncProtectedSitesFromAccount()
       ])).then(() => {
         sendResponse({ ok: true })
       })

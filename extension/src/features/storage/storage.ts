@@ -107,6 +107,13 @@ export const setSetting = async <Key extends keyof ProtectionSettings>(
   return next
 }
 
+export const setAllProtections = async (enabled: boolean): Promise<ProtectionSettings> => {
+  const settings = await getSettings()
+  const next = { ...settings, sensitiveData: enabled, promptInjection: enabled, uploadWarnings: enabled, scamDetection: enabled }
+  await saveSettings(next)
+  return next
+}
+
 export const getActivityLogs = async (): Promise<ActivityLog[]> => {
   return getValue<ActivityLog[]>(logsKey, [])
 }
