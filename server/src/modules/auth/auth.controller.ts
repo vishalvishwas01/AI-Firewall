@@ -20,7 +20,7 @@ export const signup = async (req: Request, res: Response) => {
   }
   const db = await getDb();
   const result = credentials.accountType === "enterprise"
-    ? await registerEnterpriseUser(db, credentials.email, credentials.password, credentials.name!, credentials.companyName!)
+    ? await registerEnterpriseUser(db, credentials.email, credentials.password, credentials.name, credentials.companyName!)
     : await registerUser(db, credentials.email, credentials.password, "individual", credentials.name);
   if (result.conflict) {
     res.status(409).json({ error: "An account already exists for this email" });

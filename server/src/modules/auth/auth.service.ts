@@ -26,7 +26,7 @@ export const publicUser = async (db: Db, user: UserDocument) => ({
   teamAccess: await hasTeamAccess(db, user),
 });
 
-export const registerUser = async (db: Db, email: string, password: string, accountType: UserAccountType, name?: string) => {
+export const registerUser = async (db: Db, email: string, password: string, accountType: UserAccountType, name: string) => {
   if (await findUserByEmail(db, email)) return { conflict: true as const };
   const user = await createUser(db, email, await bcrypt.hash(password, 12), accountType, name);
   return { user };

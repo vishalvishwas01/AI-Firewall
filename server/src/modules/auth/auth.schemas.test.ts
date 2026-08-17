@@ -7,10 +7,11 @@ import { authenticatedUserFromRequest } from "../../middleware/auth.js"
 import { ObjectId } from "mongodb"
 
 test("individual signup credentials normalize email", () => {
-  const parsed = parseSignupCredentials({ accountType: "individual", email: "  USER@Example.COM ", password: "password" })
+  const parsed = parseSignupCredentials({ accountType: "individual", name: "Nitesh", email: "  USER@Example.COM ", password: "password" })
   assert.equal(isAuthCredentials(parsed), true)
   if (isAuthCredentials(parsed)) {
     assert.equal(parsed.email, "user@example.com")
+    assert.equal(parsed.name, "Nitesh")
     assert.equal(parsed.accountType, "individual")
   }
 })
@@ -27,8 +28,9 @@ test("enterprise signup requires name, company name, and company email", () => {
 })
 
 test("signup rejects invalid email and short password", () => {
-  assert.deepEqual(parseSignupCredentials({ accountType: "individual", email: "bad", password: "password" }), { error: "Enter a valid email address" })
-  assert.deepEqual(parseSignupCredentials({ accountType: "individual", email: "user@example.com", password: "short" }), { error: "Password must be at least 8 characters" })
+  assert.deepEqual(parseSignupCredentials({ accountType: "individual", name: "Nitesh", email: "bad", password: "password" }), { error: "Enter a valid email address" })
+  assert.deepEqual(parseSignupCredentials({ accountType: "individual", name: "Nitesh", email: "user@example.com", password: "short" }), { error: "Password must be at least 8 characters" })
+  assert.deepEqual(parseSignupCredentials({ accountType: "individual", email: "user@example.com", password: "password" }), { error: "Enter your name" })
 })
 
 test("login requires an explicit account type", () => {
@@ -37,8 +39,8 @@ test("login requires an explicit account type", () => {
 })
 
 test("authentication DTOs reject extra fields and oversized passwords", () => {
-  assert.throws(() => parseSignupCredentials({ accountType: "individual", email: "user@example.com", password: "password", rawPrompt: "private" }))
-  assert.deepEqual(parseSignupCredentials({ accountType: "individual", email: "user@example.com", password: "x".repeat(1025) }), { error: "Password is too long" })
+  assert.throws(() => parseSignupCredentials({ accountType: "individual", name: "Nitesh", email: "user@example.com", password: "password", rawPrompt: "private" }))
+  assert.deepEqual(parseSignupCredentials({ accountType: "individual", name: "Nitesh", email: "user@example.com", password: "x".repeat(1025) }), { error: "Password is too long" })
 })
 
 test("expired bearer tokens fail closed", () => {

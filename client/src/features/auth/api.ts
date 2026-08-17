@@ -16,7 +16,7 @@ export const getSession = async () => {
 export const getInvitation = (token: string) =>
   apiRequest<{ organizationName: string; email: string; role: string; expiresAt: string }>(`/orgs/invitations/${encodeURIComponent(token)}`)
 
-export const signup = (accountType: AccountType, data: { email?: string; password: string; name?: string; companyName?: string; companyEmail?: string }) =>
+export const signup = (accountType: AccountType, data: { email?: string; password: string; name: string; companyName?: string; companyEmail?: string }) =>
   apiRequest<AuthResponse>("/auth/signup", { method: "POST", body: JSON.stringify({ ...data, accountType }) }, parseAuthResponse)
 
 export const login = (accountType: AccountType, email: string, password: string) =>

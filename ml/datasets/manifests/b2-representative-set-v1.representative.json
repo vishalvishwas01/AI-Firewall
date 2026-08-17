@@ -1,15 +1,13 @@
 {
-  "datasetSha256": "4cefd4c209a264353d49d9d5fbfa586cd9554cccf1180d3e8b29d69a5b40cbab",
   "coverage": {
-    "missingRiskStrata": [
-      "high-entropy-benign-constants",
-      "placeholders-and-examples",
-      "secret-keyword-context-with-benign-values"
-    ],
+    "missingRiskStrata": [],
     "observedRiskStrata": [
       "hashes-uuids-and-timestamps",
+      "high-entropy-benign-constants",
       "ordinary-identifiers",
-      "paths-urls-and-versions"
+      "paths-urls-and-versions",
+      "placeholders-and-examples",
+      "secret-keyword-context-with-benign-values"
     ],
     "representativenessClaimed": false,
     "requiredRiskStrata": [
@@ -21,7 +19,8 @@
       "high-entropy-benign-constants"
     ]
   },
-  "executedOn": "2026-08-04",
+  "datasetSha256": "3d0e3dffad3c4534c4b9f5da7d7f9b92023dea95e4e7d9b737997258f6a8e8ff",
+  "executedOn": "2026-08-12",
   "featureVersion": "candidate-features-v1",
   "finalApprovalVersion": "b2-final-remediation-approval-v1",
   "gates": {
@@ -36,37 +35,46 @@
   "nextStep": "b2-review-representative-set",
   "outputPath": "datasets/representative/b2-benign-features-v1.jsonl",
   "rawContentCommitted": false,
-  "recordCount": 340,
+  "recordCount": 584,
   "reportVersion": "b2-representative-set-v1",
   "schemaVersion": 1,
   "seed": 20260801,
   "sources": [
     {
-      "recordCount": 98,
+      "recordCount": 178,
       "riskStratumCounts": {
         "hashes-uuids-and-timestamps": 18,
+        "high-entropy-benign-constants": 40,
         "ordinary-identifiers": 40,
-        "paths-urls-and-versions": 40
+        "paths-urls-and-versions": 40,
+        "placeholders-and-examples": 20,
+        "secret-keyword-context-with-benign-values": 20
       },
       "sanitizedTreeSha256": "f32ee96fcead6aa1935569f0f87d6f639548f133064eb68f99b2ce398e69c0a4",
       "sourceId": "cpython-public-corpus"
     },
     {
-      "recordCount": 101,
+      "recordCount": 201,
       "riskStratumCounts": {
         "hashes-uuids-and-timestamps": 21,
+        "high-entropy-benign-constants": 40,
         "ordinary-identifiers": 40,
-        "paths-urls-and-versions": 40
+        "paths-urls-and-versions": 40,
+        "placeholders-and-examples": 40,
+        "secret-keyword-context-with-benign-values": 20
       },
       "sanitizedTreeSha256": "9f9f61c5e4ae1a28744048d438c5605c949908060443fefb54206fd29f6613f7",
       "sourceId": "kubernetes-website-public-corpus"
     },
     {
-      "recordCount": 141,
+      "recordCount": 205,
       "riskStratumCounts": {
         "hashes-uuids-and-timestamps": 21,
+        "high-entropy-benign-constants": 40,
         "ordinary-identifiers": 60,
-        "paths-urls-and-versions": 60
+        "paths-urls-and-versions": 60,
+        "placeholders-and-examples": 20,
+        "secret-keyword-context-with-benign-values": 4
       },
       "sanitizedTreeSha256": "a43fa77d4e6cd16c3cdf673bf37e0879afba51278acb1235dd93656918046210",
       "sourceId": "nodejs-public-corpus"

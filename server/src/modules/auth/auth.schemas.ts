@@ -8,7 +8,7 @@ export type AuthCredentials = {
 }
 
 export type SignupCredentials = AuthCredentials & {
-  name?: string
+  name: string
   companyName?: string
   companyEmail?: string
 }
@@ -35,7 +35,7 @@ export const parseSignupCredentials = (body: unknown): SignupCredentials | { err
   if (accountType !== "individual" && accountType !== "enterprise") return { error: "Choose an account type" }
   if (accountType === "individual" && (!emailPattern.test(email) || email.length > 180)) return { error: "Enter a valid email address" }
   if (accountType === "enterprise" && (!emailPattern.test(companyEmail) || companyEmail.length > 180)) return { error: "Enter a valid company email address" }
-  if (accountType === "enterprise" && (name.length < 2 || name.length > 160)) return { error: "Enter your name" }
+  if (name.length < 2 || name.length > 160) return { error: "Enter your name" }
   if (accountType === "enterprise" && (companyName.length < 2 || companyName.length > 160)) return { error: "Enter your company name" }
   if (password.length < 8) return { error: "Password must be at least 8 characters" }
   if (password.length > 1024) return { error: "Password is too long" }
@@ -44,7 +44,7 @@ export const parseSignupCredentials = (body: unknown): SignupCredentials | { err
     email: accountType === "enterprise" ? companyEmail : email,
     password,
     accountType,
-    ...(name ? { name } : {}),
+    name,
     ...(companyName ? { companyName } : {}),
     ...(companyEmail ? { companyEmail } : {})
   }

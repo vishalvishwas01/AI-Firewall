@@ -22,7 +22,7 @@ test("auth requests preserve the signup, login, and logout contracts", async () 
   }
 
   try {
-    await signup("individual", { email: "qa@example.com", password: "correct-horse" })
+    await signup("individual", { name: "QA User", email: "qa@example.com", password: "correct-horse" })
     await login("individual", "qa@example.com", "correct-horse")
     await logout()
   } finally {
@@ -35,7 +35,7 @@ test("auth requests preserve the signup, login, and logout contracts", async () 
     body: init?.body,
     credentials: init?.credentials
   })), [
-    { path: "/auth/signup", method: "POST", body: JSON.stringify({ email: "qa@example.com", password: "correct-horse", accountType: "individual" }), credentials: "include" },
+    { path: "/auth/signup", method: "POST", body: JSON.stringify({ name: "QA User", email: "qa@example.com", password: "correct-horse", accountType: "individual" }), credentials: "include" },
     { path: "/auth/login", method: "POST", body: JSON.stringify({ email: "qa@example.com", password: "correct-horse", accountType: "individual" }), credentials: "include" },
     { path: "/auth/logout", method: "POST", body: undefined, credentials: "include" }
   ])
