@@ -66,6 +66,7 @@ export const env = {
   googleCallbackUrl: process.env.GOOGLE_CALLBACK_URL,
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   emailFrom: process.env.EMAIL_FROM ?? "",
+  redisUrl: process.env.REDIS_URL?.trim() || "redis://127.0.0.1:6379",
   intelligencePublisherEmails: parseIntelligencePublisherEmails(
     process.env.INTELLIGENCE_PUBLISHER_EMAILS
   ),

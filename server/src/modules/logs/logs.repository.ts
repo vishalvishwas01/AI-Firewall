@@ -4,10 +4,10 @@ import { syncedLogsCollection, type SyncedLogDocument } from "../../models/synce
 import type { ParsedLogInput } from "./logs.schemas.js"
 
 export const findSummaryLogs = (db: Db, filter: Filter<SyncedLogDocument>) =>
-  syncedLogsCollection(db).find(filter, { projection: { feedback: 1, severity: 1, eventType: 1, decision: 1, hostname: 1 } }).toArray()
+  syncedLogsCollection(db).find({ $and: [filter, { is_Deleted: { $ne: true } }] }, { projection: { feedback: 1, severity: 1, eventType: 1, decision: 1, hostname: 1 } }).toArray()
 
 export const findLogs = (db: Db, filter: Filter<SyncedLogDocument>, limit?: number) => {
-  const cursor = syncedLogsCollection(db).find(filter).sort({ timestamp: -1 })
+  const cursor = syncedLogsCollection(db).find({ $and: [filter, { is_Deleted: { $ne: true } }] }).sort({ timestamp: -1 })
   return (limit === undefined ? cursor : cursor.limit(limit)).toArray()
 }
 
@@ -17,7 +17,7 @@ export const saveLog = async (db: Db, userId: ObjectId, input: ParsedLogInput) =
   await logs.updateOne(
     { userId, extensionLogId: input.extensionLogId },
     {
-      $setOnInsert: { extensionLogId: input.extensionLogId, userId, createdAt: now },
+      $setOnInsert: { extensionLogId: input.extensionLogId, userId, is_Deleted: false, createdAt: now },
       $set: {
         timestamp: input.timestamp,
         tool: input.tool,

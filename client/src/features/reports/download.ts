@@ -7,3 +7,12 @@ export const downloadJson = (filename: string, value: unknown) => {
   anchor.click()
   window.URL.revokeObjectURL(url)
 }
+
+export const downloadBlob = (filename: string, blob: Blob) => {
+  const url = window.URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  window.URL.revokeObjectURL(url)
+}

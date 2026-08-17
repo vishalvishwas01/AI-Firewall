@@ -20,6 +20,8 @@ import {
   sendSessionToExtension,
 } from "../extensionBridge";
 import { LivingFirewall } from "./LivingFirewall";
+import { getFeatureConfig } from "../../featureFlags/api";
+import type { EvaluatedFeature } from "../../featureFlags/types";
 
 const fieldClassName =
   "mt-1.5 w-full rounded-lg border-0 bg-white px-4 py-3 text-base text-[#33312b] shadow-sm outline-none ring-1 ring-transparent transition duration-200 placeholder:text-[#9d978c] focus:bg-[#faf9f6] focus:ring-[#33312b] read-only:cursor-not-allowed read-only:bg-[#efeeeb]";
@@ -86,6 +88,8 @@ export function AuthPage({
   const [submitting, setSubmitting] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
+  const [authFeature, setAuthFeature] = useState<EvaluatedFeature | null>(null);
+  const [authFeatureLoading, setAuthFeatureLoading] = useState(true);
   const cardRef = useRef<HTMLDivElement>(null);
   const isSignup = mode === "signup";
   const isEnterprise = selectedAccountType === "enterprise";
@@ -97,6 +101,8 @@ export function AuthPage({
   const showPasswordMatch = isSignup && confirmPassword.length > 0;
   const enterpriseSignupScrollable = isSignup && signupIsEnterprise;
   const isAuthenticatedForInvitation = Boolean(user && inviteToken);
+  const isAdminAuthentication = mode === "login" && window.sessionStorage.getItem(authRedirectKey) === "/admin";
+  const authBlocked = !isAdminAuthentication && !isAuthenticatedForInvitation && authFeature?.blockAuth === true && !authFeature.enabled;
 
   useEffect(() => {
     const errorCode = params.get("error");
@@ -134,6 +140,21 @@ export function AuthPage({
     window.addEventListener("popstate", syncAccountTypeFromUrl);
     return () => window.removeEventListener("popstate", syncAccountTypeFromUrl);
   }, [accountType]);
+
+  useEffect(() => {
+    let active = true;
+    const gatedAccountType = isSignup && inviteToken ? "individual" : selectedAccountType;
+    const featureKey = gatedAccountType === "enterprise" ? "enterprise-experience" : "individual-experience";
+    setAuthFeatureLoading(true);
+    getFeatureConfig()
+      .then(({ features }) => {
+        const feature = features.find((candidate) => candidate.key === featureKey);
+        if (active) setAuthFeature(feature?.[gatedAccountType] ?? null);
+      })
+      .catch(() => { if (active) setAuthFeature(null); })
+      .finally(() => { if (active) setAuthFeatureLoading(false); });
+    return () => { active = false; };
+  }, [inviteToken, isSignup, selectedAccountType]);
 
   const switchType = (nextType: AccountType) => {
     const inviteQuery = inviteToken
@@ -287,9 +308,9 @@ export function AuthPage({
           aria-label="HallGuard home"
         >
           <img
-            src="/hallguard-auth-logo.svg"
+            src="/hallguard-logo.svg"
             alt="HallGuard"
-            className="h-16 w-16 rounded-lg object-contain mix-blend-multiply xl:h-20 xl:w-20"
+            className="h-28 w-28 rounded-xl object-contain mix-blend-multiply xl:h-36 xl:w-36"
           />
         </a>
         <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center py-6">
@@ -344,6 +365,16 @@ export function AuthPage({
                     Enterprise
                   </button>
                 </div>
+                {authFeatureLoading ? (
+                  <div className="h-32" aria-label="Loading authentication availability" />
+                ) : authBlocked ? (
+                  <div className="mx-auto max-w-sm py-4 text-center">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#a64b2a]">HallGuard service notice</p>
+                    <h1 className="mt-3 text-[28px] font-semibold leading-9 tracking-[-0.01em] text-[#33312b]">{isEnterprise ? "Enterprise access is unavailable." : "Personal access is unavailable."}</h1>
+                    <p className="mt-3 text-base leading-6 text-[#4a463f]">{authFeature.message ?? "This account type is temporarily unavailable. Please check back shortly."}</p>
+                    {authFeature.endsAt ? <p className="mt-5 rounded-lg bg-white/60 px-3 py-2 text-sm text-[#4a463f]">Expected availability: {new Date(authFeature.endsAt).toLocaleString()}</p> : null}
+                  </div>
+                ) : <>
                 <div className="auth-heading mb-8 text-center">
                   {inviteToken ? (
                     <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#65645e]">
@@ -565,6 +596,7 @@ export function AuthPage({
                     </a>
                   </p>
                 </form>
+                </>}
               </>
             ) : (
               <>

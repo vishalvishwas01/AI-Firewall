@@ -29,6 +29,9 @@ export class ConflictError extends HttpError {
 export class PayloadTooLargeError extends HttpError {
   constructor(message = "Request body is too large") { super(413, "payload_too_large", message) }
 }
+export class FeatureUnavailableError extends HttpError {
+  constructor(message = "This feature is temporarily unavailable") { super(503, "feature_unavailable", message) }
+}
 
 export const normalizedHttpError = (error: unknown): HttpError | undefined => {
   if (error instanceof HttpError) return error

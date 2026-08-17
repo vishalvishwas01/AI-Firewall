@@ -3,8 +3,10 @@ import jwt from "jsonwebtoken"
 import { ObjectId } from "mongodb"
 
 import { env } from "../config/env.js"
-import { AuthenticationError } from "../shared/errors.js"
+import { getDb } from "../db/mongo.js"
+import { AuthenticationError, AuthorizationError } from "../shared/errors.js"
 import type { UserAccountType } from "../models/user.js"
+import { usersCollection } from "../models/user.js"
 
 export type AuthenticatedRequest = Request & {
   user?: { id: ObjectId; email: string; accountType?: UserAccountType }
@@ -88,4 +90,18 @@ export const requireAuth = (req: AuthenticatedRequest, _res: Response, next: Nex
 
   req.user = user
   next()
+}
+
+export const requireSuperAdmin = async (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AuthenticationError()
+    const user = await usersCollection(await getDb()).findOne(
+      { _id: req.user.id },
+      { projection: { platformRole: 1 } }
+    )
+    if (user?.platformRole !== "super_admin") throw new AuthorizationError("Platform administrator access required")
+    next()
+  } catch (error) {
+    next(error)
+  }
 }

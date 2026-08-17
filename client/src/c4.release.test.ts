@@ -16,7 +16,7 @@ test("auth requests preserve the signup, login, and logout contracts", async () 
     requests.push({ url: String(input), init })
     if (String(input).endsWith("/auth/logout")) return new Response(null, { status: 204 })
     return jsonResponse({
-      user: { id: "user-1", email: "qa@example.com", accountType: "individual", teamAccess: false },
+      user: { id: "user-1", email: "qa@example.com", accountType: "individual", platformRole: "user", hasPassword: true, teamAccess: false },
       token: "opaque-session-token"
     })
   }

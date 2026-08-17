@@ -2,17 +2,21 @@ import { ResponseValidationError } from "./schema"
 
 export const apiBaseUrl = import.meta.env?.VITE_API_BASE_URL ?? "http://localhost:4000"
 export type ResponseSchema<T> = (value: unknown) => T
-export type TransportErrorCode = "validation_error" | "authentication_required" | "access_denied" | "not_found" | "conflict" | "payload_too_large" | "rate_limited" | "request_error" | "internal_error" | "network_error" | "invalid_response"
+export type TransportErrorCode = "validation_error" | "invalid_current_password" | "authentication_required" | "access_denied" | "not_found" | "conflict" | "email_already_exists" | "no_logs_available" | "payload_too_large" | "rate_limited" | "feature_unavailable" | "request_error" | "internal_error" | "network_error" | "invalid_response"
 
-const knownCodes = new Set<TransportErrorCode>(["validation_error", "authentication_required", "access_denied", "not_found", "conflict", "payload_too_large", "rate_limited", "request_error", "internal_error"])
+const knownCodes = new Set<TransportErrorCode>(["validation_error", "invalid_current_password", "authentication_required", "access_denied", "not_found", "conflict", "email_already_exists", "no_logs_available", "payload_too_large", "rate_limited", "feature_unavailable", "request_error", "internal_error"])
 const safeMessage = (code: TransportErrorCode) => ({
   validation_error: "Check the submitted information and try again.",
+  invalid_current_password: "The current password is incorrect.",
   authentication_required: "Your session has expired. Please sign in again.",
   access_denied: "You do not have permission to access this resource.",
   not_found: "The requested resource could not be found.",
   conflict: "This request conflicts with the current state. Refresh and try again.",
+  email_already_exists: "Email already exists.",
+  no_logs_available: "No logs are available for this report.",
   payload_too_large: "The submitted data is too large.",
   rate_limited: "Too many requests. Wait briefly and try again.",
+  feature_unavailable: "This feature is temporarily unavailable.",
   network_error: "Unable to reach HallGuard. Check your connection and try again.",
   invalid_response: "HallGuard received an unexpected server response.",
   request_error: "The request could not be completed.",

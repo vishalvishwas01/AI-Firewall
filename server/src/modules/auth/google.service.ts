@@ -20,5 +20,13 @@ export const verifyGoogleCode = async (code: string) => {
   const payload = ticket.getPayload();
   if (!payload?.sub || !payload.email) throw new Error("Invalid Google identity");
 
-  return { googleId: payload.sub, email: payload.email.toLowerCase(), emailVerified: payload.email_verified === true };
+  const name = typeof payload.name === "string"
+    ? payload.name.trim().replace(/\s+/g, " ").slice(0, 160)
+    : "";
+  return {
+    googleId: payload.sub,
+    email: payload.email.toLowerCase(),
+    emailVerified: payload.email_verified === true,
+    ...(name ? { name } : {})
+  };
 };

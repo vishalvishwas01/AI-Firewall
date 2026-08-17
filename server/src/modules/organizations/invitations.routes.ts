@@ -11,6 +11,7 @@ import { requireOrganizationMembership } from "./organizations.policy.js"
 import { normalizeEmail, parseMemberInput, routeParam } from "./organizations.schemas.js"
 import { toPublicMember } from "./organizations.service.js"
 import { env } from "../../config/env.js"
+import { requireAccountExperience, requireFeature } from "../featureFlags/featureFlags.middleware.js"
 
 const router = Router()
 const INVITATION_TTL_MS = 72 * 60 * 60 * 1000
@@ -98,6 +99,8 @@ router.get("/invitations/:token", async (req, res, next) => {
 })
 
 router.use(requireAuth)
+router.use(requireAccountExperience)
+router.use(requireFeature("organization-management"))
 
 router.post("/:id/members", async (req: AuthenticatedRequest, res, next) => {
   try {

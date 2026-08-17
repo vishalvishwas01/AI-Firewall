@@ -20,6 +20,8 @@ export type SyncedLogDocument = {
   title: string
   redactedSnippet: string
   evidence: string[]
+  is_Deleted: boolean
+  deletedAt?: Date
   createdAt: Date
 }
 
@@ -27,9 +29,11 @@ export const syncedLogsCollection = (db: Db): Collection<SyncedLogDocument> =>
   db.collection<SyncedLogDocument>("synced_logs")
 
 export const ensureSyncedLogIndexes = async (db: Db) => {
-  await syncedLogsCollection(db).createIndex({ userId: 1, timestamp: -1 })
-  await syncedLogsCollection(db).createIndex({ userId: 1, tool: 1, timestamp: -1 })
-  await syncedLogsCollection(db).createIndex(
+  const logs = syncedLogsCollection(db)
+  await logs.updateMany({ is_Deleted: { $exists: false } }, { $set: { is_Deleted: false } })
+  await logs.createIndex({ userId: 1, is_Deleted: 1, timestamp: -1 })
+  await logs.createIndex({ userId: 1, tool: 1, is_Deleted: 1, timestamp: -1 })
+  await logs.createIndex(
     { userId: 1, extensionLogId: 1 },
     { unique: true }
   )

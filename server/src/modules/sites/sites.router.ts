@@ -7,10 +7,13 @@ import { sendJson, validateNoQuery } from "../../shared/validation.js"
 import { ensureDefaultSites, findOwnedSite, hasInheritedSitePolicy, loadVisibleSiteData, softDeleteSite, upsertPersonalSite } from "./sites.repository.js"
 import { isSiteInput, parseSiteInput, routeParam } from "./sites.schemas.js"
 import { mergeVisibleSites, toPublicSite } from "./sites.service.js"
+import { requireAccountExperience, requireFeature } from "../featureFlags/featureFlags.middleware.js"
 
 const router = Router()
 
 router.use(requireAuth)
+router.use(requireAccountExperience)
+router.use(requireFeature("reports"))
 router.use(validateNoQuery)
 
 router.get("/", async (req: AuthenticatedRequest, res, next) => {

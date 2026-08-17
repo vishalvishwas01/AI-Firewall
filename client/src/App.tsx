@@ -8,6 +8,10 @@ import { TrustPage } from "./features/trust/components/TrustPage";
 import { SiteHeader } from "./components/SiteHeader";
 import { HomePage } from "./components/HomePage";
 import { authRedirectKey } from "./features/auth/extensionBridge";
+import { AdminPage } from "./features/admin/components/AdminPage";
+import { AccountExperienceBoundary, FeatureBoundary } from "./features/featureFlags/components/FeatureBoundary";
+import { HelpPage } from "./features/profile/components/HelpPage";
+import { SettingsPage } from "./features/profile/components/SettingsPage";
 
 function App() {
   const [user, setUser] = useState<SessionUser | null>(null);
@@ -18,6 +22,9 @@ function App() {
   const isTeam = path === "/team";
   const isPrivacy = path === "/privacy";
   const isTrust = path === "/trust";
+  const isAdmin = path === "/admin";
+  const isHelp = path === "/help";
+  const isSettings = path === "/settings";
   const isGoogleAuthSuccess = path === "/auth/google/success";
 
   useEffect(() => {
@@ -58,11 +65,25 @@ function App() {
       setPath("/login");
       return;
     }
-    if (!user.teamAccess) {
+    if (!user.teamAccess && user.platformRole !== "super_admin") {
       window.history.replaceState({}, "", "/reports");
       setPath("/reports");
     }
   }, [isTeam, sessionLoading, user]);
+
+  useEffect(() => {
+    if (sessionLoading || !isAdmin || user) return;
+    window.sessionStorage.setItem(authRedirectKey, "/admin");
+    window.history.replaceState({}, "", "/login");
+    setPath("/login");
+  }, [isAdmin, sessionLoading, user]);
+
+  useEffect(() => {
+    if (sessionLoading || (!isHelp && !isSettings) || user) return;
+    window.sessionStorage.setItem(authRedirectKey, path);
+    window.history.replaceState({}, "", "/login");
+    setPath("/login");
+  }, [isHelp, isSettings, path, sessionLoading, user]);
 
   const handleLogout = async () => {
     await logout();
@@ -73,18 +94,34 @@ function App() {
 
   if (authMode) return <main className="min-h-screen bg-[#faf9f6] text-[#1a1c1a]"><AuthPage mode={authMode} user={user} onAuthenticated={setUser} /></main>;
 
-  if (isReports) return <PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout}><ReportsPage user={user} sessionLoading={sessionLoading} /></PageFrame>;
+  if (isReports) return <PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout}><AccountExperienceBoundary user={user}><FeatureBoundary featureKey="reports" user={user}><ReportsPage user={user} sessionLoading={sessionLoading} /></FeatureBoundary></AccountExperienceBoundary></PageFrame>;
 
   if (isTeam) {
-    if (sessionLoading || !user?.teamAccess) return null;
-    return <PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout}><TeamPage user={user} sessionLoading={sessionLoading} /></PageFrame>;
+    if (sessionLoading || (!user?.teamAccess && user?.platformRole !== "super_admin")) return null;
+    return <PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout}><AccountExperienceBoundary user={user}><FeatureBoundary featureKey="organization-management" user={user}><TeamPage user={user} sessionLoading={sessionLoading} /></FeatureBoundary></AccountExperienceBoundary></PageFrame>;
   }
 
   if (isPrivacy) return <PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout} footer><PrivacyPolicyPage /></PageFrame>;
 
-  if (isTrust) return <PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout} footer><TrustPage user={user} sessionLoading={sessionLoading} /></PageFrame>;
+  if (isTrust) return <PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout} footer><AccountExperienceBoundary user={user}><FeatureBoundary featureKey="trust-dashboard" user={user}><TrustPage user={user} sessionLoading={sessionLoading} /></FeatureBoundary></AccountExperienceBoundary></PageFrame>;
 
-  return <PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout} warm footer><HomePage /></PageFrame>;
+  if (isAdmin) {
+    if (sessionLoading || !user) return null;
+    if (user.platformRole !== "super_admin") return <PageFrame user={user} sessionLoading={false} onLogout={handleLogout}><section className="px-6 py-20"><div className="mx-auto max-w-xl rounded-2xl border border-rose-200 bg-white p-8"><h1 className="text-3xl font-semibold text-[#33312b]">Access denied</h1><p className="mt-3 text-[#65645e]">This private route requires the platform super_admin role.</p></div></section></PageFrame>;
+    return <PageFrame user={user} sessionLoading={false} onLogout={handleLogout}><AdminPage /></PageFrame>;
+  }
+
+  if (isHelp) {
+    if (sessionLoading || !user) return null;
+    return <PageFrame user={user} sessionLoading={false} onLogout={handleLogout}><HelpPage /></PageFrame>;
+  }
+
+  if (isSettings) {
+    if (sessionLoading || !user) return null;
+    return <PageFrame user={user} sessionLoading={false} onLogout={handleLogout}><SettingsPage user={user} onUserUpdated={setUser} /></PageFrame>;
+  }
+
+  return <PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout} warm footer>{user ? <AccountExperienceBoundary user={user}><HomePage /></AccountExperienceBoundary> : <HomePage />}</PageFrame>;
 }
 
 function PageFrame({ user, sessionLoading, onLogout, footer = false, warm = false, children }: { user: SessionUser | null; sessionLoading: boolean; onLogout: () => Promise<void>; footer?: boolean; warm?: boolean; children: ReactNode }) {

@@ -18,6 +18,7 @@ export const createUser = async (
     email,
     passwordHash,
     accountType,
+    platformRole: "user",
     ...(name ? { name } : {}),
     ...(companyName ? { companyName } : {}),
     authProviders: ["password"],
@@ -34,12 +35,15 @@ export const createGoogleUser = async (
   email: string,
   googleId: string,
   accountType: UserAccountType,
+  name?: string,
 ) => {
   const now = new Date();
   const result = await usersCollection(db).insertOne({
     email,
     googleId,
     accountType,
+    platformRole: "user",
+    ...(name ? { name } : {}),
     authProviders: ["google"],
     createdAt: now,
     updatedAt: now,
@@ -49,11 +53,11 @@ export const createGoogleUser = async (
   return user;
 };
 
-export const linkGoogleAccount = async (db: Db, user: ObjectId, googleId: string) => {
+export const linkGoogleAccount = async (db: Db, user: ObjectId, googleId: string, name?: string) => {
   const now = new Date();
   await usersCollection(db).updateOne(
     { _id: user },
-    { $set: { googleId, updatedAt: now }, $addToSet: { authProviders: "google" } },
+    { $set: { googleId, ...(name ? { name } : {}), updatedAt: now }, $addToSet: { authProviders: "google" } },
   );
   const updatedUser = await usersCollection(db).findOne({ _id: user });
   if (!updatedUser) throw new Error("User could not be loaded after linking Google account");

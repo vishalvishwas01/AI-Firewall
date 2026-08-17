@@ -59,3 +59,22 @@ export const parseLoginCredentials = (body: unknown): AuthCredentials | { error:
 
 export const isAuthCredentials = (value: AuthCredentials | SignupCredentials | { error: string }): value is AuthCredentials | SignupCredentials =>
   !("error" in value)
+
+export const parseProfileUpdate = (body: unknown) => {
+  const value = exactObject(body, ["name"], "Invalid profile update")
+  const name = typeof value.name === "string" ? value.name.trim() : ""
+  if (name.length < 2 || name.length > 160) return { error: "Name must be between 2 and 160 characters" }
+  return { name }
+}
+
+export const parsePasswordChange = (body: unknown) => {
+  const value = exactObject(body, ["currentPassword", "newPassword", "confirmPassword"], "Invalid password update")
+  const currentPassword = typeof value.currentPassword === "string" ? value.currentPassword : undefined
+  const newPassword = typeof value.newPassword === "string" ? value.newPassword : ""
+  const confirmPassword = typeof value.confirmPassword === "string" ? value.confirmPassword : ""
+  if (currentPassword && currentPassword.length > 1024) return { error: "Current password is too long" }
+  if (newPassword.length < 8) return { error: "New password must be at least 8 characters" }
+  if (newPassword.length > 1024) return { error: "New password is too long" }
+  if (newPassword !== confirmPassword) return { error: "New passwords do not match" }
+  return { currentPassword, newPassword }
+}

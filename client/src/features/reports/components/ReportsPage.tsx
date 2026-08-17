@@ -1,11 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react"
-import { Download } from "lucide-react"
+import { Download, RefreshCw } from "lucide-react"
 import { SiteHeader } from "../../../components/SiteHeader"
 import type { SessionUser } from "../../auth/types"
 import { authRedirectKey } from "../../auth/extensionBridge"
-import { exportAccountLogs, getLogSummary, getLogs } from "../api"
+import { deleteReportLogs, downloadLogsPdf, getLogSummary, getLogs } from "../api"
 import type { ReportLog, ReportSummary } from "../types"
-import { downloadJson } from "../download"
+import { downloadBlob } from "../download"
 import { ReportsEmptyState, ReportsErrorState, ReportsLoadingState } from "./ReportStates"
 import { createReportSite, deleteReportSite, getReportSites } from "../../sites/api"
 import type { ReportSite } from "../../sites/types"
@@ -34,8 +34,15 @@ export function ReportsPage({
   const [domainInput, setDomainInput] = useState("");
   const [siteNameInput, setSiteNameInput] = useState("");
   const [siteSaving, setSiteSaving] = useState(false);
-  const [exportingLogs, setExportingLogs] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [refreshingLogs, setRefreshingLogs] = useState(false);
+  const [selectedLogIds, setSelectedLogIds] = useState<Set<string>>(new Set());
+  const [selectAllMatching, setSelectAllMatching] = useState(false);
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const [deletingLogs, setDeletingLogs] = useState(false);
   const selectedSite = sites.find((site) => site.hostname === selectedHostname);
+  const reportFilters = { hostname: selectedHostname || undefined, from: from || undefined, to: to || undefined };
+  const selectedCount = selectAllMatching ? summary?.totalLogs ?? logs.length : selectedLogIds.size;
   const defaultSiteOrder = ["chatgpt.com", "claude.ai", "gemini.google.com"];
   const orderedSites = [...sites].sort((a, b) => {
     const defaultA = defaultSiteOrder.indexOf(a.hostname);
@@ -152,6 +159,9 @@ export function ReportsPage({
     }
 
     let active = true;
+    setSelectedLogIds(new Set());
+    setSelectAllMatching(false);
+    setDeleteConfirmationOpen(false);
     setLoading(true);
     setError("");
 
@@ -233,16 +243,68 @@ export function ReportsPage({
     await sendSitesToExtension(nextSites);
   };
 
-  const exportRedactedLogs = async () => {
-    setExportingLogs(true);
+  const downloadPdf = async () => {
+    if (!user || loading || logs.length === 0 || generatingPdf) return;
+    setGeneratingPdf(true);
     setError("");
     try {
-      const exported = await exportAccountLogs();
-      downloadJson(`hallguard-redacted-logs-${exported.exportedAt.slice(0, 10)}.json`, exported);
+      const { blob, filename } = await downloadLogsPdf(reportFilters);
+      downloadBlob(filename, blob);
     } catch (reportError) {
-      setError(reportError instanceof Error ? reportError.message : "Failed to export logs");
+      setError(reportError instanceof Error ? reportError.message : "Failed to generate PDF");
     } finally {
-      setExportingLogs(false);
+      setGeneratingPdf(false);
+    }
+  };
+
+  const refreshLogs = async () => {
+    if (!user || loading || refreshingLogs) return;
+    setRefreshingLogs(true);
+    setError("");
+    try {
+      const [logsResponse, summaryResponse] = await Promise.all([getLogs(reportFilters), getLogSummary(reportFilters)]);
+      setLogs(logsResponse.logs);
+      setSummary(summaryResponse.summary);
+      setSelectedLogIds(new Set());
+      setSelectAllMatching(false);
+      setDeleteConfirmationOpen(false);
+    } catch (reportError) {
+      setError(reportError instanceof Error ? reportError.message : "Failed to refresh logs");
+    } finally {
+      setRefreshingLogs(false);
+    }
+  };
+
+  const toggleSelectAll = (checked: boolean) => {
+    setSelectAllMatching(checked);
+    setSelectedLogIds(checked ? new Set(logs.flatMap((log) => log.id ? [log.id] : [])) : new Set());
+  };
+
+  const toggleLog = (logId: string, checked: boolean) => {
+    setSelectAllMatching(false);
+    setSelectedLogIds((current) => {
+      const next = new Set(selectAllMatching ? logs.flatMap((log) => log.id ? [log.id] : []) : current);
+      if (checked) next.add(logId); else next.delete(logId);
+      return next;
+    });
+  };
+
+  const confirmDeleteLogs = async () => {
+    if ((!selectAllMatching && selectedLogIds.size === 0) || deletingLogs) return;
+    setDeletingLogs(true);
+    setError("");
+    try {
+      await deleteReportLogs(selectAllMatching ? { all: true, filters: reportFilters } : { ids: [...selectedLogIds] });
+      const [logsResponse, summaryResponse] = await Promise.all([getLogs(reportFilters), getLogSummary(reportFilters)]);
+      setLogs(logsResponse.logs);
+      setSummary(summaryResponse.summary);
+      setSelectedLogIds(new Set());
+      setSelectAllMatching(false);
+      setDeleteConfirmationOpen(false);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete logs");
+    } finally {
+      setDeletingLogs(false);
     }
   };
 
@@ -260,15 +322,7 @@ export function ReportsPage({
             <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
               View redacted logs that were synced for {user?.email ?? "your account"}. Detection stays local; report storage only keeps masked snippets.
             </p>
-            <button
-              type="button"
-              disabled={!user || exportingLogs}
-              onClick={() => void exportRedactedLogs()}
-              className="button-secondary mt-4 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Download className="h-4 w-4" aria-hidden="true" />
-              {exportingLogs ? "Preparing export" : "Export redacted logs"}
-            </button>
+            <div className="mt-4 flex flex-wrap gap-3"><button type="button" disabled={!user || refreshingLogs} onClick={() => void refreshLogs()} className="button-secondary disabled:cursor-not-allowed disabled:opacity-60"><RefreshCw className={`h-4 w-4 ${refreshingLogs ? "animate-spin" : ""}`} aria-hidden="true" />{refreshingLogs ? "Checking logs…" : "Refresh logs"}</button><button type="button" disabled={!user || loading || logs.length === 0 || generatingPdf} onClick={() => void downloadPdf()} className="button-secondary disabled:cursor-not-allowed disabled:opacity-60"><Download className="h-4 w-4" aria-hidden="true" />{generatingPdf ? <><span>Generating PDF</span><span className="inline-flex items-end gap-1" aria-hidden="true"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]"/><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]"/><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current"/></span></> : "Download PDF"}</button></div>
           </div>
 
           <div>
@@ -453,11 +507,20 @@ export function ReportsPage({
                 </div>
               ) : null}
 
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <input type="checkbox" checked={selectAllMatching} onChange={(event) => toggleSelectAll(event.target.checked)} className="h-4 w-4 rounded border-slate-300" />
+                  Select all {selectedHostname ? `for ${selectedSite?.label ?? selectedHostname}` : "matching logs"}
+                </label>
+                {selectedCount > 0 ? <button type="button" onClick={() => setDeleteConfirmationOpen(true)} className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100">Delete {selectAllMatching ? "all matching" : selectedCount}</button> : null}
+              </div>
+
               <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                   <thead className="bg-slate-50 text-slate-600">
                     <tr>
+                      <th className="w-12 px-4 py-3 font-semibold"><span className="sr-only">Select</span></th>
                       <th className="px-4 py-3 font-semibold">Date</th>
                       <th className="px-4 py-3 font-semibold">Website</th>
                       <th className="px-4 py-3 font-semibold">Severity</th>
@@ -469,6 +532,7 @@ export function ReportsPage({
                   <tbody className="divide-y divide-slate-200">
                     {logs.map((log) => (
                       <tr key={log.extensionLogId} className="align-top">
+                        <td className="px-4 py-4"><input type="checkbox" aria-label={`Select ${log.title}`} disabled={!log.id} checked={Boolean(log.id && (selectAllMatching || selectedLogIds.has(log.id)))} onChange={(event) => { if (log.id) toggleLog(log.id, event.target.checked); }} className="h-4 w-4 rounded border-slate-300" /></td>
                         <td className="px-4 py-4 whitespace-nowrap text-slate-600">
                           {new Date(log.timestamp).toLocaleString()}
                         </td>
@@ -514,6 +578,19 @@ export function ReportsPage({
           )}
         </div>
       </div>
+
+      {deleteConfirmationOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm">
+          <div role="dialog" aria-modal="true" aria-labelledby="delete-logs-title" className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-2xl">
+            <h2 id="delete-logs-title" className="text-xl font-semibold text-slate-950">Delete selected logs?</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">{selectAllMatching ? `All ${selectedHostname ? `${selectedSite?.label ?? selectedHostname} ` : ""}logs matching the current filters` : `${selectedLogIds.size} selected ${selectedLogIds.size === 1 ? "log" : "logs"}`} will be removed from reports and PDF downloads. This is a soft delete and can only be reversed directly in the database.</p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" disabled={deletingLogs} onClick={() => setDeleteConfirmationOpen(false)} className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60">Cancel</button>
+              <button type="button" disabled={deletingLogs} onClick={() => void confirmDeleteLogs()} className="rounded-md border border-rose-700 bg-rose-700 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-800 disabled:opacity-60">{deletingLogs ? "Deleting…" : "Delete"}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isAddSiteOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm">

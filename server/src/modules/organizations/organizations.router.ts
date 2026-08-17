@@ -17,6 +17,7 @@ import { parseMemberInput, parseOrganizationInput, parseOrganizationSiteInput, p
 import { toPublicMember, toPublicOrganization, toPublicSitePolicy } from "./organizations.service.js"
 import { assertAllowedQuery } from "../../shared/validation.js"
 import { pendingInvitationRevocationFilter } from "../../models/organization.js"
+import { requireAccountExperience, requireFeature } from "../featureFlags/featureFlags.middleware.js"
 
 const router = Router()
 
@@ -61,7 +62,7 @@ const buildOrganizationSummary = async (organizationId: ObjectId) => {
 
   const logs = await syncedLogsCollection(db)
     .find(
-      { userId: { $in: userIds } },
+      { userId: { $in: userIds }, is_Deleted: { $ne: true } },
       {
         projection: {
           feedback: 1,
@@ -116,7 +117,7 @@ const buildOrganizationTrends = async (organizationId: ObjectId, days: Organizat
   if (userIds.length > 0) {
     const logs = await syncedLogsCollection(db)
       .find(
-        { userId: { $in: userIds }, timestamp: { $gte: from, $lt: to } },
+        { userId: { $in: userIds }, is_Deleted: { $ne: true }, timestamp: { $gte: from, $lt: to } },
         { projection: { timestamp: 1, severity: 1, eventType: 1, feedback: 1 } }
       )
       .toArray()
@@ -136,6 +137,8 @@ const buildOrganizationTrends = async (organizationId: ObjectId, days: Organizat
 }
 
 router.use(requireAuth)
+router.use(requireAccountExperience)
+router.use(requireFeature("organization-management"))
 router.use((req, _res, next) => {
   try {
     assertAllowedQuery(req.query as Record<string, unknown>, req.method === "GET" && req.path.endsWith("/trends") ? ["days"] : [])

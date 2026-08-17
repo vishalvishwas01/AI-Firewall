@@ -26,6 +26,8 @@
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.4.0",
     "mongosh": "^2.8.3",
+    "nunjucks": "^3.2.4",
+    "puppeteer": "^24.16.0",
     "redis": "^6.0.1"
   },
   "devDependencies": {
@@ -33,6 +35,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/nunjucks": "^3.2.6",
     "@types/node": "^26.0.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"

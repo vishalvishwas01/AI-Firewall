@@ -40,3 +40,30 @@ export const sendOrganizationInvitationEmail = async (input: {
     throw new Error(`Invitation email failed: ${response.status} ${body.slice(0, 300)}`)
   }
 }
+
+export const sendHelpDeskReplyEmail = async (input: { to: string; name?: string; subject: string; message: string }) => {
+  if (!env.resendApiKey || !env.emailFrom) {
+    if (env.nodeEnv !== "production") {
+      console.warn(JSON.stringify({ event: "help_desk_email_not_configured", to: input.to }))
+      return
+    }
+    throw new Error("Transactional email is not configured")
+  }
+
+  const greeting = input.name ? `Hi ${escapeHtml(input.name)},` : "Hello,"
+  const message = escapeHtml(input.message).replace(/\n/g, "<br>")
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.resendApiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: env.emailFrom,
+      to: [input.to],
+      subject: input.subject,
+      html: `<!doctype html><html><body style="font-family:Arial,sans-serif;line-height:1.65;color:#24241f"><p>${greeting}</p><p>${message}</p><p>Regards,<br><strong>HallGuard Support</strong></p></body></html>`
+    })
+  })
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(`Help desk email failed: ${response.status} ${body.slice(0, 300)}`)
+  }
+}

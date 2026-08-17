@@ -83,7 +83,7 @@ function BrowserDemo() {
         <div className="mt-3 flex items-center justify-between rounded-lg bg-[#33312b] px-4 py-3 text-sm text-white"><span>Ask AI</span><ArrowRight className="h-4 w-4"/></div>
       </div>
     </div>
-    <div className="relative z-10 mt-5 ml-auto w-[96%] rounded-[20px] border border-[#e2c7a1] bg-[#fffaf0] shadow-[0_24px_70px_rgba(51,49,43,0.20)] sm:-mr-3 sm:w-[88%] lg:-mr-5">
+    <div className="relative z-10 mt-5 ml-auto w-[96%] rounded-[20px] border border-[#e2c7a1] bg-[#fffaf0] shadow-[0_24px_70px_rgba(51,49,43,0.20)] sm:-mr-3 sm:w-[88%] lg:-mr-0">
       <div className="grid grid-cols-[1fr_auto] items-start gap-4 border-b border-[#eadcc8] p-5"><div><div className="flex items-center gap-2"><CircleAlert className="h-5 w-5 shrink-0 text-[#a51d22]"/><p className="font-[Manrope] text-lg font-semibold text-[#2f312f]">Sensitive secret detected</p></div><p className="mt-1 text-sm leading-5 text-[#4a463f]">This looks like it contains a key, token, password, or private secret.</p></div><span className="shrink-0 whitespace-nowrap rounded-full bg-[#ffdad6] px-3 py-1.5 text-xs font-semibold leading-none text-[#93000a]">HIGH RISK</span></div>
       <div className="space-y-3 p-5"><div className="rounded-lg border border-[#e5d9c8] bg-white/80 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-[#65645e]">Redacted preview</p><code className="mt-2 block text-sm text-[#33312b]">api_key=[REDACTED]</code></div><div className="grid grid-cols-2 gap-2"><button className="rounded-lg border border-[#ccc6bc] bg-white px-3 py-2.5 text-sm font-semibold text-[#33312b]">Cancel</button><button className="rounded-lg bg-emerald-700 px-3 py-2.5 text-sm font-semibold text-white">Use redacted</button></div></div>
     </div>

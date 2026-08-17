@@ -11,10 +11,12 @@
     "test": "esbuild src/c2.contract.test.ts src/c4.release.test.ts --bundle --platform=node --format=esm --outdir=.test-dist && node --test .test-dist/c2.contract.test.js .test-dist/c4.release.test.js"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.8.2",
     "framer-motion": "^12.15.0",
     "lucide-react": "^0.511.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-redux": "^9.2.0",
     "three": "^0.179.1"
   },
   "devDependencies": {

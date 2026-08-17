@@ -24,6 +24,11 @@ import { rejectReadMethodBodies, sendJson, validateNoQuery } from "./shared/vali
 import { authRateLimiter, globalRateLimiter, requestIdMiddleware, structuredRequestLogger } from "./shared/operational.js"
 import { runRetentionSweep } from "./infrastructure/retention.js"
 import { safeErrorLog } from "./shared/errors.js"
+import { featureConfigRouter } from "./modules/featureFlags/featureFlags.routes.js"
+import { ensureFeatureFlagIndexes } from "./modules/featureFlags/featureFlags.js"
+import { ensureHelpDeskIndexes } from "./models/helpDesk.js"
+import { supportRouter } from "./modules/support/support.routes.js"
+import { closeRedisClient } from "./db/redis.js"
 
 const app = express()
 
@@ -77,6 +82,7 @@ app.get("/ready", validateNoQuery, async (_req, res) => {
 })
 
 app.use("/auth", authRateLimiter, authRouter)
+app.use("/config", featureConfigRouter)
 app.use("/logs", logsRouter)
 app.use("/sites", sitesRouter)
 app.use("/orgs", invitationsRouter)
@@ -85,6 +91,7 @@ app.use("/admin", adminRouter)
 app.use("/improvement-events", improvementTelemetryRouter)
 app.use("/intelligence", intelligenceRouter)
 app.use("/extension-health", extensionHealthRouter)
+app.use("/support", supportRouter)
 
 app.use(errorBoundary)
 
@@ -95,6 +102,8 @@ await ensureReportSiteIndexes(db)
 await ensureOrganizationIndexes(db)
 await ensureImprovementTelemetryIndexes(db)
 await ensureIntelligencePackageIndexes(db)
+await ensureFeatureFlagIndexes(db)
+await ensureHelpDeskIndexes(db)
 ready = true
 
 const retentionTimer = setInterval(async () => {
@@ -118,6 +127,7 @@ const shutdown = async (signal: string) => {
   clearInterval(retentionTimer)
   await new Promise<void>((resolve) => server.close(() => resolve()))
   await closeMongoClient()
+  await closeRedisClient()
   console.log(JSON.stringify({ event: "server_stopped", signal }))
 }
 

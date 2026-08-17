@@ -1,16 +1,18 @@
-import { nonEmptyString, nullable, object } from "../../lib/schema"
+import { boolean, nonEmptyString, nullable, object } from "../../lib/schema"
 import type { AccountType, AuthResponse, SessionUser } from "./types"
 
 const parseAccountType = (value: unknown): AccountType => value === "enterprise" ? "enterprise" : "individual"
 
 export const parseSessionUser = (value: unknown): SessionUser => {
-  const input = object(value, ["id", "email", "accountType", "teamAccess"], ["name", "companyName"])
+  const input = object(value, ["id", "email", "accountType", "teamAccess", "hasPassword"], ["name", "companyName", "platformRole"])
   return {
     id: nonEmptyString(input.id, 64),
     email: nonEmptyString(input.email, 320),
     accountType: parseAccountType(input.accountType),
+    platformRole: input.platformRole === "super_admin" ? "super_admin" : "user",
     ...(typeof input.name === "string" ? { name: input.name } : {}),
     ...(typeof input.companyName === "string" ? { companyName: input.companyName } : {}),
+    hasPassword: boolean(input.hasPassword),
     teamAccess: input.accountType === "enterprise" && input.teamAccess === true,
   }
 }
