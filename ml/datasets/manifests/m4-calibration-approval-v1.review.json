@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "m4-calibration-approval-v1",
+  "reviewType": "HUMAN_APPROVAL",
+  "reviewedOn": "2026-08-18",
+  "status": "approved-limited-calibration",
+  "trainingStateSha256": "3086b2f242051f383c7227bf0e2e4948b33903deeacbda819f1711939feea391",
+  "representativeEvaluationSha256": "ad62960b92bc6c51e23837a5fe01fc195fcd49725c174576f6824b2b21e516ce",
+  "extensionBenchmarkSha256": "4a057f56f3ad1b6c2f4132643bbdfc1dd544d65832045248a44517cad7a3b90e",
+  "reviewers": [
+    {"role": "privacy", "identity": "Umang Aggarwal", "decision": "approve", "scope": "Limited reviewed artifact calibration only; no production accuracy claim."},
+    {"role": "security", "identity": "Vishal Vishwas", "decision": "approve", "scope": "Digest-bound calibration evidence; no signing-key or deployment authority."},
+    {"role": "maintainer", "identity": "Tushar Garg", "decision": "approve", "relayedDecision": "approvee", "normalizationNote": "Trailing spelling corrected to approve; original relayed value retained for audit."}
+  ],
+  "gates": {
+    "calibrationComputed": true,
+    "calibrationApproved": true,
+    "productionAccuracyClaimAllowed": false,
+    "trainingStateCommitAllowed": false,
+    "modelReleaseAllowed": false
+  },
+  "releaseEligible": false,
+  "nextStep": "m4-prepare-artifact-review"
+}

@@ -121,6 +121,35 @@ Scope-amendment update - 2026-08-12:
 
 Current next step: **request separate one-time exact-pin network authorization.** Once explicitly authorized, implement the approved selectors first, run no-network selector tests, and then perform the bounded rehydration/extraction operation. M3 remains in progress until the expanded dataset and final three-role coverage review pass.
 
+#### M3 execution update (2026-08-12)
+
+- The standing three-reviewer workflow authorization was validated without reconfirmation and the exact pinned-source extraction completed.
+- The resulting sanitized representative set contains 584 content-free numeric rows and observes all six required strata, with every stratum meeting the selector minimums across the approved public sources.
+- Archive SHA-256 values and accepted-tree SHA-256 values matched the recorded pins; both scanner layers and notice exclusions ran; raw archives and quarantine were deleted.
+- The existing B2 aggregate evidence remains deliberately non-approving: `representativeSetReviewed` and `trainingEligible` are still false. No training or release occurred.
+
+The expanded coverage decision is recorded immutably in `datasets/manifests/m3-representative-coverage-review-v1.review.json` with the three standing reviewer approvals. Training and release remain false.
+
+Current next step: **run the full ML validation suite, then evaluate the independent training-state/privacy/evaluation gates.**
+
+The draft training state and synthetic evaluation are complete. The next M3 implementation is the separate mixed representative evaluation in `m3_representative_evaluation.py`, which preserves the synthetic-only report and measures benign false positives on the 584-row reviewed set. Application recall and extension performance remain later gates.
+
+The mixed evaluation completed with zero false positives across all 584 reviewed benign rows. Its remaining blockers are application-layered recall, extension latency, extension bundle growth, and calibration approval. The next implementation phase is the application-layered recall check before extension benchmarking.
+
+The extension/application evidence is now recorded in `datasets/manifests/m4-extension-benchmark-v1.manifest.json`: application false-negative rate 0%, 10 KiB p95 1.6258 ms, 100 KiB p95 7.9454 ms, and 99,170-byte content-script output below the 102,400-byte limit. The sole remaining recorded blocker is calibration approval.
+
+Current next step: **record calibration approval bound to the exact training-state and evaluation digests, without enabling production accuracy claims or release.**
+
+Calibration approval is now recorded in `datasets/manifests/m4-calibration-approval-v1.review.json`. It is limited to the digest-bound artifact candidate; production accuracy claims, signing, deployment, and release remain false.
+
+Current next step: **prepare the artifact-review handoff and compatibility checks.** Do not activate or publish the model from this workspace.
+
+Added `export_shadow_artifact.py` to convert the reviewed training state into a schema-v2, logistic-regression-only, `shadow` artifact with canonical bounded serialization and Git revision provenance. The artifact stays in ignored ML storage until compatibility and review gates pass.
+
+The artifact handoff review is recorded in `datasets/manifests/m4-shadow-artifact-handoff-v1.review.json`, bound to the 1,638-byte artifact digest, training-state digest, benchmark digest, and calibration approval. It is approved only for external review; no extension copy, signing, deployment, or release is authorized here.
+
+Prepared `datasets/manifests/m4-external-signing-request-v1.review.json` for the externally custodIed signing process. It specifies the unsigned artifact/package metadata, required compatibility and rollback checks, and the exact evidence digests. No private key, signature, or production deployment credential exists in this workspace.
+
 ### Phase M4 - Train small local candidates reproducibly
 
 1. Use the exact pinned preprocessing and logistic-regression implementation with seed `20260801`.

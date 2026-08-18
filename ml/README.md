@@ -211,12 +211,46 @@ The evidence-only gap analysis is recorded in
 `M3_REPRESENTATIVE_COVERAGE_GAP.md`. It binds the three missing benign risk strata to deterministic
 selector requirements and the existing immutable source pins while keeping every execution gate closed.
 
-The next required action is a distinct privacy/security/maintainer scope amendment. Network access,
-source rehydration, selector implementation, feature extraction, representative-dataset replacement,
-training, and release are not authorized by the analysis. If the scope amendment is approved, exact-pin
-rehydration still requires a separate one-time network authorization.
+The scope amendment and standing workflow authorization are now recorded in the M3 manifests. The
+authorized exact-pin extraction completed with 584 sanitized, content-free numeric rows covering all six
+required strata; pin digests, scanner gates, and quarantine deletion passed.
 
-The scope amendment is now recorded in
-`datasets/manifests/m3-representative-gap-scope-amendment-v1.review.json`. It authorizes selector
-implementation only. The next gate is separate one-time exact-pin network authorization; rehydration,
-feature-extraction execution, dataset replacement, training, and release remain blocked.
+The expanded coverage review is recorded in
+`datasets/manifests/m3-representative-coverage-review-v1.review.json`. Coverage is approved, but
+`trainingEligible` and `releaseEligible` remain false until the full ML validation and independent
+training-state/evaluation gates pass.
+
+Run the mixed representative evaluation with:
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+.venv\Scripts\python -m hallguard_ml.m3_representative_evaluation --root .
+```
+
+It writes `reports/m3-representative-evaluation-v1.evaluation.json` and does not replace the immutable synthetic evaluation report.
+
+Extension benchmark evidence is recorded in
+`datasets/manifests/m4-extension-benchmark-v1.manifest.json`. It binds application recall, measured
+10 KiB/100 KiB p95 latency, bundle bytes, and the ML digests. Calibration approval is the remaining
+quality gate; release eligibility remains false.
+
+The limited calibration approval is recorded in
+`datasets/manifests/m4-calibration-approval-v1.review.json`. It is digest-bound and does not authorize
+production accuracy claims, signing, deployment, or release. The next step is artifact-review handoff.
+
+Create the local shadow-only handoff candidate with:
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+.venv\Scripts\python -m hallguard_ml.export_shadow_artifact --root .
+```
+
+The generated schema-v2 artifact remains under ignored `artifacts/` and is not copied, signed, activated, or published.
+
+The external-review handoff is recorded in
+`datasets/manifests/m4-shadow-artifact-handoff-v1.review.json`. It is digest-bound and explicitly
+disables extension integration, signing, deployment, and release.
+
+The unsigned signing request is recorded in
+`datasets/manifests/m4-external-signing-request-v1.review.json`. It is a handoff checklist for the
+external release-controlled signer; this workspace cannot create keys, signatures, or deployments.

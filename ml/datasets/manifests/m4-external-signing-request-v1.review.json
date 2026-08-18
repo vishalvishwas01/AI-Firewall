@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "requestVersion": "m4-external-signing-request-v1",
+  "requestType": "EXTERNAL_SIGNING_HANDOFF",
+  "requestedOn": "2026-08-18",
+  "status": "ready-for-external-signing-review",
+  "artifact": "artifacts/m4-secret-logistic-b2-limited-v1.shadow-artifact.json",
+  "artifactSha256": "0d5251ff7cdbd9e599f445ee381fd89b51b3016eb29959ba239e433a704b50fe",
+  "artifactBytes": 1638,
+  "package": {
+    "packageVersion": "2026.08.18-v1",
+    "sequence": 2,
+    "minExtensionVersion": "0.1.0",
+    "maxExtensionVersion": "0.1.99",
+    "requiredCapabilities": ["rules-v1", "model-v2", "candidate-features-v1"],
+    "modelVersion": "secret-logistic-b2-limited-v1",
+    "distribution": "signed-data-package",
+    "executablePayloadAllowed": false,
+    "remoteRegexAllowed": false
+  },
+  "requiredExternalChecks": [
+    "recompute artifact SHA-256",
+    "verify schema-v2 and feature-order contract",
+    "verify extension compatibility and rollback metadata",
+    "sign package manifest with externally managed Ed25519 key",
+    "publish signature and trust metadata through release-controlled process",
+    "retain prior sequence-1 package as rollback candidate"
+  ],
+  "boundEvidence": {
+    "trainingStateSha256": "3086b2f242051f383c7227bf0e2e4948b33903deeacbda819f1711939feea391",
+    "representativeEvaluationSha256": "ad62960b92bc6c51e23837a5fe01fc195fcd49725c174576f6824b2b21e516ce",
+    "extensionBenchmarkSha256": "4a057f56f3ad1b6c2f4132643bbdfc1dd544d65832045248a44517cad7a3b90e"
+  },
+  "gates": {
+    "privateSigningKeyPresentInMlWorkspace": false,
+    "packageSigned": false,
+    "productionDeploymentAuthorized": false,
+    "releaseEligible": false
+  },
+  "nextStep": "external-custodied-signature-and-staging-review"
+}

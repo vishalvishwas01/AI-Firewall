@@ -58,4 +58,10 @@ without expanding the reviewed scope.
 
 Selector implementation is now authorized for the exact plan. Network access, source rehydration,
 feature-extraction execution, representative-dataset replacement, training, and release remain blocked.
+
+## Execution result
+
+The approved exact-pin extraction has now run. It produced 584 sanitized, content-free numeric rows spanning all six required strata. The recorded archive and sanitized-tree digests matched the approved pins, scanner and notice-exclusion checks passed, and the transient raw quarantine was removed.
+
+The three-role decision is now recorded in `datasets/manifests/m3-representative-coverage-review-v1.review.json`. This coverage approval does not automatically authorize training or release; those gates remain false until the full ML validation and independent training-state checks pass.
 The next required decision is separate one-time exact-pin network authorization.

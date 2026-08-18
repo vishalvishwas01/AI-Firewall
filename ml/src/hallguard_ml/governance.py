@@ -9,6 +9,7 @@ from pathlib import Path
 from .contracts import (
     FEATURE_NAMES,
     ContractError,
+    validate_artifact,
     validate_b2_training_state_approval,
     validate_corpus_review_package,
     validate_dataset_manifest,
@@ -31,6 +32,7 @@ from .contracts import (
     validate_targeted_review_evidence,
     validate_training_state,
 )
+from .m3_representative_evaluation import validate_m3_representative_evaluation
 from .representative_gap import (
     GAP_ANALYSIS_FILE,
     SCOPE_AMENDMENT_FILE,
@@ -69,7 +71,85 @@ B2_TRAINING_STATE_APPROVAL_FILE = Path("datasets/manifests/b2-training-state-app
 M3_GAP_ANALYSIS_FILE = Path("datasets/manifests") / GAP_ANALYSIS_FILE
 M3_SCOPE_AMENDMENT_FILE = Path("datasets/manifests") / SCOPE_AMENDMENT_FILE
 M3_WORKFLOW_AUTHORIZATION_FILE = Path("datasets/manifests") / WORKFLOW_AUTHORIZATION_FILE
+M3_COVERAGE_REVIEW_FILE = Path("datasets/manifests/m3-representative-coverage-review-v1.review.json")
+M4_SHADOW_ARTIFACT_FILE = Path("artifacts/m4-secret-logistic-b2-limited-v1.shadow-artifact.json")
 SUPPLEMENTAL_REVIEW_FIELDS = {
+    "m4-external-signing-request-v1.review.json": {
+        "schemaVersion",
+        "requestVersion",
+        "requestType",
+        "requestedOn",
+        "status",
+        "artifact",
+        "artifactSha256",
+        "artifactBytes",
+        "package",
+        "requiredExternalChecks",
+        "boundEvidence",
+        "gates",
+        "nextStep",
+    },
+    "m4-shadow-artifact-handoff-v1.review.json": {
+        "schemaVersion",
+        "reviewVersion",
+        "reviewType",
+        "reviewedOn",
+        "status",
+        "artifact",
+        "artifactSha256",
+        "artifactBytes",
+        "trainingStateSha256",
+        "benchmarkManifestSha256",
+        "calibrationApprovalVersion",
+        "reviewers",
+        "gates",
+        "nextStep",
+    },
+    "m4-calibration-approval-v1.review.json": {
+        "schemaVersion",
+        "reviewVersion",
+        "reviewType",
+        "reviewedOn",
+        "status",
+        "trainingStateSha256",
+        "representativeEvaluationSha256",
+        "extensionBenchmarkSha256",
+        "reviewers",
+        "gates",
+        "releaseEligible",
+        "nextStep",
+    },
+    "m4-extension-benchmark-v1.manifest.json": {
+        "schemaVersion",
+        "manifestVersion",
+        "manifestType",
+        "recordedOn",
+        "sourceCommands",
+        "applicationLayeredRecall",
+        "applicationFalseNegativeRate",
+        "latency",
+        "bundle",
+        "trainingStateSha256",
+        "representativeEvaluationSha256",
+        "gates",
+        "releaseEligible",
+        "blockers",
+        "nextStep",
+    },
+    M3_COVERAGE_REVIEW_FILE.name: {
+        "schemaVersion",
+        "reviewVersion",
+        "reviewType",
+        "reviewedOn",
+        "status",
+        "representativeEvidenceVersion",
+        "datasetSha256",
+        "requiredRiskStrata",
+        "observedRiskStrata",
+        "reviewers",
+        "gates",
+        "nextStep",
+    },
     "b2-calibration-publication-approval-v1.review.json": {
         "schemaVersion",
         "reviewVersion",
@@ -348,17 +428,22 @@ def _audit_m3_data_boundary(root: Path) -> list[str]:
     errors = _audit_m2_data_boundary(root)
     errors = [error for error in errors if not error.startswith("M1 forbids premature reports file:")]
     approved_name = "secret-logistic-m2-synthetic-v1.metrics.json"
+    synthetic_evaluation_name = "b2-limited-evaluation-v1.evaluation.json"
+    representative_name = "m3-representative-evaluation-v1.evaluation.json"
     for path in sorted((root / "reports").rglob("*")):
         if not path.is_file() or path.relative_to(root) in M1_STATIC_DATA_FILES:
             continue
-        if path.name != approved_name or path.parent != root / "reports":
+        if path.name not in {approved_name, synthetic_evaluation_name, representative_name} or path.parent != root / "reports":
             errors.append(f"M3 forbids undeclared report file: {path.relative_to(root)}")
             continue
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
             if not isinstance(value, dict):
                 raise ContractError("evaluation report root must be an object")
-            validate_evaluation_report(value)
+            if path.name == representative_name:
+                validate_m3_representative_evaluation(value)
+            else:
+                validate_evaluation_report(value)
         except (json.JSONDecodeError, ContractError) as error:
             errors.append(f"{path.relative_to(root)}: {error}")
     return errors
@@ -405,6 +490,7 @@ def _audit_b2_pre_intake_boundary(root: Path) -> list[str]:
                 or error.endswith(str(M3_GAP_ANALYSIS_FILE))
                 or error.endswith(str(M3_SCOPE_AMENDMENT_FILE))
                 or error.endswith(str(M3_WORKFLOW_AUTHORIZATION_FILE))
+                or error.endswith(str(M3_COVERAGE_REVIEW_FILE))
             )
         )
     ]
@@ -453,7 +539,10 @@ def _audit_b2_representative_boundary(root: Path) -> list[str]:
     errors = [
         error
         for error in errors
-        if not (error.startswith("M1 forbids undeclared data file:") and error.endswith(output_suffix))
+        if not (
+            (error.startswith("M1 forbids undeclared data file:") and error.endswith(output_suffix))
+            or (error.startswith("M2 forbids non-draft artifact file:") and error.endswith(str(M4_SHADOW_ARTIFACT_FILE)))
+        )
     ]
     if not (root / B2_REPRESENTATIVE_FILE).is_file():
         errors.append(f"B2 representative stage requires evidence: {B2_REPRESENTATIVE_FILE}")
@@ -484,6 +573,15 @@ def _audit_b2_representative_boundary(root: Path) -> list[str]:
                     errors.append(f"B2 representative output row {line_number} feature values are invalid")
             except json.JSONDecodeError as error:
                 errors.append(f"B2 representative output row {line_number} is invalid JSON: {error}")
+    artifact = root / M4_SHADOW_ARTIFACT_FILE
+    if artifact.is_file():
+        try:
+            value = json.loads(artifact.read_text(encoding="utf-8"))
+            if not isinstance(value, dict):
+                raise ContractError("shadow artifact root must be an object")
+            validate_artifact(value)
+        except (json.JSONDecodeError, ContractError) as error:
+            errors.append(f"{M4_SHADOW_ARTIFACT_FILE}: {error}")
     return errors
 
 

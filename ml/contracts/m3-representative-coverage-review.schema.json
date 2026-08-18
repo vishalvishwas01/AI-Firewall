@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/hallguard-m3-representative-coverage-review-v1.schema.json",
+  "title": "HallGuard M3 Expanded Representative Coverage Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "reviewVersion", "reviewType", "reviewedOn", "status", "representativeEvidenceVersion", "datasetSha256", "requiredRiskStrata", "observedRiskStrata", "reviewers", "gates", "nextStep"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reviewVersion": { "const": "m3-representative-coverage-review-v1" },
+    "reviewType": { "const": "HUMAN_APPROVAL" },
+    "status": { "const": "approved-expanded-representative-set" },
+    "representativeEvidenceVersion": { "const": "b2-representative-set-v1" },
+    "datasetSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "requiredRiskStrata": { "type": "array", "minItems": 6, "uniqueItems": true, "items": { "type": "string" } },
+    "observedRiskStrata": { "type": "array", "minItems": 6, "uniqueItems": true, "items": { "type": "string" } },
+    "reviewers": { "type": "array", "minItems": 3, "maxItems": 3 },
+    "nextStep": { "const": "m3-run-full-ml-validation" }
+  }
+}

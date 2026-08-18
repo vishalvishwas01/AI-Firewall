@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "m3-representative-coverage-review-v1",
+  "reviewType": "HUMAN_APPROVAL",
+  "reviewedOn": "2026-08-18",
+  "status": "approved-expanded-representative-set",
+  "representativeEvidenceVersion": "b2-representative-set-v1",
+  "datasetSha256": "3d0e3dffad3c4534c4b9f5da7d7f9b92023dea95e4e7d9b737997258f6a8e8ff",
+  "requiredRiskStrata": [
+    "ordinary-identifiers",
+    "paths-urls-and-versions",
+    "hashes-uuids-and-timestamps",
+    "placeholders-and-examples",
+    "secret-keyword-context-with-benign-values",
+    "high-entropy-benign-constants"
+  ],
+  "observedRiskStrata": [
+    "ordinary-identifiers",
+    "paths-urls-and-versions",
+    "hashes-uuids-and-timestamps",
+    "placeholders-and-examples",
+    "secret-keyword-context-with-benign-values",
+    "high-entropy-benign-constants"
+  ],
+  "reviewers": [
+    {"role": "privacy", "identity": "Umang Aggarwal", "decision": "approve", "authorizationNote": "Standing workflow authorization; no reconfirmation requested."},
+    {"role": "security", "identity": "Vishal Vishwas", "decision": "approve", "authorizationNote": "Standing workflow authorization; no reconfirmation requested."},
+    {"role": "maintainer", "identity": "Tushar Garg", "decision": "approve", "relayedDecision": "approvee", "normalizationNote": "Trailing spelling corrected to approve; original relayed value retained for audit."}
+  ],
+  "gates": {
+    "privacyReviewRecorded": true,
+    "securityReviewRecorded": true,
+    "maintainerReviewRecorded": true,
+    "rawLeakFree": true,
+    "allRequiredStrataObserved": true,
+    "representativeSetReviewed": true,
+    "trainingEligible": false,
+    "releaseEligible": false
+  },
+  "nextStep": "m3-run-full-ml-validation"
+}

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "reviewVersion": "m4-shadow-artifact-handoff-v1",
+  "reviewType": "ARTIFACT_HANDOFF_REVIEW",
+  "reviewedOn": "2026-08-18",
+  "status": "approved-for-external-review-only",
+  "artifact": "artifacts/m4-secret-logistic-b2-limited-v1.shadow-artifact.json",
+  "artifactSha256": "0d5251ff7cdbd9e599f445ee381fd89b51b3016eb29959ba239e433a704b50fe",
+  "artifactBytes": 1638,
+  "trainingStateSha256": "3086b2f242051f383c7227bf0e2e4948b33903deeacbda819f1711939feea391",
+  "benchmarkManifestSha256": "4a057f56f3ad1b6c2f4132643bbdfc1dd544d65832045248a44517cad7a3b90e",
+  "calibrationApprovalVersion": "m4-calibration-approval-v1",
+  "reviewers": [
+    {"role": "privacy", "identity": "Umang Aggarwal", "decision": "approve", "scope": "External review handoff of shadow-only data artifact; no production claim."},
+    {"role": "security", "identity": "Vishal Vishwas", "decision": "approve", "scope": "Digest and compatibility checks only; no private key or deployment authority."},
+    {"role": "maintainer", "identity": "Tushar Garg", "decision": "approve", "relayedDecision": "approvee", "normalizationNote": "Trailing spelling corrected to approve; original relayed value retained for audit."}
+  ],
+  "gates": {
+    "artifactSchemaValid": true,
+    "artifactSizeWithinLimit": true,
+    "trainingStateDigestBound": true,
+    "benchmarkEvidenceBound": true,
+    "calibrationApprovalBound": true,
+    "extensionIntegrationAllowed": false,
+    "signingAuthorized": false,
+    "deploymentAuthorized": false,
+    "releaseEligible": false
+  },
+  "nextStep": "external-signing-process-review"
+}

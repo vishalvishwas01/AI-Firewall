@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "manifestVersion": "m4-extension-benchmark-v1",
+  "manifestType": "EXTENSION_BENCHMARK_EVIDENCE",
+  "recordedOn": "2026-08-18",
+  "sourceCommands": ["npm test", "npm run benchmark:report", "npm run benchmark:shadow", "npm run typecheck", "npm run build", "npm run intelligence:drill"],
+  "applicationLayeredRecall": 1.0,
+  "applicationFalseNegativeRate": 0.0,
+  "latency": {
+    "tenKiBP50Ms": 1.0731,
+    "tenKiBP95Ms": 1.6258,
+    "hundredKiBP50Ms": 6.6278,
+    "hundredKiBP95Ms": 7.9454,
+    "p95TenKiBLimitMs": 10.0,
+    "p95HundredKiBLimitMs": 25.0
+  },
+  "bundle": {
+    "totalBytes": 881282,
+    "scriptAndStyleBytes": 858003,
+    "contentScriptBytes": 99170,
+    "contentScriptLimitBytes": 102400
+  },
+  "trainingStateSha256": "3086b2f242051f383c7227bf0e2e4948b33903deeacbda819f1711939feea391",
+  "representativeEvaluationSha256": "ad62960b92bc6c51e23837a5fe01fc195fcd49725c174576f6824b2b21e516ce",
+  "gates": {
+    "applicationLayeredRecall": true,
+    "extensionLatency": true,
+    "extensionBundleGrowth": true,
+    "calibrationApproved": false
+  },
+  "releaseEligible": false,
+  "blockers": ["calibrationApproved"],
+  "nextStep": "m4-record-calibration-approval"
+}
