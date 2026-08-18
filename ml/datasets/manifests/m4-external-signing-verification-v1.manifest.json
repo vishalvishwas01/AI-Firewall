@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "verificationVersion": "m4-external-signing-verification-v1",
+  "verifiedOn": "2026-08-19",
+  "packageVersion": "2026.08.18-v1",
+  "sequence": 2,
+  "artifactSha256": "0d5251ff7cdbd9e599f445ee381fd89b51b3016eb29959ba239e433a704b50fe",
+  "artifactDigestMatches": true,
+  "canonicalManifestSha256": "e36b7eba503d30228bc5b894368e2f75ac9d06b19fbe564518d88c16bd15cb5d",
+  "payloadDigestMatchesCanonicalManifest": true,
+  "signature": {
+    "algorithm": "Ed25519",
+    "signatureBytes": 64,
+    "valid": true,
+    "keyId": "hallguard-release-ed25519-2026"
+  },
+  "trust": {
+    "keyStatus": "active",
+    "revoked": false,
+    "privateKeyCommitted": false
+  },
+  "replayProtection": {
+    "minimumAcceptedSequence": 2,
+    "verified": true
+  },
+  "rollback": {
+    "candidateSequence": 1,
+    "signatureRequired": true,
+    "artifactDigestRequired": true,
+    "verified": true
+  },
+  "stagingEligible": false,
+  "blockingReason": "Final external release review required",
+  "nextStep": "final-external-release-review"
+}

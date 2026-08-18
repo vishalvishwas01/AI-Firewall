@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "trustBundleVersion": 1,
+  "keys": [
+    {
+      "keyId": "hallguard-release-ed25519-2026",
+      "algorithm": "Ed25519",
+      "publicKeyFile": "public-key.pem",
+      "status": "active",
+      "purpose": "HallGuard ML package signing"
+    }
+  ]
+}

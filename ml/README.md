@@ -254,3 +254,11 @@ disables extension integration, signing, deployment, and release.
 The unsigned signing request is recorded in
 `datasets/manifests/m4-external-signing-request-v1.review.json`. It is a handoff checklist for the
 external release-controlled signer; this workspace cannot create keys, signatures, or deployments.
+
+External verification is recorded in
+`datasets/manifests/m4-external-signing-verification-v1.manifest.json`. Signature, trust, digest,
+replay, and rollback checks pass; staging remains explicitly ineligible pending final external release review.
+
+The final staging-review request is recorded in
+`datasets/manifests/m4-staging-review-request-v1.manifest.json`. It is a non-authorizing checklist for
+the external staging drill and release decision.

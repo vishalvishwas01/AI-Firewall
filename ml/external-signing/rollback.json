@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "currentSequence": 2,
+  "rollbackCandidate": {
+    "sequence": 1,
+    "required": true
+  },
+  "rollbackPolicy": {
+    "automaticRollback": false,
+    "requiresExplicitAuthorization": true,
+    "mustVerifySignature": true,
+    "mustVerifyArtifactDigest": true
+  }
+}

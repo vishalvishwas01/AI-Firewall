@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "stagingEligible": false,
+  "checks": {
+    "artifactSha256Verified": true,
+    "payloadSha256Verified": true,
+    "ed25519SignatureVerified": true,
+    "trustedKeyVerified": true,
+    "keyActive": true,
+    "extensionCompatibilityVerified": true,
+    "sequenceVerified": true,
+    "replayProtectionVerified": true,
+    "rollbackMetadataVerified": true
+  },
+  "blockingReason": "Final external release review required"
+}

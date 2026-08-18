@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "packageVersion": "2026.08.18-v1",
+  "sequence": 2,
+  "modelVersion": "secret-logistic-b2-limited-v1",
+  "artifact": "m4-secret-logistic-b2-limited-v1.shadow-artifact.json",
+  "artifactSha256": "0d5251ff7cdbd9e599f445ee381fd89b51b3016eb29959ba239e433a704b50fe",
+  "distribution": "signed-data-package",
+  "executablePayloadAllowed": false,
+  "remoteRegexAllowed": false,
+  "extensionCompatibility": {
+    "minExtensionVersion": "0.1.0",
+    "maxExtensionVersion": "0.1.99"
+  },
+  "requiredCapabilities": [
+    "rules-v1",
+    "model-v2",
+    "candidate-features-v1"
+  ],
+ "signing": {
+  "algorithm": "Ed25519",
+  "canonicalization": "JCS-RFC8785",
+  "encoding": "UTF-8",
+  "signatureDomain": "hallguard-ml-package-v1",
+  "keyId": "hallguard-release-ed25519-2026"
+}
+}

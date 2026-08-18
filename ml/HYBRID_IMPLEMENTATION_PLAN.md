@@ -150,6 +150,10 @@ The artifact handoff review is recorded in `datasets/manifests/m4-shadow-artifac
 
 Prepared `datasets/manifests/m4-external-signing-request-v1.review.json` for the externally custodIed signing process. It specifies the unsigned artifact/package metadata, required compatibility and rollback checks, and the exact evidence digests. No private key, signature, or production deployment credential exists in this workspace.
 
+The supplied external package was verified and recorded in `datasets/manifests/m4-external-signing-verification-v1.manifest.json`: artifact and canonical-manifest digests match, the 64-byte Ed25519 signature validates against the active unrevoked public key, sequence/replay and rollback metadata pass, and no private key is committed. Staging remains false because final external release review is still required.
+
+Prepared `datasets/manifests/m4-staging-review-request-v1.manifest.json` for the final external staging drill. It binds the verified package and lists the required install, activation, rollback, and three-role release checks. No staging authorization or production deployment was performed.
+
 ### Phase M4 - Train small local candidates reproducibly
 
 1. Use the exact pinned preprocessing and logistic-regression implementation with seed `20260801`.

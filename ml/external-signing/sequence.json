@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "packageVersion": "2026.08.18-v1",
+  "sequence": 2,
+  "minimumAcceptedSequence": 2,
+  "replayProtection": {
+    "enabled": true,
+    "rejectSequenceLessThan": 2
+  }
+}

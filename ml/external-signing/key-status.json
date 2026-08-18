@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "keyId": "hallguard-release-ed25519-2026",
+  "algorithm": "Ed25519",
+  "status": "active",
+  "revoked": false,
+  "purpose": "HallGuard ML package signing",
+  "privateKeyLocation": "external-signing-authority",
+  "privateKeyCommitted": false
+}

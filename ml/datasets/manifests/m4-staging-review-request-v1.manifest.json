@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "requestVersion": "m4-staging-review-request-v1",
+  "requestType": "FINAL_EXTERNAL_STAGING_REVIEW",
+  "requestedOn": "2026-08-19",
+  "status": "ready-for-final-external-review",
+  "packageVersion": "2026.08.18-v1",
+  "sequence": 2,
+  "artifact": "m4-secret-logistic-b2-limited-v1.shadow-artifact.json",
+  "artifactSha256": "0d5251ff7cdbd9e599f445ee381fd89b51b3016eb29959ba239e433a704b50fe",
+  "signatureKeyId": "hallguard-release-ed25519-2026",
+  "evidence": {
+    "externalSigningVerification": "m4-external-signing-verification-v1",
+    "artifactHandoff": "m4-shadow-artifact-handoff-v1",
+    "calibrationApproval": "m4-calibration-approval-v1",
+    "extensionBenchmark": "m4-extension-benchmark-v1"
+  },
+  "requiredFinalChecks": [
+    "release owner confirms package manifest and payload digests",
+    "release owner confirms active trust key and signature",
+    "staging environment accepts sequence 2 and retains sequence 1 rollback",
+    "extension installation and local runtime activation drill passes",
+    "rollback drill passes before any canary exposure",
+    "privacy/security/maintainer release decision is recorded externally"
+  ],
+  "gates": {
+    "signatureVerified": true,
+    "artifactDigestVerified": true,
+    "replayProtectionVerified": true,
+    "rollbackMetadataVerified": true,
+    "stagingAuthorizationRecorded": false,
+    "productionDeploymentAuthorized": false,
+    "releaseEligible": false
+  },
+  "nextStep": "external-staging-drill-and-release-decision"
+}
