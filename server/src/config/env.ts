@@ -45,6 +45,13 @@ if (!/^[A-Za-z0-9._-]{1,64}$/.test(jwtActiveKeyId)) throw new Error("JWT_ACTIVE_
 const jwtSigningSecret = process.env.JWT_ACTIVE_SECRET || process.env.JWT_SECRET!
 if (jwtSigningSecret.length < 32 || process.env.JWT_SECRET!.length < 32) throw new Error("JWT secrets must be at least 32 characters")
 const jwtPreviousKeys = parseJwtPreviousKeys(process.env.JWT_PREVIOUS_KEYS)
+const parseBooleanEnv = (value: string | undefined, fallback = false) => value === undefined ? fallback : value.trim().toLowerCase() === "true"
+const parseIntegerEnv = (value: string | undefined, fallback: number, minimum: number, maximum: number) => {
+  if (value === undefined || value.trim() === "") return fallback
+  const parsed = Number(value)
+  if (!Number.isInteger(parsed) || parsed < minimum || parsed > maximum) throw new Error(`Environment integer must be between ${minimum} and ${maximum}`)
+  return parsed
+}
 
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
@@ -66,7 +73,12 @@ export const env = {
   googleCallbackUrl: process.env.GOOGLE_CALLBACK_URL,
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   emailFrom: process.env.EMAIL_FROM ?? "",
-  redisUrl: process.env.REDIS_URL?.trim() || "redis://127.0.0.1:6379",
+  disableManualSignupRateLimiting: parseBooleanEnv(process.env.DISABLE_MANUAL_SIGNUP_RATE_LIMITING),
+  trustProxyHops: parseIntegerEnv(process.env.TRUST_PROXY_HOPS, 0, 0, 10),
+  loginActivityRetentionDays: parseIntegerEnv(process.env.LOGIN_ACTIVITY_RETENTION_DAYS, 180, 1, 3650),
+  loginGeolocationEnabled: parseBooleanEnv(process.env.LOGIN_GEOLOCATION_ENABLED),
+  upstashRedisRestUrl: process.env.UPSTASH_REDIS_REST_URL?.trim() || "",
+  upstashRedisRestToken: process.env.UPSTASH_REDIS_REST_TOKEN?.trim() || "",
   intelligencePublisherEmails: parseIntelligencePublisherEmails(
     process.env.INTELLIGENCE_PUBLISHER_EMAILS
   ),

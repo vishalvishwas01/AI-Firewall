@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 import type { Request, RequestHandler } from "express"
 
 import { sendJson } from "./validation.js"
+import { env } from "../config/env.js"
 
 declare module "express-serve-static-core" {
   interface Request {
@@ -35,11 +36,15 @@ export const structuredRequestLogger: RequestHandler = (req, res, next) => {
   next()
 }
 
-type RateLimitOptions = { windowMs: number; max: number; name?: string; key?: (req: Request) => string; maxBuckets?: number }
+type RateLimitOptions = { windowMs: number; max: number; name?: string; key?: (req: Request) => string; maxBuckets?: number; skip?: (req: Request) => boolean }
 
-export const createRateLimiter = ({ windowMs, max, name = "request", key = (req) => req.ip ?? "unknown", maxBuckets = 10_000 }: RateLimitOptions): RequestHandler => {
+export const createRateLimiter = ({ windowMs, max, name = "request", key = (req) => req.ip ?? "unknown", maxBuckets = 10_000, skip }: RateLimitOptions): RequestHandler => {
   const buckets = new Map<string, { startedAt: number; count: number }>()
   return (req, res, next) => {
+    if (skip?.(req)) {
+      next()
+      return
+    }
     const now = Date.now()
     const bucketKey = key(req).slice(0, 160)
     const existing = buckets.get(bucketKey)
@@ -70,5 +75,15 @@ export const createRateLimiter = ({ windowMs, max, name = "request", key = (req)
   }
 }
 
-export const authRateLimiter = createRateLimiter({ windowMs: 60_000, max: 20, name: "authentication", key: (req) => `auth:${req.ip ?? "unknown"}` })
+// Keep unrelated auth activity from exhausting login or recovery capacity. For
+// example, session polling must not consume the same bucket as POST /login.
+export const authRateLimiter = createRateLimiter({
+  windowMs: 15 * 60_000,
+  max: 100,
+  name: "authentication",
+  key: (req) => `auth:${req.ip ?? "unknown"}:${req.method}:${req.path}`,
+  skip: (req) => env.disableManualSignupRateLimiting && req.method === "POST" && req.path === "/signup"
+})
+export const verificationSendRateLimiter = createRateLimiter({ windowMs: 15 * 60_000, max: 30, name: "verification email", key: (req) => `verification-send:${req.ip ?? "unknown"}` })
+export const verificationAttemptRateLimiter = createRateLimiter({ windowMs: 15 * 60_000, max: 100, name: "verification attempt", key: (req) => `verification-attempt:${req.ip ?? "unknown"}` })
 export const globalRateLimiter = createRateLimiter({ windowMs: 60_000, max: 300, name: "request" })

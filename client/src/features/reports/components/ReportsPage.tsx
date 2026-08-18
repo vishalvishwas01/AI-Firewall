@@ -23,6 +23,7 @@ export function ReportsPage({
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [sites, setSites] = useState<ReportSite[]>([]);
   const [selectedHostname, setSelectedHostname] = useState("");
+  const [selectedTool, setSelectedTool] = useState<"Other" | "">("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [loading, setLoading] = useState(true);
@@ -41,7 +42,7 @@ export function ReportsPage({
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [deletingLogs, setDeletingLogs] = useState(false);
   const selectedSite = sites.find((site) => site.hostname === selectedHostname);
-  const reportFilters = { hostname: selectedHostname || undefined, from: from || undefined, to: to || undefined };
+  const reportFilters = { tool: selectedTool || undefined, hostname: selectedHostname || undefined, from: from || undefined, to: to || undefined };
   const selectedCount = selectAllMatching ? summary?.totalLogs ?? logs.length : selectedLogIds.size;
   const defaultSiteOrder = ["chatgpt.com", "claude.ai", "gemini.google.com"];
   const orderedSites = [...sites].sort((a, b) => {
@@ -117,7 +118,7 @@ export function ReportsPage({
   };
 
   useEffect(() => {
-    if (!user) {
+    if (!user || user.verificationRequired) {
       setLoading(false);
       setSitesLoading(false);
       return;
@@ -153,7 +154,7 @@ export function ReportsPage({
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || user.verificationRequired) {
       setLoading(false);
       return;
     }
@@ -166,6 +167,7 @@ export function ReportsPage({
     setError("");
 
     const filters = {
+      tool: selectedTool || undefined,
       hostname: selectedHostname || undefined,
       from: from || undefined,
       to: to || undefined
@@ -188,7 +190,7 @@ export function ReportsPage({
     return () => {
       active = false;
     };
-  }, [user, selectedHostname, from, to]);
+  }, [user, selectedHostname, selectedTool, from, to]);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -335,14 +337,21 @@ export function ReportsPage({
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => setSelectedHostname("")}
+                onClick={() => { setSelectedHostname(""); setSelectedTool("") }}
                 className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${
-                  selectedHostname === ""
+                  selectedHostname === "" && selectedTool === ""
                     ? "border-slate-950 bg-slate-950 text-white"
                     : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
                 }`}
               >
                 All
+              </button>
+              <button
+                type="button"
+                onClick={() => { setSelectedHostname(""); setSelectedTool((current) => current === "Other" ? "" : "Other") }}
+                className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${selectedTool === "Other" ? "border-slate-950 bg-slate-950 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"}`}
+              >
+                Other
               </button>
               <button
                 type="button"
@@ -355,7 +364,7 @@ export function ReportsPage({
                 <button
                   type="button"
                   key={site.hostname}
-                  onClick={() => setSelectedHostname(site.hostname)}
+                  onClick={() => { setSelectedHostname(site.hostname); setSelectedTool("") }}
                   className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${
                     selectedHostname === site.hostname
                       ? "border-slate-950 bg-slate-950 text-white"

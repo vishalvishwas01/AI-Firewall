@@ -16,6 +16,7 @@ import { requireAccountExperience, requireFeature } from "../featureFlags/featur
 import { generateLogsPdf } from "./report.service.js"
 import { syncedLogsCollection } from "../../models/syncedLog.js"
 import { ValidationError } from "../../shared/errors.js"
+import { requireVerifiedIdentity } from "../../middleware/verifiedIdentity.js"
 
 const router = Router()
 
@@ -45,6 +46,7 @@ const buildLogQuery = (req: AuthenticatedRequest, includeLimit: boolean) => {
 }
 
 router.use(requireAuth)
+router.use(requireVerifiedIdentity)
 
 router.get("/summary", requireAccountExperience, requireFeature("reports"), async (req: AuthenticatedRequest, res, next) => {
   try {

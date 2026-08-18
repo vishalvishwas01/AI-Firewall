@@ -45,6 +45,7 @@ export const createGoogleUser = async (
     platformRole: "user",
     ...(name ? { name } : {}),
     authProviders: ["google"],
+    emailVerifiedAt: now,
     createdAt: now,
     updatedAt: now,
   });

@@ -2,7 +2,6 @@ import type { ObjectId } from "mongodb"
 import { getRedisClient } from "../../db/redis.js"
 
 export type HelpDeskDraft = { subject: string; message: string }
-const fallbackDrafts = new Map<string, HelpDeskDraft>()
 const keyFor = (adminId: ObjectId, userId: ObjectId) => `hallguard:admin:help-desk:draft:${adminId.toHexString()}:${userId.toHexString()}`
 
 export const getHelpDeskDraft = async (adminId: ObjectId, userId: ObjectId): Promise<HelpDeskDraft> => {
@@ -15,17 +14,16 @@ export const getHelpDeskDraft = async (adminId: ObjectId, userId: ObjectId): Pro
       return { subject: typeof value.subject === "string" ? value.subject : "", message: typeof value.message === "string" ? value.message : "" }
     } catch { return { subject: "", message: "" } }
   }
-  return fallbackDrafts.get(key) ?? { subject: "", message: "" }
+  return { subject: "", message: "" }
 }
 
 export const saveHelpDeskDraft = async (adminId: ObjectId, userId: ObjectId, draft: HelpDeskDraft) => {
   const key = keyFor(adminId, userId)
   const redis = await getRedisClient()
+  if (!redis) throw new Error("Upstash Redis is not configured")
   if (!draft.subject && !draft.message) {
-    fallbackDrafts.delete(key)
-    if (redis) await redis.del(key)
+    await redis.del(key)
     return
   }
-  fallbackDrafts.set(key, draft)
-  if (redis) await redis.set(key, JSON.stringify(draft), { EX: 30 * 24 * 60 * 60 })
+  await redis.set(key, JSON.stringify(draft), { ex: 30 * 24 * 60 * 60 })
 }

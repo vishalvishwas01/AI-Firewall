@@ -4,7 +4,7 @@ import type { AccountType, AuthResponse, SessionUser } from "./types"
 const parseAccountType = (value: unknown): AccountType => value === "enterprise" ? "enterprise" : "individual"
 
 export const parseSessionUser = (value: unknown): SessionUser => {
-  const input = object(value, ["id", "email", "accountType", "teamAccess", "hasPassword"], ["name", "companyName", "platformRole"])
+  const input = object(value, ["id", "email", "accountType", "teamAccess", "hasPassword"], ["name", "companyName", "platformRole", "verificationRequired", "verificationReason", "authProviders"])
   return {
     id: nonEmptyString(input.id, 64),
     email: nonEmptyString(input.email, 320),
@@ -14,6 +14,9 @@ export const parseSessionUser = (value: unknown): SessionUser => {
     ...(typeof input.companyName === "string" ? { companyName: input.companyName } : {}),
     hasPassword: boolean(input.hasPassword),
     teamAccess: input.accountType === "enterprise" && input.teamAccess === true,
+    verificationRequired: input.verificationRequired === true,
+    ...(input.verificationReason === "signup" || input.verificationReason === "admin" ? { verificationReason: input.verificationReason } : {}),
+    authProviders: Array.isArray(input.authProviders) ? input.authProviders.filter((item): item is "password" | "google" => item === "password" || item === "google") : [],
   }
 }
 

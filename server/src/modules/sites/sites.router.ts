@@ -3,6 +3,7 @@ import { Router } from "express"
 
 import { getDb } from "../../db/mongo.js"
 import { requireAuth, type AuthenticatedRequest } from "../../middleware/auth.js"
+import { requireVerifiedIdentity } from "../../middleware/verifiedIdentity.js"
 import { sendJson, validateNoQuery } from "../../shared/validation.js"
 import { ensureDefaultSites, findOwnedSite, hasInheritedSitePolicy, loadVisibleSiteData, softDeleteSite, upsertPersonalSite } from "./sites.repository.js"
 import { isSiteInput, parseSiteInput, routeParam } from "./sites.schemas.js"
@@ -12,6 +13,7 @@ import { requireAccountExperience, requireFeature } from "../featureFlags/featur
 const router = Router()
 
 router.use(requireAuth)
+router.use(requireVerifiedIdentity)
 router.use(requireAccountExperience)
 router.use(requireFeature("reports"))
 router.use(validateNoQuery)

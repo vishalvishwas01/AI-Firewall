@@ -13,6 +13,17 @@ export type UserDocument = {
   name?: string
   companyName?: string
   authProviders: ("password" | "google")[]
+  emailVerifiedAt?: Date
+  verificationRequiredAt?: Date
+  verificationReason?: "signup" | "admin"
+  identityVerification?: {
+    nonce: string
+    codeHash: string
+    requestedAt: Date
+    expiresAt: Date
+    resendAvailableAt: Date
+    attempts: number
+  }
   createdAt: Date
   updatedAt: Date
 }
@@ -25,4 +36,5 @@ export const ensureUserIndexes = async (db: Db) => {
   await users.updateMany({ platformRole: { $exists: false } }, { $set: { platformRole: "user" } })
   await users.createIndex({ email: 1 }, { unique: true })
   await users.createIndex({ googleId: 1 }, { unique: true, sparse: true })
+  await users.createIndex({ verificationRequiredAt: 1 })
 }

@@ -23,6 +23,9 @@ export class AuthorizationError extends HttpError {
 export class NotFoundError extends HttpError {
   constructor(message = "Resource not found") { super(404, "not_found", message) }
 }
+export class EmailNotFoundError extends HttpError {
+  constructor() { super(404, "email_not_found", "This email does not exist in HallGuard") }
+}
 export class ConflictError extends HttpError {
   constructor(message = "Request conflicts with current state") { super(409, "conflict", message) }
 }

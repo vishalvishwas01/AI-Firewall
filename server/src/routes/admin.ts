@@ -4,7 +4,7 @@ import { detectionBenchmarkSnapshot } from "../data/detectionBenchmarkSnapshot.j
 import { getDb } from "../db/mongo.js"
 import { requireAuth, requireSuperAdmin, type AuthenticatedRequest } from "../middleware/auth.js"
 import { organizationMembersCollection } from "../models/organization.js"
-import { sendJson, validateNoQuery } from "../shared/validation.js"
+import { exactObject, sendJson, validateNoQuery } from "../shared/validation.js"
 import { featureFlagsCollection } from "../modules/featureFlags/featureFlags.js"
 import { getAllFeatures } from "../modules/featureFlags/featureFlags.service.js"
 import { parseFeatureKey, parseFeatureUpdate } from "../modules/featureFlags/featureFlags.schemas.js"
@@ -16,10 +16,41 @@ import { parseHelpDeskDraft, parseHelpDeskReply } from "../modules/support/suppo
 import { getHelpDeskDraft, saveHelpDeskDraft } from "../modules/support/helpDeskDrafts.js"
 import { sendHelpDeskReplyEmail } from "../shared/email.js"
 import { validateNoBody } from "../shared/validation.js"
+import { startVerificationCampaign, listVerificationCampaigns } from "../modules/auth/verificationAdmin.service.js"
+import { adminLoginActivity, type AdminLoginActivityFilters } from "../modules/auth/loginActivityAdmin.service.js"
 
 const router = Router()
 
 router.use(requireAuth)
+
+router.get("/login-activity", requireSuperAdmin, validateNoBody, async (req, res, next) => {
+  try {
+    const allowedQuery = new Set(["email", "accountType", "authMethod", "outcome", "days", "ipAddress"])
+    if (Object.keys(req.query).some((key) => !allowedQuery.has(key)) || Object.values(req.query).some((value) => typeof value !== "string")) throw new ValidationError("Invalid login activity filters")
+    const scalar = (value: unknown) => typeof value === "string" ? value.trim() : ""
+    const email = scalar(req.query.email)
+    const accountTypeValue = scalar(req.query.accountType)
+    const authMethodValue = scalar(req.query.authMethod)
+    const outcomeValue = scalar(req.query.outcome)
+    const daysValue = scalar(req.query.days)
+    const ipAddress = scalar(req.query.ipAddress)
+    if (email.length > 180 || ipAddress.length > 64) throw new ValidationError("Login activity filter is too long")
+    if (accountTypeValue && accountTypeValue !== "individual" && accountTypeValue !== "enterprise") throw new ValidationError("Invalid account type filter")
+    if (authMethodValue && authMethodValue !== "password" && authMethodValue !== "google") throw new ValidationError("Invalid sign-in method filter")
+    if (outcomeValue && outcomeValue !== "success" && outcomeValue !== "failed") throw new ValidationError("Invalid outcome filter")
+    if (daysValue && !["1", "7", "30", "90"].includes(daysValue)) throw new ValidationError("Invalid time filter")
+    const filters: AdminLoginActivityFilters = {
+      ...(email ? { email } : {}),
+      ...(accountTypeValue ? { accountType: accountTypeValue as "individual" | "enterprise" } : {}),
+      ...(authMethodValue ? { authMethod: authMethodValue as "password" | "google" } : {}),
+      ...(outcomeValue ? { outcome: outcomeValue as "success" | "failed" } : {}),
+      ...(daysValue ? { days: Number(daysValue) as 1 | 7 | 30 | 90 } : {}),
+      ...(ipAddress ? { ipAddress } : {})
+    }
+    sendJson(res, ["users", "anonymousAttempts"], await adminLoginActivity(await getDb(), filters))
+  } catch (error) { next(error) }
+})
+
 router.use(validateNoQuery)
 
 router.get("/benchmark", requireAccountExperience, requireFeature("trust-dashboard"), async (req: AuthenticatedRequest, res, next) => {
@@ -104,6 +135,22 @@ router.patch("/features/:key", requireSuperAdmin, async (req: AuthenticatedReque
   } catch (error) {
     next(error)
   }
+})
+
+router.get("/verification-campaigns", requireSuperAdmin, async (_req, res, next) => {
+  try { sendJson(res, ["campaigns"], { campaigns: await listVerificationCampaigns(await getDb()) }) } catch (error) { next(error) }
+})
+
+router.post("/verification-campaigns", requireSuperAdmin, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    if (!req.user) throw new Error("Authenticated user missing")
+    const input = exactObject(req.body, ["providerScope", "accountScope"], "Invalid verification campaign")
+    const providerScope = input.providerScope === "password" || input.providerScope === "google" || input.providerScope === "both" ? input.providerScope : undefined
+    const accountScope = input.accountScope === "individual" || input.accountScope === "enterprise" || input.accountScope === "both" ? input.accountScope : undefined
+    if (!providerScope || !accountScope) throw new ValidationError("Choose valid provider and account filters")
+    const campaign = await startVerificationCampaign(await getDb(), { createdBy: req.user.id, providerScope, accountScope })
+    sendJson(res.status(201), ["campaign"], { campaign: { ...campaign, createdAt: campaign.createdAt.toISOString() } })
+  } catch (error) { next(error) }
 })
 
 const helpDeskMessageDto = (item: HelpDeskDocument) => ({

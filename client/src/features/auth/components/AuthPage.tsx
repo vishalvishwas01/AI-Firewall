@@ -197,7 +197,10 @@ export function AuthPage({
         : await login(selectedAccountType, email, password);
       onAuthenticated(response.user);
       if (isExtensionAuthFlow()) await sendSessionToExtension(response.token);
-      if (!inviteToken) redirectAfterAuthentication();
+      if (isSignup && response.user.verificationRequired) {
+        window.history.replaceState({}, "", "/verify-email");
+        window.dispatchEvent(new Event("popstate"));
+      } else if (!inviteToken) redirectAfterAuthentication();
     } catch (authError) {
       setError(
         authError instanceof Error
@@ -595,6 +598,7 @@ export function AuthPage({
                       {isSignup ? "Login" : "Sign up"}
                     </a>
                   </p>
+                  {!isSignup ? <p className="text-center text-sm"><a href="/forgot-password" className="font-semibold text-[#087f78] underline-offset-4 hover:underline">Forgot password?</a></p> : null}
                 </form>
                 </>}
               </>

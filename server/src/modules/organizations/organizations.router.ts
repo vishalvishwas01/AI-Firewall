@@ -18,6 +18,7 @@ import { toPublicMember, toPublicOrganization, toPublicSitePolicy } from "./orga
 import { assertAllowedQuery } from "../../shared/validation.js"
 import { pendingInvitationRevocationFilter } from "../../models/organization.js"
 import { requireAccountExperience, requireFeature } from "../featureFlags/featureFlags.middleware.js"
+import { requireVerifiedIdentity } from "../../middleware/verifiedIdentity.js"
 
 const router = Router()
 
@@ -137,6 +138,7 @@ const buildOrganizationTrends = async (organizationId: ObjectId, days: Organizat
 }
 
 router.use(requireAuth)
+router.use(requireVerifiedIdentity)
 router.use(requireAccountExperience)
 router.use(requireFeature("organization-management"))
 router.use((req, _res, next) => {

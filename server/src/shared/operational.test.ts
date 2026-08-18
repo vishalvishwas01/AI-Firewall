@@ -3,10 +3,12 @@ import assert from "node:assert/strict"
 
 import { authRateLimiter, createRateLimiter, requestIdMiddleware } from "./operational.js"
 
-const request = (headers: Record<string, string> = {}) => ({
+const request = (headers: Record<string, string> = {}, method = "POST", path = "/login") => ({
   headers,
   header(name: string) { return headers[name.toLowerCase()] },
-  ip: "127.0.0.1"
+  ip: "127.0.0.1",
+  method,
+  path
 }) as any
 
 const response = () => {
@@ -48,8 +50,18 @@ test("rate limiter bounds repeated requests and emits retry metadata", () => {
 test("authentication limiter is bounded independently from the global limiter", () => {
   const req = request()
   let status = 200
-  for (let attempt = 0; attempt < 21; attempt += 1) {
+  for (let attempt = 0; attempt < 101; attempt += 1) {
     const res = response(); authRateLimiter(req, res, () => undefined); status = res.statusCode
   }
   assert.equal(status, 429)
+})
+
+test("authentication limiter keeps login and session traffic in separate buckets", () => {
+  const loginRequest = request({}, "POST", "/login")
+  for (let attempt = 0; attempt < 100; attempt += 1) authRateLimiter(loginRequest, response(), () => undefined)
+  const sessionResponse = response()
+  let called = false
+  authRateLimiter(request({}, "GET", "/session"), sessionResponse, () => { called = true })
+  assert.equal(called, true)
+  assert.equal(sessionResponse.statusCode, 200)
 })

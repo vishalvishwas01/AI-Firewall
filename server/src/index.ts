@@ -27,10 +27,13 @@ import { safeErrorLog } from "./shared/errors.js"
 import { featureConfigRouter } from "./modules/featureFlags/featureFlags.routes.js"
 import { ensureFeatureFlagIndexes } from "./modules/featureFlags/featureFlags.js"
 import { ensureHelpDeskIndexes } from "./models/helpDesk.js"
+import { ensureVerificationCampaignIndexes } from "./models/verificationCampaign.js"
+import { ensurePasswordResetIndexes } from "./models/passwordReset.js"
+import { ensureLoginActivityIndexes } from "./models/loginActivity.js"
 import { supportRouter } from "./modules/support/support.routes.js"
-import { closeRedisClient } from "./db/redis.js"
 
 const app = express()
+if (env.trustProxyHops > 0) app.set("trust proxy", env.trustProxyHops)
 
 const allowedOrigins = [
   env.clientOrigin,
@@ -104,6 +107,9 @@ await ensureImprovementTelemetryIndexes(db)
 await ensureIntelligencePackageIndexes(db)
 await ensureFeatureFlagIndexes(db)
 await ensureHelpDeskIndexes(db)
+await ensureVerificationCampaignIndexes(db)
+await ensurePasswordResetIndexes(db)
+await ensureLoginActivityIndexes(db)
 ready = true
 
 const retentionTimer = setInterval(async () => {
@@ -127,7 +133,6 @@ const shutdown = async (signal: string) => {
   clearInterval(retentionTimer)
   await new Promise<void>((resolve) => server.close(() => resolve()))
   await closeMongoClient()
-  await closeRedisClient()
   console.log(JSON.stringify({ event: "server_stopped", signal }))
 }
 

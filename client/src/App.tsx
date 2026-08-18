@@ -12,6 +12,8 @@ import { AdminPage } from "./features/admin/components/AdminPage";
 import { AccountExperienceBoundary, FeatureBoundary } from "./features/featureFlags/components/FeatureBoundary";
 import { HelpPage } from "./features/profile/components/HelpPage";
 import { SettingsPage } from "./features/profile/components/SettingsPage";
+import { EmailVerificationPage, VerificationPrompt } from "./features/auth/components/EmailVerificationPage";
+import { ForgotPasswordPage } from "./features/auth/components/ForgotPasswordPage";
 
 function App() {
   const [user, setUser] = useState<SessionUser | null>(null);
@@ -25,6 +27,8 @@ function App() {
   const isAdmin = path === "/admin";
   const isHelp = path === "/help";
   const isSettings = path === "/settings";
+  const isVerification = path === "/verify-email";
+  const isForgotPassword = path === "/forgot-password";
   const isGoogleAuthSuccess = path === "/auth/google/success";
 
   useEffect(() => {
@@ -35,6 +39,14 @@ function App() {
       .finally(() => { if (active) setSessionLoading(false); });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const timer = window.setInterval(() => {
+      getSession().then(({ user: sessionUser }) => setUser(sessionUser)).catch(() => undefined);
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!isGoogleAuthSuccess || sessionLoading) return;
@@ -72,6 +84,24 @@ function App() {
   }, [isTeam, sessionLoading, user]);
 
   useEffect(() => {
+    if (sessionLoading || !isVerification || user) return;
+    window.history.replaceState({}, "", "/login");
+    setPath("/login");
+  }, [isVerification, sessionLoading, user]);
+
+  useEffect(() => {
+    if (sessionLoading || !isVerification || !user || user.verificationRequired) return;
+    window.history.replaceState({}, "", "/reports");
+    setPath("/reports");
+  }, [isVerification, sessionLoading, user]);
+
+  useEffect(() => {
+    if (sessionLoading || !user?.verificationRequired || user.verificationReason !== "signup" || isVerification || authMode) return;
+    window.history.replaceState({}, "", "/verify-email");
+    setPath("/verify-email");
+  }, [authMode, isVerification, sessionLoading, user]);
+
+  useEffect(() => {
     if (sessionLoading || !isAdmin || user) return;
     window.sessionStorage.setItem(authRedirectKey, "/admin");
     window.history.replaceState({}, "", "/login");
@@ -93,6 +123,13 @@ function App() {
   };
 
   if (authMode) return <main className="min-h-screen bg-[#faf9f6] text-[#1a1c1a]"><AuthPage mode={authMode} user={user} onAuthenticated={setUser} /></main>;
+
+  if (isForgotPassword) return <ForgotPasswordPage />;
+
+  if (isVerification) {
+    if (sessionLoading || !user) return null;
+    return <PageFrame user={user} sessionLoading={false} onLogout={handleLogout} identityGate={false}><EmailVerificationPage user={user} onVerified={setUser} /></PageFrame>;
+  }
 
   if (isReports) return <PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout}><AccountExperienceBoundary user={user}><FeatureBoundary featureKey="reports" user={user}><ReportsPage user={user} sessionLoading={sessionLoading} /></FeatureBoundary></AccountExperienceBoundary></PageFrame>;
 
@@ -124,16 +161,17 @@ function App() {
   return <PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout} warm footer>{user ? <AccountExperienceBoundary user={user}><HomePage /></AccountExperienceBoundary> : <HomePage />}</PageFrame>;
 }
 
-function PageFrame({ user, sessionLoading, onLogout, footer = false, warm = false, children }: { user: SessionUser | null; sessionLoading: boolean; onLogout: () => Promise<void>; footer?: boolean; warm?: boolean; children: ReactNode }) {
+function PageFrame({ user, sessionLoading, onLogout, footer = false, warm = false, identityGate = true, children }: { user: SessionUser | null; sessionLoading: boolean; onLogout: () => Promise<void>; footer?: boolean; warm?: boolean; identityGate?: boolean; children: ReactNode }) {
   return <main className={`min-h-screen ${warm ? "bg-[#faf9f6] text-[#1a1c1a]" : "bg-slate-50 text-slate-950"}`}>
     <SiteHeader user={user} sessionLoading={sessionLoading} onLogout={onLogout} />
     {children}
+    {identityGate && user?.verificationRequired && user.verificationReason === "admin" ? <VerificationPrompt user={user} /> : null}
     {footer ? <SiteFooter /> : null}
   </main>;
 }
 
 function PrivacyPolicyPage() {
-  return <section id="page-content" tabIndex={-1} className="px-6 py-20 outline-none sm:px-8 lg:px-10"><div className="mx-auto max-w-4xl"><p className="font-[Geist] text-xs font-semibold uppercase tracking-[0.14em] text-[#65645e]">Privacy</p><h1 className="mt-4 font-[Manrope] text-4xl font-semibold tracking-[-0.025em] text-[#33312b]">Your sensitive text stays out of synced reports.</h1><p className="mt-5 text-base leading-7 text-[#4a463f]">HallGuard is designed around local-first detection and optional, redacted account-backed reporting.</p></div></section>;
+  return <section id="page-content" tabIndex={-1} className="px-6 py-20 outline-none sm:px-8 lg:px-10"><div className="mx-auto max-w-4xl"><p className="font-[Geist] text-xs font-semibold uppercase tracking-[0.14em] text-[#65645e]">Privacy</p><h1 className="mt-4 font-[Manrope] text-4xl font-semibold tracking-[-0.025em] text-[#33312b]">Your sensitive text stays out of synced reports.</h1><p className="mt-5 text-base leading-7 text-[#4a463f]">HallGuard is designed around local-first detection and optional, redacted account-backed reporting.</p><div className="mt-8 rounded-2xl border border-[#d6d0c6] bg-white p-6"><h2 className="font-[Manrope] text-xl font-semibold text-[#33312b]">Login security history</h2><p className="mt-3 text-sm leading-6 text-[#65645e]">To help identify unauthorized access, HallGuard records login time, success or failure, sign-in method, backend-observed IP address, browser, operating system, and optionally coarse IP-derived location. This security history is stored separately from AI detection logs and automatically deleted after the configured retention period.</p></div></div></section>;
 }
 
 function SiteFooter() {

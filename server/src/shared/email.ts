@@ -1,7 +1,5 @@
 import { env } from "../config/env.js"
-
-const escapeHtml = (value: string) =>
-  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;")
+import { emailTemplateValues, escapeEmailHtml, getInlineEmailLogo, renderEmailTemplate } from "./emailTemplates.js"
 
 export const sendOrganizationInvitationEmail = async (input: {
   to: string
@@ -17,9 +15,9 @@ export const sendOrganizationInvitationEmail = async (input: {
     throw new Error("Transactional email is not configured")
   }
 
-  const organizationName = escapeHtml(input.organizationName)
-  const role = escapeHtml(input.role)
-  const invitationUrl = escapeHtml(input.invitationUrl)
+  const organizationName = escapeEmailHtml(input.organizationName)
+  const role = escapeEmailHtml(input.role)
+  const invitationUrl = escapeEmailHtml(input.invitationUrl)
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -50,8 +48,8 @@ export const sendHelpDeskReplyEmail = async (input: { to: string; name?: string;
     throw new Error("Transactional email is not configured")
   }
 
-  const greeting = input.name ? `Hi ${escapeHtml(input.name)},` : "Hello,"
-  const message = escapeHtml(input.message).replace(/\n/g, "<br>")
+  const message = escapeEmailHtml(input.message).replace(/\n/g, "<br>")
+  const inlineLogo = getInlineEmailLogo()
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${env.resendApiKey}`, "Content-Type": "application/json" },
@@ -59,11 +57,58 @@ export const sendHelpDeskReplyEmail = async (input: { to: string; name?: string;
       from: env.emailFrom,
       to: [input.to],
       subject: input.subject,
-      html: `<!doctype html><html><body style="font-family:Arial,sans-serif;line-height:1.65;color:#24241f"><p>${greeting}</p><p>${message}</p><p>Regards,<br><strong>HallGuard Support</strong></p></body></html>`
+      html: renderEmailTemplate("help-desk-reply.html", emailTemplateValues({ SUBJECT: escapeEmailHtml(input.subject), HEADING: escapeEmailHtml(input.subject), NAME: escapeEmailHtml(input.name || "there"), MESSAGE: message, ...(inlineLogo ? { LOGO_URL: inlineLogo.source } : {}) })),
+      ...(inlineLogo ? { attachments: [inlineLogo.attachment] } : {})
     })
   })
   if (!response.ok) {
     const body = await response.text()
     throw new Error(`Help desk email failed: ${response.status} ${body.slice(0, 300)}`)
   }
+}
+
+export const sendEmailVerificationOtp = async (input: { to: string; name?: string; code: string }) => {
+  if (!env.resendApiKey || !env.emailFrom) {
+    if (env.nodeEnv !== "production") {
+      console.warn(JSON.stringify({ event: "verification_email_not_configured", to: input.to }))
+      return
+    }
+    throw new Error("Transactional email is not configured")
+  }
+  const inlineLogo = getInlineEmailLogo()
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.resendApiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: env.emailFrom,
+      to: [input.to],
+      subject: `${input.code} is your HallGuard verification code`,
+      html: renderEmailTemplate("email-verification.html", emailTemplateValues({ NAME: escapeEmailHtml(input.name || "there"), OTP_CODE: escapeEmailHtml(input.code), ...(inlineLogo ? { LOGO_URL: inlineLogo.source } : {}) })),
+      ...(inlineLogo ? { attachments: [inlineLogo.attachment] } : {})
+    })
+  })
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(`Verification email failed: ${response.status} ${body.slice(0, 300)}`)
+  }
+}
+
+export const sendPasswordResetOtp = async (input: { to: string; name?: string; code: string }) => {
+  if (!env.resendApiKey || !env.emailFrom) {
+    if (env.nodeEnv !== "production") { console.warn(JSON.stringify({ event: "password_reset_email_not_configured", to: input.to })); return }
+    throw new Error("Transactional email is not configured")
+  }
+  const inlineLogo = getInlineEmailLogo()
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.resendApiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: env.emailFrom,
+      to: [input.to],
+      subject: `${input.code} is your HallGuard password reset code`,
+      html: renderEmailTemplate("forgot-password.html", emailTemplateValues({ NAME: escapeEmailHtml(input.name || "there"), OTP_CODE: escapeEmailHtml(input.code), ...(inlineLogo ? { LOGO_URL: inlineLogo.source } : {}) })),
+      ...(inlineLogo ? { attachments: [inlineLogo.attachment] } : {})
+    })
+  })
+  if (!response.ok) { const body = await response.text(); throw new Error(`Password reset email failed: ${response.status} ${body.slice(0, 300)}`) }
 }

@@ -26,6 +26,9 @@ export const publicUser = async (db: Db, user: UserDocument) => ({
   ...(user.companyName ? { companyName: user.companyName } : {}),
   hasPassword: Boolean(user.passwordHash),
   teamAccess: await hasTeamAccess(db, user),
+  verificationRequired: user.platformRole !== "super_admin" && Boolean(user.verificationRequiredAt && (!user.emailVerifiedAt || user.verificationRequiredAt > user.emailVerifiedAt)),
+  ...(user.verificationRequiredAt && (!user.emailVerifiedAt || user.verificationRequiredAt > user.emailVerifiedAt) && user.verificationReason ? { verificationReason: user.verificationReason } : {}),
+  authProviders: user.authProviders ?? [],
 });
 
 export const updateUserName = async (db: Db, user: UserDocument, name: string) => {

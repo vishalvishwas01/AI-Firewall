@@ -2,12 +2,14 @@ import { ResponseValidationError } from "./schema"
 
 export const apiBaseUrl = import.meta.env?.VITE_API_BASE_URL ?? "http://localhost:4000"
 export type ResponseSchema<T> = (value: unknown) => T
-export type TransportErrorCode = "validation_error" | "invalid_current_password" | "authentication_required" | "access_denied" | "not_found" | "conflict" | "email_already_exists" | "no_logs_available" | "payload_too_large" | "rate_limited" | "feature_unavailable" | "request_error" | "internal_error" | "network_error" | "invalid_response"
+export type TransportErrorCode = "validation_error" | "invalid_current_password" | "invalid_credentials" | "email_not_found" | "authentication_required" | "access_denied" | "not_found" | "conflict" | "email_already_exists" | "no_logs_available" | "payload_too_large" | "rate_limited" | "feature_unavailable" | "request_error" | "internal_error" | "network_error" | "invalid_response"
 
-const knownCodes = new Set<TransportErrorCode>(["validation_error", "invalid_current_password", "authentication_required", "access_denied", "not_found", "conflict", "email_already_exists", "no_logs_available", "payload_too_large", "rate_limited", "feature_unavailable", "request_error", "internal_error"])
+const knownCodes = new Set<TransportErrorCode>(["validation_error", "invalid_current_password", "invalid_credentials", "email_not_found", "authentication_required", "access_denied", "not_found", "conflict", "email_already_exists", "no_logs_available", "payload_too_large", "rate_limited", "feature_unavailable", "request_error", "internal_error"])
 const safeMessage = (code: TransportErrorCode) => ({
   validation_error: "Check the submitted information and try again.",
   invalid_current_password: "The current password is incorrect.",
+  invalid_credentials: "Email or password is incorrect.",
+  email_not_found: "This email does not exist in HallGuard.",
   authentication_required: "Your session has expired. Please sign in again.",
   access_denied: "You do not have permission to access this resource.",
   not_found: "The requested resource could not be found.",

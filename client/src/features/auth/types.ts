@@ -8,5 +8,8 @@ export type SessionUser = {
   companyName?: string
   hasPassword: boolean
   teamAccess: boolean
+  verificationRequired: boolean
+  verificationReason?: "signup" | "admin"
+  authProviders: ("password" | "google")[]
 }
 export type AuthResponse = { user: SessionUser; token: string }

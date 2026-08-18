@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
 import type { HelpDeskDraft, HelpDeskThread } from "./types"
 
-type AdminSection = "features" | "help-desk"
+export type AdminSection = "features" | "help-desk" | "verification" | "login-activity"
 type HelpDeskState = {
   section: AdminSection
   sidebarOpen: boolean

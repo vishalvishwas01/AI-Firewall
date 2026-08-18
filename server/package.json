@@ -16,6 +16,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@upstash/redis": "^1.38.2",
     "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
@@ -27,16 +28,15 @@
     "mongodb": "^7.4.0",
     "mongosh": "^2.8.3",
     "nunjucks": "^3.2.4",
-    "puppeteer": "^24.16.0",
-    "redis": "^6.0.1"
+    "puppeteer": "^24.16.0"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/nunjucks": "^3.2.6",
     "@types/node": "^26.0.1",
+    "@types/nunjucks": "^3.2.6",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
