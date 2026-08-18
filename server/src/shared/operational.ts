@@ -3,6 +3,7 @@ import type { Request, RequestHandler } from "express"
 
 import { sendJson } from "./validation.js"
 import { env } from "../config/env.js"
+import { logRequestEvent } from "./serverLogger.js"
 
 declare module "express-serve-static-core" {
   interface Request {
@@ -21,17 +22,8 @@ export const requestIdMiddleware: RequestHandler = (req, res, next) => {
 }
 
 export const structuredRequestLogger: RequestHandler = (req, res, next) => {
-  const startedAt = Date.now()
-  const routeFamily = req.path.split("/").filter(Boolean)[0] ?? "root"
   res.once("finish", () => {
-    console.log(JSON.stringify({
-      event: "http_request",
-      requestId: req.requestId,
-      method: req.method,
-      route: routeFamily,
-      status: res.statusCode,
-      durationMs: Date.now() - startedAt
-    }))
+    if (res.statusCode >= 400) logRequestEvent(req, res.statusCode)
   })
   next()
 }

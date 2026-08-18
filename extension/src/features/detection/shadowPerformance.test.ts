@@ -29,12 +29,6 @@ describe("E6 isolated shadow performance", () => {
     const shortP95 = percentile(shortTimings, 0.95)
     const longP50 = percentile(longTimings, 0.5)
     const longP95 = percentile(longTimings, 0.95)
-    console.log(JSON.stringify({
-      tenKiBP50Ms: shortP50,
-      tenKiBP95Ms: shortP95,
-      hundredKiBP50Ms: longP50,
-      hundredKiBP95Ms: longP95
-    }))
     expect(shortP50).toBeLessThanOrEqual(shortP95)
     expect(longP50).toBeLessThanOrEqual(longP95)
     expect(shortP95).toBeLessThan(10)

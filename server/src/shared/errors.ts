@@ -1,4 +1,5 @@
 import type { ErrorRequestHandler, RequestHandler } from "express"
+import { logServerEvent } from "./serverLogger.js"
 
 export class HttpError extends Error {
   constructor(
@@ -51,7 +52,9 @@ export const safeErrorLog = (error: unknown) => error instanceof HttpError
 
 export const errorBoundary: ErrorRequestHandler = (error, req, res, _next) => {
   const known = normalizedHttpError(error)
-  console.error(JSON.stringify({ event: "request_failed", requestId: req.requestId, ...safeErrorLog(error) }))
+  const details = safeErrorLog(error)
+  req.serverLogErrorLogged = true
+  logServerEvent(details.code === "internal_error" ? "error" : "warn", req.path.startsWith("/admin") ? "security" : req.path.startsWith("/auth") ? "auth" : "http", details.name, { requestId: req.requestId, status: details.status, code: details.code, method: req.method, path: req.path, ipAddress: req.ip })
   res.status(known?.status ?? 500).json({
     error: known?.message ?? "Internal server error",
     code: known?.code ?? "internal_error"

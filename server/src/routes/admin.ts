@@ -18,10 +18,29 @@ import { sendHelpDeskReplyEmail } from "../shared/email.js"
 import { validateNoBody } from "../shared/validation.js"
 import { startVerificationCampaign, listVerificationCampaigns } from "../modules/auth/verificationAdmin.service.js"
 import { adminLoginActivity, type AdminLoginActivityFilters } from "../modules/auth/loginActivityAdmin.service.js"
+import { listServerLogs, type ServerLogFilters } from "../modules/admin/serverLogs.service.js"
 
 const router = Router()
 
 router.use(requireAuth)
+
+router.get("/server-logs", requireSuperAdmin, validateNoBody, async (req, res, next) => {
+  try {
+    const allowedQuery = new Set(["from", "to", "level", "category", "search"])
+    if (Object.keys(req.query).some((key) => !allowedQuery.has(key)) || Object.values(req.query).some((value) => typeof value !== "string")) throw new ValidationError("Invalid server log filters")
+    const scalar = (value: unknown) => typeof value === "string" ? value.trim() : ""
+    const fromValue = scalar(req.query.from); const toValue = scalar(req.query.to)
+    const from = fromValue ? new Date(`${fromValue}T00:00:00.000Z`) : undefined
+    const to = toValue ? new Date(`${toValue}T23:59:59.999Z`) : undefined
+    if ((fromValue && Number.isNaN(from!.getTime())) || (toValue && Number.isNaN(to!.getTime())) || (from && to && from > to)) throw new ValidationError("Invalid server log date range")
+    const level = scalar(req.query.level); const category = scalar(req.query.category); const search = scalar(req.query.search)
+    if (level && !["error", "warn", "security", "info"].includes(level)) throw new ValidationError("Invalid server log level")
+    if (category && !["http", "auth", "email", "system", "security", "database"].includes(category)) throw new ValidationError("Invalid server log category")
+    if (search.length > 180) throw new ValidationError("Server log search is too long")
+    const filters: ServerLogFilters = { ...(from ? { from } : {}), ...(to ? { to } : {}), ...(level ? { level: level as ServerLogFilters["level"] } : {}), ...(category ? { category: category as ServerLogFilters["category"] } : {}), ...(search ? { search } : {}) }
+    sendJson(res, ["logs"], { logs: await listServerLogs(await getDb(), filters) })
+  } catch (error) { next(error) }
+})
 
 router.get("/login-activity", requireSuperAdmin, validateNoBody, async (req, res, next) => {
   try {

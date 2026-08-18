@@ -5,6 +5,7 @@ import type { Request } from "express"
 
 import { env } from "../../config/env.js"
 import { anonymousLoginSubject, loginActivityCollection, type LoginActivityEntry } from "../../models/loginActivity.js"
+import { logServerEvent } from "../../shared/serverLogger.js"
 
 type LoginLocation = NonNullable<LoginActivityEntry["location"]>
 const maximumActivities = 100
@@ -81,7 +82,7 @@ export const recordLoginActivity = async (db: Db, req: Request, input: { userId?
       }).catch(() => undefined)
     }
   } catch (error) {
-    console.error(JSON.stringify({ event: "login_activity_write_failed", name: error instanceof Error ? error.name : "UnknownError" }))
+    logServerEvent("error", "database", "Login activity write failed", { name: error instanceof Error ? error.name : "UnknownError" })
   }
 }
 

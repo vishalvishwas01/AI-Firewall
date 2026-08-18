@@ -1,5 +1,5 @@
 import { apiRequest } from "../../lib/http"
-import { array, boolean, isoDate, nonEmptyString, nonNegativeInteger, object, oneOf, string } from "../../lib/schema"
+import { array, boolean, dictionary, isoDate, nonEmptyString, nonNegativeInteger, object, oneOf, string } from "../../lib/schema"
 import type { HelpDeskDraft, HelpDeskMessage, HelpDeskThread } from "./types"
 
 const parseMessage = (value: unknown): HelpDeskMessage => {
@@ -44,5 +44,17 @@ export const getAdminLoginActivity = (filters: AdminLoginActivityFilters) => {
   return apiRequest<{ users: AdminLoginActivityUser[]; anonymousAttempts: number }>(`/admin/login-activity${suffix}`, {}, (value) => {
     const input = object(value, ["users", "anonymousAttempts"])
     return { users: array(input.users, (item) => { const user = object(item, ["documentId", "userId", "name", "email", "accountType", "totalActivities", "lastActivityAt", "activities"]); return { documentId: nonEmptyString(user.documentId, 64), userId: nonEmptyString(user.userId, 64), name: nonEmptyString(user.name, 160), email: nonEmptyString(user.email, 320), accountType: oneOf(user.accountType, ["individual", "enterprise"] as const), totalActivities: nonNegativeInteger(user.totalActivities), lastActivityAt: isoDate(user.lastActivityAt), activities: array(user.activities, parseAdminActivity, 100) } }, 10000), anonymousAttempts: nonNegativeInteger(input.anonymousAttempts) }
+  })
+}
+
+export type ServerLog = { id: string; level: "error" | "warn" | "security" | "info"; category: "http" | "auth" | "email" | "system" | "security" | "database"; message: string; requestId?: string; method?: string; path?: string; statusCode?: number; ipAddress?: string; metadata?: Record<string, unknown>; createdAt: string }
+export type ServerLogFilters = { from: string; to: string; level: "" | "error" | "warn" | "security" | "info"; category: "" | "http" | "auth" | "email" | "system" | "security" | "database"; search: string }
+export const getServerLogs = (filters: ServerLogFilters) => {
+  const query = new URLSearchParams()
+  for (const [key, value] of Object.entries(filters)) if (value.trim()) query.set(key, value.trim())
+  const encodedQuery = query.toString()
+  return apiRequest<{ logs: ServerLog[] }>(`/admin/server-logs${encodedQuery ? `?${encodedQuery}` : ""}`, {}, (value) => {
+    const input = object(value, ["logs"])
+    return { logs: array(input.logs, (item) => { const log = object(item, ["id", "level", "category", "message", "createdAt"], ["requestId", "method", "path", "statusCode", "ipAddress", "metadata"]); return { id: nonEmptyString(log.id, 64), level: oneOf(log.level, ["error", "warn", "security", "info"] as const), category: oneOf(log.category, ["http", "auth", "email", "system", "security", "database"] as const), message: nonEmptyString(log.message, 500), ...(log.requestId === undefined ? {} : { requestId: nonEmptyString(log.requestId, 100) }), ...(log.method === undefined ? {} : { method: nonEmptyString(log.method, 12) }), ...(log.path === undefined ? {} : { path: nonEmptyString(log.path, 300) }), ...(log.statusCode === undefined ? {} : { statusCode: nonNegativeInteger(log.statusCode) }), ...(log.ipAddress === undefined ? {} : { ipAddress: nonEmptyString(log.ipAddress, 64) }), ...(log.metadata === undefined ? {} : { metadata: dictionary(log.metadata) }), createdAt: isoDate(log.createdAt) } }, 5000) }
   })
 }

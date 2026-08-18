@@ -30,7 +30,9 @@ import { ensureHelpDeskIndexes } from "./models/helpDesk.js"
 import { ensureVerificationCampaignIndexes } from "./models/verificationCampaign.js"
 import { ensurePasswordResetIndexes } from "./models/passwordReset.js"
 import { ensureLoginActivityIndexes } from "./models/loginActivity.js"
+import { ensureServerLogIndexes } from "./models/serverLog.js"
 import { supportRouter } from "./modules/support/support.routes.js"
+import { logServerEvent, setServerLoggerDb } from "./shared/serverLogger.js"
 
 const app = express()
 if (env.trustProxyHops > 0) app.set("trust proxy", env.trustProxyHops)
@@ -40,11 +42,8 @@ const allowedOrigins = [
   env.extensionOrigin,
 ].filter(Boolean)
 
-console.log(JSON.stringify({
-  event: "server_configured",
-  clientOriginConfigured: Boolean(env.clientOrigin),
-  extensionOriginConfigured: Boolean(env.extensionOrigin),
-}))
+// Configuration details are available through the admin Server logs screen;
+// they are intentionally not written to stdout in production.
 
 app.use(requestIdMiddleware)
 app.use(structuredRequestLogger)
@@ -110,30 +109,32 @@ await ensureHelpDeskIndexes(db)
 await ensureVerificationCampaignIndexes(db)
 await ensurePasswordResetIndexes(db)
 await ensureLoginActivityIndexes(db)
+await ensureServerLogIndexes(db)
+setServerLoggerDb(db)
 ready = true
 
 const retentionTimer = setInterval(async () => {
   try {
     const result = await runRetentionSweep(db)
     if (result.improvementEventsDeleted > 0) {
-      console.log(JSON.stringify({ event: "retention_sweep", ...result }))
+      if (result.improvementEventsDeleted > 0) logServerEvent("info", "system", "Retention sweep completed", result)
     }
   } catch (error) {
-    console.error(JSON.stringify({ event: "retention_sweep_failed", ...safeErrorLog(error) }))
+    logServerEvent("error", "database", "Retention sweep failed", safeErrorLog(error))
   }
 }, 15 * 60 * 1000)
 retentionTimer.unref()
 
 const server = app.listen(env.port, () => {
-  console.log(JSON.stringify({ event: "server_listening", port: env.port }))
+  logServerEvent("info", "system", "Server listening", { port: env.port })
 })
 
 const shutdown = async (signal: string) => {
   ready = false
   clearInterval(retentionTimer)
+  logServerEvent("info", "system", "Server stopping", { signal })
   await new Promise<void>((resolve) => server.close(() => resolve()))
   await closeMongoClient()
-  console.log(JSON.stringify({ event: "server_stopped", signal }))
 }
 
 process.once("SIGTERM", () => { void shutdown("SIGTERM") })

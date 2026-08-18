@@ -17,6 +17,7 @@ import { issueVerificationOtp, verificationStatus, verifyEmailOtp } from "./emai
 import { exactObject } from "../../shared/validation.js";
 import { completePasswordReset, passwordResetStatus, requestPasswordReset, verifyPasswordResetOtp } from "./passwordReset.service.js";
 import { recordLoginActivity, userLoginActivity } from "./loginActivity.service.js";
+import { logServerEvent } from "../../shared/serverLogger.js";
 
 const accountTypeFromQuery = (value: unknown): UserAccountType => value === "enterprise" ? "enterprise" : "individual";
 const authErrorUrl = (authPath: string, error: string) => `${env.clientOrigin}/${authPath}${authPath.includes("?") ? "&" : "?"}error=${error}`;
@@ -42,7 +43,7 @@ export const signup = async (req: Request, res: Response) => {
   try {
     await issueVerificationOtp(db, verificationUser, true);
   } catch (error) {
-    console.error("Initial verification email failed", error);
+    logServerEvent("error", "email", "Initial verification email failed", { name: error instanceof Error ? error.name : "UnknownError" });
   }
   const token = signAuthToken({ id: result.user._id!, email: result.user.email, accountType: result.user.accountType ?? credentials.accountType });
   res.cookie(authCookieName, token, authCookieOptions);
@@ -213,7 +214,7 @@ export const googleCallback = async (req: Request, res: Response) => {
     res.cookie(authCookieName, token, authCookieOptions);
     res.redirect(`${env.clientOrigin}/auth/google/success`);
   } catch (error) {
-    console.error("Google OAuth callback failed", error);
+    logServerEvent("error", "auth", "Google OAuth callback failed", { name: error instanceof Error ? error.name : "UnknownError", ipAddress: req.ip });
     await recordLoginActivity(await getDb(), req, { ...(activityUserId ? { userId: activityUserId } : {}), authMethod: "google", success: false, failureReason: "google_oauth_failed" });
     res.redirect(`${env.clientOrigin}/login?error=google_oauth_failed`);
   }

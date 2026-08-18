@@ -1,5 +1,6 @@
 import { env } from "../config/env.js"
 import { emailTemplateValues, escapeEmailHtml, getInlineEmailLogo, renderEmailTemplate } from "./emailTemplates.js"
+import { logServerEvent } from "./serverLogger.js"
 
 export const sendOrganizationInvitationEmail = async (input: {
   to: string
@@ -9,7 +10,7 @@ export const sendOrganizationInvitationEmail = async (input: {
 }) => {
   if (!env.resendApiKey || !env.emailFrom) {
     if (env.nodeEnv !== "production") {
-      console.warn(JSON.stringify({ event: "organization_invitation_email_not_configured", to: input.to, invitationUrl: input.invitationUrl }))
+      logServerEvent("warn", "email", "Organization invitation email is not configured", { to: input.to })
       return
     }
     throw new Error("Transactional email is not configured")
@@ -42,7 +43,7 @@ export const sendOrganizationInvitationEmail = async (input: {
 export const sendHelpDeskReplyEmail = async (input: { to: string; name?: string; subject: string; message: string }) => {
   if (!env.resendApiKey || !env.emailFrom) {
     if (env.nodeEnv !== "production") {
-      console.warn(JSON.stringify({ event: "help_desk_email_not_configured", to: input.to }))
+      logServerEvent("warn", "email", "Help desk email is not configured", { to: input.to })
       return
     }
     throw new Error("Transactional email is not configured")
@@ -70,7 +71,7 @@ export const sendHelpDeskReplyEmail = async (input: { to: string; name?: string;
 export const sendEmailVerificationOtp = async (input: { to: string; name?: string; code: string }) => {
   if (!env.resendApiKey || !env.emailFrom) {
     if (env.nodeEnv !== "production") {
-      console.warn(JSON.stringify({ event: "verification_email_not_configured", to: input.to }))
+      logServerEvent("warn", "email", "Verification email is not configured", { to: input.to })
       return
     }
     throw new Error("Transactional email is not configured")
@@ -95,7 +96,7 @@ export const sendEmailVerificationOtp = async (input: { to: string; name?: strin
 
 export const sendPasswordResetOtp = async (input: { to: string; name?: string; code: string }) => {
   if (!env.resendApiKey || !env.emailFrom) {
-    if (env.nodeEnv !== "production") { console.warn(JSON.stringify({ event: "password_reset_email_not_configured", to: input.to })); return }
+    if (env.nodeEnv !== "production") { logServerEvent("warn", "email", "Password reset email is not configured", { to: input.to }); return }
     throw new Error("Transactional email is not configured")
   }
   const inlineLogo = getInlineEmailLogo()
