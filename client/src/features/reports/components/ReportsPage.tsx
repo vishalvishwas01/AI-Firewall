@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react"
-import { Download, RefreshCw } from "lucide-react"
+import { ChevronDown, Download, Eye, RefreshCw, ShieldAlert } from "lucide-react"
 import { SiteHeader } from "../../../components/SiteHeader"
 import type { SessionUser } from "../../auth/types"
 import { authRedirectKey } from "../../auth/extensionBridge"
@@ -10,6 +10,20 @@ import { ReportsEmptyState, ReportsErrorState, ReportsLoadingState } from "./Rep
 import { createReportSite, deleteReportSite, getReportSites } from "../../sites/api"
 import type { ReportSite } from "../../sites/types"
 import { hostnameMatchesSite, sendSitesToExtension } from "../../sites/extensionBridge"
+
+const formatReportDate = (value: string) => {
+  const date = new Date(value)
+  return {
+    date: date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),
+    time: date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
+  }
+}
+
+const highlightedSnippet = (snippet: string) => snippet.split(/(\[[A-Z][A-Z0-9 _-]{2,}\])/g).map((part, index) =>
+  /^\[[A-Z][A-Z0-9 _-]{2,}\]$/.test(part)
+    ? <mark key={`${part}-${index}`} className="rounded-md bg-amber-200 px-1.5 py-0.5 font-semibold text-amber-950 shadow-[0_0_0_1px_rgba(180,83,9,.15)]">{part}</mark>
+    : <span key={`${part}-${index}`}>{part}</span>
+)
 
 export function ReportsPage({
   user,
@@ -41,6 +55,7 @@ export function ReportsPage({
   const [selectAllMatching, setSelectAllMatching] = useState(false);
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [deletingLogs, setDeletingLogs] = useState(false);
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const selectedSite = sites.find((site) => site.hostname === selectedHostname);
   const reportFilters = { tool: selectedTool || undefined, hostname: selectedHostname || undefined, from: from || undefined, to: to || undefined };
   const selectedCount = selectAllMatching ? summary?.totalLogs ?? logs.length : selectedLogIds.size;
@@ -311,26 +326,26 @@ export function ReportsPage({
   };
 
   return (
-    <section className="bg-slate-50 px-6 py-10 sm:px-8 lg:px-10">
-      <div className="mx-auto max-w-7xl">
-        <div className="flex flex-col gap-4 border-b border-slate-200 pb-6">
+    <section className="min-h-[calc(100vh-4rem)] bg-[#f5f3ee] px-4 py-8 text-[#33312b] sm:px-7 sm:py-10 lg:px-10">
+      <div className="mx-auto max-w-[1500px]">
+        <div className="flex flex-col gap-6 border-b border-[#d6d0c6] pb-7">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wider text-teal-700">
-              Account-backed reports
+            <p className="text-xs font-semibold uppercase tracking-[.18em] text-[#087f78]">
+              Security intelligence / account reports
             </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-normal text-slate-950 sm:text-4xl">
-              Synced warning history
+            <h1 className="mt-2 font-[Manrope] text-4xl font-semibold tracking-[-.04em] text-[#33312b] sm:text-5xl">
+              Understand every warning
             </h1>
-            <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
-              View redacted logs that were synced for {user?.email ?? "your account"}. Detection stays local; report storage only keeps masked snippets.
+            <p className="mt-3 max-w-3xl text-base leading-7 text-[#65645e]">
+              Review redacted activity synced for {user?.email ?? "your account"}. Each record separates the signal, the evidence, and the action taken so the problem is easy to understand.
             </p>
             <div className="mt-4 flex flex-wrap gap-3"><button type="button" disabled={!user || refreshingLogs} onClick={() => void refreshLogs()} className="button-secondary disabled:cursor-not-allowed disabled:opacity-60"><RefreshCw className={`h-4 w-4 ${refreshingLogs ? "animate-spin" : ""}`} aria-hidden="true" />{refreshingLogs ? "Checking logs…" : "Refresh logs"}</button><button type="button" disabled={!user || loading || logs.length === 0 || generatingPdf} onClick={() => void downloadPdf()} className="button-secondary disabled:cursor-not-allowed disabled:opacity-60"><Download className="h-4 w-4" aria-hidden="true" />{generatingPdf ? <><span>Generating PDF</span><span className="inline-flex items-end gap-1" aria-hidden="true"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]"/><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]"/><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current"/></span></> : "Download PDF"}</button></div>
           </div>
 
           <div>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-700">
-                Websites
+              <h2 className="text-xs font-semibold uppercase tracking-[.16em] text-[#777269]">
+                Filter by protected website
               </h2>
             </div>
 
@@ -340,8 +355,8 @@ export function ReportsPage({
                 onClick={() => { setSelectedHostname(""); setSelectedTool("") }}
                 className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${
                   selectedHostname === "" && selectedTool === ""
-                    ? "border-slate-950 bg-slate-950 text-white"
-                    : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                    ? "border-[#33312b] bg-[#33312b] text-white"
+                    : "border-[#ccc6bc] bg-white text-[#4a463f] hover:border-[#33312b]"
                 }`}
               >
                 All
@@ -349,14 +364,14 @@ export function ReportsPage({
               <button
                 type="button"
                 onClick={() => { setSelectedHostname(""); setSelectedTool((current) => current === "Other" ? "" : "Other") }}
-                className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${selectedTool === "Other" ? "border-slate-950 bg-slate-950 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"}`}
+                className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${selectedTool === "Other" ? "border-[#33312b] bg-[#33312b] text-white" : "border-[#ccc6bc] bg-white text-[#4a463f] hover:border-[#33312b]"}`}
               >
                 Other
               </button>
               <button
                 type="button"
                 onClick={() => openAddSiteModal()}
-                className="rounded-md border border-teal-700 bg-teal-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800"
+                className="rounded-xl border border-[#087f78] bg-[#087f78] px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#056b65]"
               >
                 Add domain
               </button>
@@ -365,10 +380,10 @@ export function ReportsPage({
                   type="button"
                   key={site.hostname}
                   onClick={() => { setSelectedHostname(site.hostname); setSelectedTool("") }}
-                  className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${
+                    className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
                     selectedHostname === site.hostname
-                      ? "border-slate-950 bg-slate-950 text-white"
-                      : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                      ? "border-[#33312b] bg-[#33312b] text-white"
+                      : "border-[#ccc6bc] bg-white text-[#4a463f] hover:border-[#33312b]"
                   }`}
                 >
                   <span>{site.label}</span>
@@ -418,7 +433,7 @@ export function ReportsPage({
                 value={from}
                 max={to || today}
                 onChange={(event) => setFrom(event.target.value)}
-                className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10"
+                  className="mt-2 h-11 w-full rounded-xl border border-[#ccc6bc] bg-white px-3 text-sm outline-none focus:border-[#087f78] focus:ring-2 focus:ring-[#087f78]/15"
               />
             </label>
             <label className="text-sm font-semibold text-slate-950">
@@ -429,7 +444,7 @@ export function ReportsPage({
                 min={from || undefined}
                 max={today}
                 onChange={(event) => setTo(event.target.value)}
-                className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10"
+                  className="mt-2 h-11 w-full rounded-xl border border-[#ccc6bc] bg-white px-3 text-sm outline-none focus:border-[#087f78] focus:ring-2 focus:ring-[#087f78]/15"
               />
             </label>
           </div>
@@ -445,12 +460,12 @@ export function ReportsPage({
               {summary ? (
                 <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                   {summaryCards.map((card) => (
-                    <div key={card.label} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <div key={card.label} className="rounded-2xl border border-[#d6d0c6] bg-white p-5 shadow-[0_8px_24px_rgba(51,49,43,.05)]">
+                      <p className="text-xs font-semibold uppercase tracking-[.14em] text-[#777269]">
                         {card.label}
                       </p>
-                      <p className="mt-2 text-2xl font-semibold text-slate-950">{card.value}</p>
-                      <p className="mt-1 text-sm text-slate-600">{card.detail}</p>
+                      <p className="mt-2 font-[Manrope] text-3xl font-semibold text-[#33312b]">{card.value}</p>
+                      <p className="mt-1 text-sm text-[#777269]">{card.detail}</p>
                     </div>
                   ))}
                 </div>
@@ -461,12 +476,12 @@ export function ReportsPage({
             <>
               <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 {summaryCards.map((card) => (
-                  <div key={card.label} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <div key={card.label} className="rounded-2xl border border-[#d6d0c6] bg-white p-5 shadow-[0_8px_24px_rgba(51,49,43,.05)]">
+                    <p className="text-xs font-semibold uppercase tracking-[.14em] text-[#777269]">
                       {card.label}
                     </p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-950">{card.value}</p>
-                    <p className="mt-1 text-sm text-slate-600">{card.detail}</p>
+                    <p className="mt-2 font-[Manrope] text-3xl font-semibold text-[#33312b]">{card.value}</p>
+                    <p className="mt-1 text-sm text-[#777269]">{card.detail}</p>
                   </div>
                 ))}
               </div>
@@ -516,7 +531,7 @@ export function ReportsPage({
                 </div>
               ) : null}
 
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#d6d0c6] bg-white px-4 py-3 shadow-sm">
                 <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                   <input type="checkbox" checked={selectAllMatching} onChange={(event) => toggleSelectAll(event.target.checked)} className="h-4 w-4 rounded border-slate-300" />
                   Select all {selectedHostname ? `for ${selectedSite?.label ?? selectedHostname}` : "matching logs"}
@@ -524,13 +539,14 @@ export function ReportsPage({
                 {selectedCount > 0 ? <button type="button" onClick={() => setDeleteConfirmationOpen(true)} className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100">Delete {selectAllMatching ? "all matching" : selectedCount}</button> : null}
               </div>
 
-              <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <div className="overflow-hidden rounded-2xl border border-[#d6d0c6] bg-white shadow-[0_12px_35px_rgba(51,49,43,.07)]">
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                  <thead className="bg-slate-50 text-slate-600">
+                  <table className="min-w-full table-fixed divide-y divide-[#ece8e0] text-left text-sm">
+                  <colgroup><col className="w-12" /><col className="w-[100px]" /><col className="w-[150px]" /><col className="w-[95px]" /><col className="w-[130px]" /><col className="w-[190px]" /><col /></colgroup>
+                  <thead className="bg-[#f8f6f1] text-[#777269]">
                     <tr>
                       <th className="w-12 px-4 py-3 font-semibold"><span className="sr-only">Select</span></th>
-                      <th className="px-4 py-3 font-semibold">Date</th>
+                      <th className="px-4 py-3 font-semibold">When</th>
                       <th className="px-4 py-3 font-semibold">Website</th>
                       <th className="px-4 py-3 font-semibold">Severity</th>
                       <th className="px-4 py-3 font-semibold">Decision</th>
@@ -538,44 +554,41 @@ export function ReportsPage({
                       <th className="px-4 py-3 font-semibold">Snippet</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody className="divide-y divide-[#ece8e0]">
                     {logs.map((log) => (
-                      <tr key={log.extensionLogId} className="align-top">
+                      <tr key={log.extensionLogId} className="align-top transition hover:bg-[#fcfbf8]">
                         <td className="px-4 py-4"><input type="checkbox" aria-label={`Select ${log.title}`} disabled={!log.id} checked={Boolean(log.id && (selectAllMatching || selectedLogIds.has(log.id)))} onChange={(event) => { if (log.id) toggleLog(log.id, event.target.checked); }} className="h-4 w-4 rounded border-slate-300" /></td>
-                        <td className="px-4 py-4 whitespace-nowrap text-slate-600">
-                          {new Date(log.timestamp).toLocaleString()}
+                        <td className="px-3 py-4 text-[#65645e]">
+                          <time dateTime={log.timestamp} className="block leading-5"><span className="block font-semibold text-[#33312b]">{formatReportDate(log.timestamp).date}</span><span className="block text-xs text-[#777269]">{formatReportDate(log.timestamp).time}</span></time>
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap font-medium text-slate-950">
+                        <td className="px-3 py-4 font-medium text-[#33312b]">
                           <span>{siteLabelForLog(log)}</span>
-                          <span className="mt-1 block text-xs font-normal text-slate-500">
+                          <span className="mt-1 block truncate text-xs font-normal text-[#777269]">
                             {log.hostname}
                           </span>
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
+                        <td className="px-3 py-4">
                           <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold uppercase ${severityClass(log.severity)}`}>
                             {log.severity}
                           </span>
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <span>{log.decision}</span>
+                        <td className="px-3 py-4">
+                          <span className="font-medium text-[#4a463f]">{log.decision}</span>
                           {log.feedback ? (
                             <span className="mt-1 block rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-600">
                               {feedbackLabel(log.feedback)}
                             </span>
                           ) : null}
                         </td>
-                        <td className="px-4 py-4 font-medium text-slate-950">
-                          {log.title}
+                        <td className="px-3 py-4 font-medium text-[#33312b]">
+                          <div className="flex items-start gap-2"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-[#087f78]" /><span>{log.title}</span></div>
                         </td>
-                        <td className="px-4 py-4 text-slate-600">
-                          <p className="max-w-2xl whitespace-pre-wrap break-words">
-                            {log.redactedSnippet}
-                          </p>
-                          {log.evidence.length > 0 ? (
-                            <p className="mt-2 text-xs text-slate-500">
-                              Why flagged: {log.evidence.join(", ")}
-                            </p>
-                          ) : null}
+                        <td className="px-3 py-4 text-[#4a463f]">
+                          <button type="button" onClick={() => setExpandedLogId((current) => current === log.extensionLogId ? null : log.extensionLogId)} className="group w-full text-left">
+                            <span className="block whitespace-pre-wrap break-words rounded-xl border border-[#e5c36a]/60 bg-[#fffaf0] p-4 font-mono text-[13px] leading-6 text-[#4a4030] shadow-[inset_3px_0_0_#d99a24] transition group-hover:border-[#d99a24] group-hover:bg-[#fff7e2]">{highlightedSnippet(log.redactedSnippet)}</span>
+                            <span className="mt-2 flex items-center gap-1 text-xs font-semibold text-[#087f78]"><Eye className="h-3.5 w-3.5" />{expandedLogId === log.extensionLogId ? "Hide analysis" : "View analysis"}<ChevronDown className={`h-3.5 w-3.5 transition ${expandedLogId === log.extensionLogId ? "rotate-180" : ""}`} /></span>
+                          </button>
+                          {expandedLogId === log.extensionLogId ? <div className="mt-3 rounded-xl border border-[#d6d0c6] bg-[#f8f6f1] p-3 text-xs text-[#65645e]"><p className="font-semibold uppercase tracking-[.12em] text-[#777269]">Why this was flagged</p><p className="mt-1 leading-5">{log.evidence.length > 0 ? log.evidence.join(" · ") : "No additional evidence was recorded."}</p><p className="mt-3 font-semibold uppercase tracking-[.12em] text-[#777269]">Event type</p><p className="mt-1 capitalize">{log.eventType.replace(/-/g, " ")}</p></div> : null}
                         </td>
                       </tr>
                     ))}
