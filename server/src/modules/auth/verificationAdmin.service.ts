@@ -1,13 +1,20 @@
-import type { Db, ObjectId } from "mongodb"
-import { usersCollection } from "../../models/user.js"
+import type { Db, Filter, ObjectId } from "mongodb"
+import { usersCollection, type UserDocument, type UserAccountType } from "../../models/user.js"
 import { verificationCampaignsCollection, type VerificationAccountScope, type VerificationProviderScope } from "../../models/verificationCampaign.js"
 
 export const startVerificationCampaign = async (db: Db, input: { createdBy: ObjectId; providerScope: VerificationProviderScope; accountScope: VerificationAccountScope }) => {
-  const provider = input.providerScope === "both" ? ["password", "google"] : [input.providerScope]
-  const accountType = input.accountScope === "both" ? { $in: ["individual", "enterprise"] } : input.accountScope
+  const provider: ("password" | "google")[] = input.providerScope === "both" ? ["password", "google"] : [input.providerScope]
+  const accountType: UserAccountType | { $in: UserAccountType[] } = input.accountScope === "both"
+    ? { $in: ["individual", "enterprise"] }
+    : input.accountScope
+  const filter: Filter<UserDocument> = {
+    platformRole: { $ne: "super_admin" },
+    accountType,
+    authProviders: { $in: provider }
+  }
   const now = new Date()
   const result = await usersCollection(db).updateMany(
-    { platformRole: { $ne: "super_admin" }, accountType, authProviders: { $in: provider } },
+    filter,
     { $set: { verificationRequiredAt: now, verificationReason: "admin", updatedAt: now }, $unset: { identityVerification: "" } }
   )
   const campaign = { createdBy: input.createdBy, providerScope: input.providerScope, accountScope: input.accountScope, matchedCount: result.matchedCount, createdAt: now }

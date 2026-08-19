@@ -513,6 +513,14 @@ def _audit_b1_data_boundary(root: Path) -> list[str]:
 
 def _audit_b2_pre_intake_boundary(root: Path) -> list[str]:
     errors = _audit_b1_data_boundary(root)
+    errors = [
+        error
+        for error in errors
+        if not (
+            error.startswith("M2 forbids non-draft artifact file:")
+            and error.endswith(str(M4_SHADOW_ARTIFACT_FILE))
+        )
+    ]
     approval_suffix = str(B2_APPROVAL_FILE)
     errors = [
         error

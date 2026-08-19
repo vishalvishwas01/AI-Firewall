@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": "ai-ml-trigger-policy-v1",
+  "status": "manual-first",
+  "allowedTriggerTypes": ["manual-admin"],
+  "deferredTriggerTypes": ["approved-source-change", "approved-manifest-change", "benchmark-regression", "scheduled-drift-check"],
+  "networkRequired": false,
+  "aiProviderRequired": false,
+  "aiWorkflowEnabled": false,
+  "automaticTriggerEnabled": false,
+  "deduplication": {
+    "key": "inputDigest-and-runProfileId",
+    "stableInputOutcome": "not-needed",
+    "activeInputOutcome": "not-needed"
+  },
+  "budgets": {
+    "maxRunsPerDay": 1,
+    "maxActiveRuns": 1,
+    "cooldownSeconds": 86400,
+    "maxRunSeconds": 1800,
+    "maxDatasetRows": 100000,
+    "maxAiTokensPerRun": 2000,
+    "maxAiCostUsdPerRun": 1
+  },
+  "prohibitedInputs": ["prompt", "text", "snippet", "candidate", "secret", "fileBody", "dom", "screenshot", "featureVector", "rawContent", "telemetryPayload", "chainOfThought"]
+}

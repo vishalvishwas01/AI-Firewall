@@ -1,0 +1,42 @@
+{
+  "recordVersion": 1,
+  "gate": "A1",
+  "status": "approved",
+  "reviewType": "three_role_release_review",
+  "recordedAt": "2026-08-20",
+  "evidence": {
+    "workflowSchema": {
+      "path": "docs/contracts/ai-ml-workflow.schema.json",
+      "sha256": "a78976d5f3720cad722131fbf2cfa9f477045a209e031d2b41ea41c1f00d7ecb"
+    },
+    "workflowFixture": {
+      "path": "docs/contracts/ai-ml-workflow.fixtures.json",
+      "sha256": "3804b195aa5abce95f3bd1363b7f4be887f9f0002b7152abe39020afea6260b8"
+    },
+    "workflowDesign": {
+      "path": "docs/AI_ML_WORKFLOW_CONTRACTS.md",
+      "sha256": "27a7404a5764196472eda2d97469efea6a3336f96dbe21daf1db6fa080e37665"
+    },
+    "technicalEvidence": {
+      "mlEnvironment": "Python 3.14.6 passed",
+      "mlTests": { "passed": 80, "skipped": 1, "failed": 0 },
+      "governanceValidation": "HallGuard B2 workspace validation passed",
+      "serverTypecheck": "tsc --noEmit completed with no errors",
+      "stateTransitions": "passed",
+      "negativeFixtures": "passed"
+    }
+  },
+  "reviews": [
+    { "role": "privacy", "reviewer": "umang aggarwal", "decision": "approved", "scope": ["Privacy governance", "ML execution and data boundaries", "Workspace validation", "Privacy-related A1 controls"], "conditions": [] },
+    { "role": "security", "reviewer": "vishal vishwas", "decision": "approved", "scope": ["Security controls", "Threat-model alignment", "ML execution security", "State-transition enforcement", "Negative-case enforcement"], "conditions": [] },
+    { "role": "maintainer", "reviewer": "tushar garg", "decision": "approved", "scope": ["Repository readiness", "ADR and governance implementation", "ML and server validation", "Test evidence", "A1 release readiness"], "conditions": [] }
+  ],
+  "finalDecision": {
+    "privacyApproved": true,
+    "securityApproved": true,
+    "maintainerApproved": true,
+    "allRequiredReviewsComplete": true,
+    "a1Complete": true,
+    "nextGateAllowed": true
+  }
+}

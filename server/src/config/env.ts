@@ -4,6 +4,7 @@ import {
   parseIntelligencePublisherEmails,
   parseIntelligenceSignerMode
 } from "../modules/intelligence/intelligence.policy.js"
+import { parseAiWorkflowConfig } from "../modules/mlWorkflow/workflow.policy.js"
 
 dotenv.config()
 
@@ -87,5 +88,6 @@ export const env = {
   ),
   intelligenceSignerMode: parseIntelligenceSignerMode(
     process.env.INTELLIGENCE_SIGNER_MODE
-  )
+  ),
+  aiWorkflow: parseAiWorkflowConfig()
 }

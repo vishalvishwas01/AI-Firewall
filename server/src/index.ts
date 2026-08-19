@@ -33,6 +33,7 @@ import { ensureLoginActivityIndexes } from "./models/loginActivity.js"
 import { ensureServerLogIndexes } from "./models/serverLog.js"
 import { supportRouter } from "./modules/support/support.routes.js"
 import { logServerEvent, setServerLoggerDb } from "./shared/serverLogger.js"
+import { ensureTrainingTriggerIndexes } from "./modules/mlWorkflow/trigger.repository.js"
 
 const app = express()
 if (env.trustProxyHops > 0) app.set("trust proxy", env.trustProxyHops)
@@ -110,6 +111,7 @@ await ensureVerificationCampaignIndexes(db)
 await ensurePasswordResetIndexes(db)
 await ensureLoginActivityIndexes(db)
 await ensureServerLogIndexes(db)
+await ensureTrainingTriggerIndexes(db)
 setServerLoggerDb(db)
 ready = true
 

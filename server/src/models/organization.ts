@@ -77,6 +77,12 @@ export const pendingInvitationRevocationFilter = (memberId: ObjectId, organizati
   status: "invited" as const
 })
 
+export const pendingInvitationActivationFilter = (userId: ObjectId, email: string) => ({
+  email: email.trim().toLowerCase(),
+  status: "invited" as const,
+  $or: [{ userId: { $exists: false } }, { userId }]
+})
+
 export const ensureOrganizationIndexes = async (db: Db) => {
   await organizationsCollection(db).createIndex({ ownerUserId: 1, createdAt: -1 })
   await organizationMembersCollection(db).createIndex({ userId: 1, organizationId: 1 })

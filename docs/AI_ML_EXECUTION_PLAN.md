@@ -108,18 +108,19 @@ Approval record: `AI_ML_A0_APPROVALS_2026-08-20.json` binds the ADR and threat-m
 
 ### Phase A1 - Define versioned workflow contracts
 
-Status: **In progress — 2026-08-20**
+Status: **Complete — 2026-08-20**
 
-Current implementation record: `AI_ML_WORKFLOW_CONTRACTS.md` freezes the contract design. The shared JSON Schema and content-free fixture are being added under `docs/contracts/`; server/client/ML validation must consume the same fixture before this phase can complete.
+Current implementation record: `AI_ML_WORKFLOW_CONTRACTS.md` freezes the contract design. The shared JSON Schema and content-free fixture are implemented under `docs/contracts/`; server, client, and ML validation consume the same fixture.
 
 Implementation update — 2026-08-20:
 
 - Added `docs/contracts/ai-ml-workflow.schema.json` with exact-field schema definitions for triggers, runs, evidence, AI summaries, admin decisions, and release receipts.
 - Added the shared content-free fixture `docs/contracts/ai-ml-workflow.fixtures.json`.
 - Added server workflow types and a standalone fixture-binding/prohibited-key test; added client workflow types; added ML fail-closed fixture validation and tests.
-- Verification: both JSON documents parse; the standalone server fixture test passed (2/2); client typecheck passed.
-- Known blockers: the pinned ML Python environment remains inaccessible (`Python314` returns Windows access denied), so the ML validation test could not execute. Full server typecheck remains blocked by four pre-existing unrelated TypeScript errors; the new workflow fixture test passed independently.
-- Remaining work: finish field/value/state-transition validation in all runtime consumers, run ML tests after restoring the pinned Python executable, add cross-language negative fixtures, and obtain three-role review before marking A1 complete.
+- Verification: both JSON documents parse; the standalone server fixture test passed; client typecheck passed; ML tests passed 80 with 1 skip and 0 failures; HallGuard B2 workspace validation passed; state-transition and negative-fixture checks passed; server typecheck passed.
+- Baseline repair update — 2026-08-20: fixed the pre-existing server typecheck defects in `models/organization.ts`, `modules/auth/verificationAdmin.service.ts`, and `modules/support/helpDeskDrafts.ts`. Server typecheck now passes and the full server suite passes 60/60. The fixes preserve invitation matching, verification campaign filtering, and safe Redis draft fallback behavior.
+- The earlier ML environment access issue is resolved in the reviewed evidence.
+- Approval record: `AI_ML_A1_APPROVALS_2026-08-20.json` binds the contract artifacts and records privacy, security, and maintainer approval without conditions. A1 is complete and A2 is authorized to start.
 
 1. Add exact-field JSON schemas and shared TypeScript/Python types for:
    - `TrainingTrigger`;
@@ -168,7 +169,20 @@ Exit criteria:
 
 ### Phase A2 - Define safe retraining triggers and budgets
 
-Status: **Planned**
+Status: **In progress — 2026-08-20**
+
+Implementation update — 2026-08-20:
+
+- Added disabled-by-default AI/provider/model configuration placeholders to `server/.env.example` and validated them through `server/src/modules/mlWorkflow/workflow.policy.ts`.
+- Manual-first boundary is enforced by `AI_ML_AUTO_TRIGGER_ENABLED=false`; no provider call or autonomous trigger exists in this step.
+- Added bounded defaults for daily runs, active runs, cooldown, wall time, dataset rows, AI tokens, and per-run cost.
+- `ml/.env.example` explicitly remains provider-independent; future AI credentials belong in the server deployment secret manager, not the offline runner.
+- Added `trigger.policy.ts`, a pure manual-first eligibility decision: automatic triggers are rejected, unchanged/deduplicated input returns `not-needed`, and daily/active/cooldown limits fail closed. No queue, database write, runner invocation, or AI call is part of this policy.
+- Verification: A2 policy and trigger tests passed 6/6; server typecheck passed; full server suite passed 60/60.
+- Persisted-trigger update — 2026-08-20: added the append-only `ml_training_triggers` repository. A compound unique index on `(requestedBy, triggerId)` makes retrying the same manual request idempotent; status/timestamp and expiry indexes support safe selection and seven-day retention. Stored fields are limited to actor ID, opaque trigger ID, content-free digests/configuration IDs, bounded reason/status, timestamps, and `networkRequired: false`.
+- Added `trigger.schemas.ts` as the future admin-API boundary. It accepts only `triggerId`, a lowercase SHA-256 `inputDigest`, and the allowlisted `profile-logistic-v1`; unknown fields, raw-content fields, network authorization, and arbitrary run profiles fail closed. No route is exposed yet.
+- Added `trigger.service.ts` to compose validation output, eligibility policy, and idempotent persistence. A retry returns the original trigger record; policy outcomes are recorded without creating a training run. Run-count/history context remains an explicit dependency for the future run coordinator.
+- Added `docs/contracts/ai-ml-trigger-policy-v1.json` as the reviewable baseline for A2. It locks the manual-only trigger type, deferred automatic types, no-network/no-provider state, deduplication outcomes, resource/token/cost limits, and prohibited input fields. A2 implementation is ready for privacy, security, and maintainer review; A3 must not start until that approval is recorded.
 
 1. Begin with manual admin-triggered runs and scheduled checks; do not begin with autonomous event-based training.
 2. Add eligible automatic triggers only after the manual workflow is stable:

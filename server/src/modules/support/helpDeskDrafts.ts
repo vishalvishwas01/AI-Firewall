@@ -8,7 +8,7 @@ export const getHelpDeskDraft = async (adminId: ObjectId, userId: ObjectId): Pro
   const key = keyFor(adminId, userId)
   const redis = await getRedisClient()
   const raw = redis ? await redis.get(key) : undefined
-  if (raw) {
+  if (typeof raw === "string" && raw) {
     try {
       const value = JSON.parse(raw) as Partial<HelpDeskDraft>
       return { subject: typeof value.subject === "string" ? value.subject : "", message: typeof value.message === "string" ? value.message : "" }
