@@ -1,0 +1,47 @@
+{
+  "recordVersion": 1,
+  "gate": "A0",
+  "status": "approved",
+  "recordedAt": "2026-08-20",
+  "evidence": {
+    "adr": {
+      "path": "docs/ADR-018-AI_ASSISTED_ML_BOUNDARY.md",
+      "sha256": "7d5bc2de2b0dfa579ce027aa1a5f95539b09768ffebbba36754a43c39e642aac"
+    },
+    "threatModel": {
+      "path": "docs/AI_ML_THREAT_MODEL.md",
+      "sha256": "ae09b175984e57bf52758690e33b6968d125d3a08eb74bcc2dfbc1502b093448"
+    }
+  },
+  "approvals": [
+    {
+      "role": "privacy",
+      "approver": "umang aggarwal",
+      "decision": "approved",
+      "scope": "Privacy review for the AI Firewall architecture, AI/ML execution flow, data handling, logging, and documented privacy controls.",
+      "conditions": []
+    },
+    {
+      "role": "security",
+      "approver": "vishal vishwas",
+      "decision": "approved",
+      "scope": "Security review covering the threat model, AI/ML execution paths, attack surface, trust boundaries, secrets, abuse cases, and documented security controls.",
+      "conditions": []
+    },
+    {
+      "role": "maintainer",
+      "approver": "tushar garg",
+      "decision": "approved",
+      "scope": "Maintainer review of repository state, ADR updates, AI/ML execution documentation, threat model, operational readiness, and release governance.",
+      "conditions": []
+    }
+  ],
+  "gateDecision": {
+    "privacy": true,
+    "security": true,
+    "maintainer": true,
+    "allRequiredApprovalsRecorded": true,
+    "a0Complete": true,
+    "a1AllowedToStart": true
+  }
+}

@@ -1,6 +1,6 @@
 # AI-assisted ML pipeline threat model
 
-**Status:** Proposed — pending privacy, security, and maintainer approval  
+**Status:** Approved — 2026-08-20
 **Date:** 2026-08-20  
 **Scope:** The planned AI-assisted offline ML workflow and signed intelligence-package release path.
 
@@ -55,7 +55,8 @@
 
 | Role | Reviewer | Decision | Date | Notes |
 | --- | --- | --- | --- | --- |
-| Privacy | Pending | Pending | Pending |  |
-| Security | Pending | Pending | Pending |  |
-| Maintainer | Pending | Pending | Pending |  |
+| Privacy | Umang Aggarwal | Approved | 2026-08-20 | No conditions |
+| Security | Vishal Vishwas | Approved | 2026-08-20 | No conditions |
+| Maintainer | Tushar Garg | Approved | 2026-08-20 | No conditions |
 
+The digest-bound approval record is `AI_ML_A0_APPROVALS_2026-08-20.json`.

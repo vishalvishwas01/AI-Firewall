@@ -1,0 +1,10 @@
+export type WorkflowId = string
+export type Sha256 = string
+export type WorkflowTimestamp = string
+export type WorkflowVersion = string
+export type TrainingRunState = "queued" | "validating" | "training" | "evaluating" | "awaiting_review" | "failed" | "denied" | "approved" | "signing" | "publishing" | "staged" | "canary" | "stable"
+export type ReviewDecision = "approve" | "deny"
+export type ReleaseChannel = "staging" | "canary" | "stable"
+export type TrainingRunSummary = { runId: WorkflowId; state: TrainingRunState; candidateDigest: Sha256 | null; evidenceDigest: Sha256 | null; createdAt: WorkflowTimestamp; expiresAt: WorkflowTimestamp }
+export type AdminReviewDecision = { contractVersion: "hallguard-ai-admin-review-v1"; decisionId: WorkflowId; runId: WorkflowId; candidateDigest: Sha256; evidenceDigest: Sha256; decision: ReviewDecision; comment: string | null; reviewerUserId: WorkflowId; reviewedAt: WorkflowTimestamp; expectedRecordVersion: number; recordVersion: number }
+export type ReleaseReceipt = { contractVersion: "hallguard-ai-release-receipt-v1"; receiptId: WorkflowId; runId: WorkflowId; decisionId: WorkflowId; candidateDigest: Sha256; evidenceDigest: Sha256; packageVersion: WorkflowVersion; packageSequence: number; channel: ReleaseChannel; signingKeyId: WorkflowVersion; packageDigest: Sha256; publishedAt: WorkflowTimestamp; publicationAuditId: WorkflowId; status: "staged" | "canary" | "stable" | "revoked" }

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/ai-ml-workflow-v1.schema.json",
+  "title": "HallGuard AI/ML Workflow Contracts",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "triggers", "runs", "evidence", "summaries", "decisions", "receipts"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "triggers": { "type": "array", "items": { "$ref": "#/$defs/trainingTrigger" } },
+    "runs": { "type": "array", "items": { "$ref": "#/$defs/trainingRun" } },
+    "evidence": { "type": "array", "items": { "$ref": "#/$defs/trainingEvidence" } },
+    "summaries": { "type": "array", "items": { "$ref": "#/$defs/aiReviewSummary" } },
+    "decisions": { "type": "array", "items": { "$ref": "#/$defs/adminReviewDecision" } },
+    "receipts": { "type": "array", "items": { "$ref": "#/$defs/releaseReceipt" } }
+  },
+  "$defs": {
+    "version": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{2,127}$", "maxLength": 128 },
+    "id": { "type": "string", "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{2,127}$", "maxLength": 128 },
+    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "timestamp": { "type": "string", "format": "date-time", "maxLength": 40 },
+    "boundedText": { "type": "string", "minLength": 1, "maxLength": 2000, "pattern": "^[^\\u0000-\\u001f\\u007f]+$" },
+    "nullableText": { "type": ["string", "null"], "maxLength": 2000, "pattern": "^[^\\u0000-\\u001f\\u007f]*$" },
+    "trainingTrigger": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contractVersion", "triggerId", "triggerType", "requestedBy", "requestedAt", "inputDigest", "runProfileId", "reasonCode", "networkRequired", "status"],
+      "properties": {
+        "contractVersion": { "const": "hallguard-ai-training-trigger-v1" }, "triggerId": { "$ref": "#/$defs/id" },
+        "triggerType": { "enum": ["manual-admin", "approved-source-change", "approved-manifest-change", "benchmark-regression", "scheduled-drift-check"] },
+        "requestedBy": { "$ref": "#/$defs/id" }, "requestedAt": { "$ref": "#/$defs/timestamp" }, "inputDigest": { "$ref": "#/$defs/digest" },
+        "runProfileId": { "$ref": "#/$defs/version" }, "reasonCode": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{1,63}$", "maxLength": 64 },
+        "networkRequired": { "const": false }, "status": { "enum": ["eligible", "not-needed", "rejected"] }
+      }
+    },
+    "trainingRun": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contractVersion", "runId", "triggerId", "inputDigest", "runProfileId", "state", "recordVersion", "createdAt", "startedAt", "finishedAt", "expiresAt", "runnerVersion", "evidenceDigest", "candidateDigest", "failureCode"],
+      "properties": {
+        "contractVersion": { "const": "hallguard-ai-training-run-v1" }, "runId": { "$ref": "#/$defs/id" }, "triggerId": { "$ref": "#/$defs/id" },
+        "inputDigest": { "$ref": "#/$defs/digest" }, "runProfileId": { "$ref": "#/$defs/version" },
+        "state": { "enum": ["queued", "validating", "training", "evaluating", "awaiting_review", "failed", "denied", "approved", "signing", "publishing", "staged", "canary", "stable"] },
+        "recordVersion": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }, "createdAt": { "$ref": "#/$defs/timestamp" },
+        "startedAt": { "type": ["string", "null"], "format": "date-time" }, "finishedAt": { "type": ["string", "null"], "format": "date-time" }, "expiresAt": { "$ref": "#/$defs/timestamp" },
+        "runnerVersion": { "$ref": "#/$defs/version" }, "evidenceDigest": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" }, "candidateDigest": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "failureCode": { "type": ["string", "null"], "enum": [null, "input-invalid", "provenance-invalid", "resource-limit", "dependency-drift", "non-converged", "evaluation-failed", "runner-unavailable", "unknown"] }
+      }
+    },
+    "trainingEvidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contractVersion", "runId", "evidenceDigest", "baselineModelVersion", "candidateModelVersion", "datasetManifestDigest", "runProfileDigest", "sourceRevisionDigest", "artifactDigest", "artifactBytes", "metrics", "gates", "compatibility", "reproducibility", "generatedAt", "retentionExpiresAt"],
+      "properties": {
+        "contractVersion": { "const": "hallguard-ai-training-evidence-v1" }, "runId": { "$ref": "#/$defs/id" }, "evidenceDigest": { "$ref": "#/$defs/digest" },
+        "baselineModelVersion": { "$ref": "#/$defs/version" }, "candidateModelVersion": { "$ref": "#/$defs/version" }, "datasetManifestDigest": { "$ref": "#/$defs/digest" }, "runProfileDigest": { "$ref": "#/$defs/digest" }, "sourceRevisionDigest": { "$ref": "#/$defs/digest" }, "artifactDigest": { "$ref": "#/$defs/digest" },
+        "artifactBytes": { "type": "integer", "minimum": 2, "maximum": 5242880 },
+        "metrics": { "$ref": "#/$defs/metrics" }, "gates": { "type": "object", "additionalProperties": false, "required": ["allPassed", "criticalRecall", "benignFalsePositive", "rawLeakFree", "performancePassed", "calibrationSufficient"], "properties": { "allPassed": { "type": "boolean" }, "criticalRecall": { "type": "boolean" }, "benignFalsePositive": { "type": "boolean" }, "rawLeakFree": { "type": "boolean" }, "performancePassed": { "type": "boolean" }, "calibrationSufficient": { "type": "boolean" } } },
+        "compatibility": { "type": "object", "additionalProperties": false, "required": ["minExtensionVersion", "maxExtensionVersion", "requiredCapabilities"], "properties": { "minExtensionVersion": { "$ref": "#/$defs/version" }, "maxExtensionVersion": { "$ref": "#/$defs/version" }, "requiredCapabilities": { "type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true, "items": { "enum": ["rules-v1", "model-v2", "candidate-features-v1"] } } } },
+        "reproducibility": { "type": "object", "additionalProperties": false, "required": ["rerunMatched", "seed", "dependencyLockDigest"], "properties": { "rerunMatched": { "type": "boolean" }, "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647 }, "dependencyLockDigest": { "$ref": "#/$defs/digest" } } },
+        "generatedAt": { "$ref": "#/$defs/timestamp" }, "retentionExpiresAt": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "metrics": { "type": "object", "additionalProperties": false, "required": ["recall", "falseNegativeRate", "falsePositiveRate", "precision", "calibrationError", "support"], "properties": { "recall": { "type": "number", "minimum": 0, "maximum": 1 }, "falseNegativeRate": { "type": "number", "minimum": 0, "maximum": 1 }, "falsePositiveRate": { "type": "number", "minimum": 0, "maximum": 1 }, "precision": { "type": "number", "minimum": 0, "maximum": 1 }, "calibrationError": { "type": "number", "minimum": 0, "maximum": 1 }, "support": { "type": "integer", "minimum": 1, "maximum": 100000000 } } },
+    "aiReviewSummary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contractVersion", "runId", "evidenceDigest", "summaryDigest", "provider", "model", "promptTemplateVersion", "recommendation", "headline", "reasons", "passedGates", "failedGates", "limitations", "generatedAt", "tokenCount", "estimatedCost", "latencyMs", "validationStatus"],
+      "properties": { "contractVersion": { "const": "hallguard-ai-review-summary-v1" }, "runId": { "$ref": "#/$defs/id" }, "evidenceDigest": { "$ref": "#/$defs/digest" }, "summaryDigest": { "$ref": "#/$defs/digest" }, "provider": { "$ref": "#/$defs/version" }, "model": { "$ref": "#/$defs/version" }, "promptTemplateVersion": { "$ref": "#/$defs/version" }, "recommendation": { "enum": ["approve-review", "deny-review", "insufficient-evidence"] }, "headline": { "$ref": "#/$defs/boundedText" }, "reasons": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "$ref": "#/$defs/boundedText" } }, "passedGates": { "type": "array", "maxItems": 16, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{1,63}$" } }, "failedGates": { "type": "array", "maxItems": 16, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{1,63}$" } }, "limitations": { "type": "array", "maxItems": 8, "items": { "$ref": "#/$defs/boundedText" } }, "generatedAt": { "$ref": "#/$defs/timestamp" }, "tokenCount": { "type": "integer", "minimum": 0, "maximum": 10000 }, "estimatedCost": { "type": "number", "minimum": 0, "maximum": 100 }, "latencyMs": { "type": "integer", "minimum": 0, "maximum": 120000 }, "validationStatus": { "enum": ["validated", "invalid", "provider-unavailable"] } }
+    },
+    "adminReviewDecision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contractVersion", "decisionId", "runId", "candidateDigest", "evidenceDigest", "decision", "comment", "reviewerUserId", "reviewedAt", "expectedRecordVersion", "recordVersion"],
+      "properties": { "contractVersion": { "const": "hallguard-ai-admin-review-v1" }, "decisionId": { "$ref": "#/$defs/id" }, "runId": { "$ref": "#/$defs/id" }, "candidateDigest": { "$ref": "#/$defs/digest" }, "evidenceDigest": { "$ref": "#/$defs/digest" }, "decision": { "enum": ["approve", "deny"] }, "comment": { "$ref": "#/$defs/nullableText" }, "reviewerUserId": { "$ref": "#/$defs/id" }, "reviewedAt": { "$ref": "#/$defs/timestamp" }, "expectedRecordVersion": { "type": "integer", "minimum": 1 }, "recordVersion": { "type": "integer", "minimum": 1 } }
+    },
+    "releaseReceipt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contractVersion", "receiptId", "runId", "decisionId", "candidateDigest", "evidenceDigest", "packageVersion", "packageSequence", "channel", "signingKeyId", "packageDigest", "publishedAt", "publicationAuditId", "status"],
+      "properties": { "contractVersion": { "const": "hallguard-ai-release-receipt-v1" }, "receiptId": { "$ref": "#/$defs/id" }, "runId": { "$ref": "#/$defs/id" }, "decisionId": { "$ref": "#/$defs/id" }, "candidateDigest": { "$ref": "#/$defs/digest" }, "evidenceDigest": { "$ref": "#/$defs/digest" }, "packageVersion": { "$ref": "#/$defs/version" }, "packageSequence": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }, "channel": { "enum": ["staging", "canary", "stable"] }, "signingKeyId": { "$ref": "#/$defs/version" }, "packageDigest": { "$ref": "#/$defs/digest" }, "publishedAt": { "$ref": "#/$defs/timestamp" }, "publicationAuditId": { "$ref": "#/$defs/id" }, "status": { "enum": ["staged", "canary", "stable", "revoked"] } }
+    }
+  }
+}

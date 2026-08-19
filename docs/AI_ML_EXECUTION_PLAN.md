@@ -60,7 +60,7 @@ Follow `docs/EXECUTION_PROTOCOL.md`: start one step at a time, mark it in progre
 
 ### Phase A0 - Record baseline and freeze the scope
 
-Status: **In progress — 2026-08-20; implementation evidence recorded, approvals pending**
+Status: **Complete — 2026-08-20**
 
 1. Run and record the current ML, server, client, and extension test/typecheck/build baselines.
 2. Record the currently supported runtime capabilities: `rules-v1`, `model-v2`, `candidate-features-v1`, and logistic regression.
@@ -104,11 +104,22 @@ Documents added:
 
 Deployment-boundary finding: the checked ML configuration intentionally has no server/database URL, production credential, signing private key, telemetry source, or AI-provider credential. The server is disabled for signing by default and forbids private signing keys in configuration; the extension accepts public roots only. This is source/configuration evidence only. Future runner infrastructure needs an independent deployment attestation before activation.
 
-Remaining A0 gate: obtain and record distinct privacy, security, and maintainer approvals for the new ADR, threat model, and isolated-runner boundary. Until then, A0 remains in progress and A1 must not start.
+Approval record: `AI_ML_A0_APPROVALS_2026-08-20.json` binds the ADR and threat-model digests and records approval by Umang Aggarwal (privacy), Vishal Vishwas (security), and Tushar Garg (maintainer), all without conditions. A0 is complete and A1 is authorized to begin.
 
 ### Phase A1 - Define versioned workflow contracts
 
-Status: **Planned**
+Status: **In progress — 2026-08-20**
+
+Current implementation record: `AI_ML_WORKFLOW_CONTRACTS.md` freezes the contract design. The shared JSON Schema and content-free fixture are being added under `docs/contracts/`; server/client/ML validation must consume the same fixture before this phase can complete.
+
+Implementation update — 2026-08-20:
+
+- Added `docs/contracts/ai-ml-workflow.schema.json` with exact-field schema definitions for triggers, runs, evidence, AI summaries, admin decisions, and release receipts.
+- Added the shared content-free fixture `docs/contracts/ai-ml-workflow.fixtures.json`.
+- Added server workflow types and a standalone fixture-binding/prohibited-key test; added client workflow types; added ML fail-closed fixture validation and tests.
+- Verification: both JSON documents parse; the standalone server fixture test passed (2/2); client typecheck passed.
+- Known blockers: the pinned ML Python environment remains inaccessible (`Python314` returns Windows access denied), so the ML validation test could not execute. Full server typecheck remains blocked by four pre-existing unrelated TypeScript errors; the new workflow fixture test passed independently.
+- Remaining work: finish field/value/state-transition validation in all runtime consumers, run ML tests after restoring the pinned Python executable, add cross-language negative fixtures, and obtain three-role review before marking A1 complete.
 
 1. Add exact-field JSON schemas and shared TypeScript/Python types for:
    - `TrainingTrigger`;

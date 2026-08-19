@@ -1,6 +1,6 @@
 # ADR-018: AI-assisted ML control-plane boundary
 
-**Status:** Proposed — pending privacy, security, and maintainer approval  
+**Status:** Approved — 2026-08-20
 **Date:** 2026-08-20  
 **Decision owners:** HallGuard maintainers
 
@@ -67,6 +67,8 @@ This is a repository/configuration finding, not proof of any future cloud deploy
 - The project must add workflow contracts, state-machine controls, isolated job infrastructure, content-free evidence validation, admin authorization, and external signing integration before automation is enabled.
 - Human approval remains mandatory for every release under this ADR.
 
-## Approval required
+## Approval record
 
-This ADR is not active until distinct privacy, security, and maintainer approvals are recorded. Any later change to the prohibited-input list, tool permissions, signing boundary, or human-approval requirement requires a new ADR or an approved amendment.
+Approved by Umang Aggarwal (privacy), Vishal Vishwas (security), and Tushar Garg (maintainer) on 2026-08-20. The digest-bound approval record is `AI_ML_A0_APPROVALS_2026-08-20.json`.
+
+Any later change to the prohibited-input list, tool permissions, signing boundary, or human-approval requirement requires a new ADR or an approved amendment.
