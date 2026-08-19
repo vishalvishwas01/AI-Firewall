@@ -125,7 +125,7 @@ const retentionTimer = setInterval(async () => {
 }, 15 * 60 * 1000)
 retentionTimer.unref()
 
-const server = app.listen(env.port, () => {
+const server = app.listen(env.port, "0.0.0.0", () => {
   logServerEvent("info", "system", "Server listening", { port: env.port })
 })
 

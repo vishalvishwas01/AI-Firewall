@@ -54,10 +54,10 @@ const parseIntegerEnv = (value: string | undefined, fallback: number, minimum: n
 }
 
 export const env = {
-  nodeEnv: process.env.NODE_ENV ?? "development",
-  port: Number(process.env.PORT ?? 4000),
+  nodeEnv: process.env.NODE_ENV,
+  port: Number(process.env.PORT ?? 8080),
   mongodbUri: process.env.MONGODB_URI!,
-  mongodbDbName: process.env.MONGODB_DB_NAME ?? "ai_firewall",
+  mongodbDbName: process.env.MONGODB_DB_NAME!,
   jwtSecret: process.env.JWT_SECRET!,
   jwtActiveKeyId,
   jwtSigningSecret,
