@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "packageVersion": "2026.08.18-v1",
+  "sequence": 2,
+  "releaseDecision": {
+    "privacy": {
+      "decision": "approved",
+      "reviewer": "Privacy Officer",
+      "reviewBy": "Umang Aggarwal",
+      "reviewedAt": "2026-08-19T12:49:00+05:30",
+      "scope": [
+        "No raw secret content is included in release metadata",
+        "ML package is limited to the declared artifact",
+        "Local-first detection behavior remains preserved",
+        "No undeclared telemetry or remote regex dependency is introduced"
+      ],
+      "notes": "Privacy review completed. Production release approved."
+    },
+    "security": {
+      "decision": "approved",
+      "reviewer": "Security Officer",
+      "reviewBy": "Vishal vishwas",
+      "reviewedAt": "2026-08-19T12:49:00+05:30",
+      "scope": [
+        "Artifact SHA-256 verified",
+        "Payload SHA-256 verified",
+        "Ed25519 signature independently verified",
+        "Signing key is trusted and active",
+        "Sequence and replay protections verified",
+        "Rollback metadata verified",
+        "Tamper rejection verified",
+        "Wrong-artifact rejection verified",
+        "Wrong-key rejection verified",
+        "Activation drill completed",
+        "Rollback drill completed"
+      ],
+      "notes": "Security review completed. Production release approved."
+    },
+    "maintainer": {
+      "decision": "approved",
+      "reviewer": "Maintenance Officer",
+      "reviewBy": "Tushar Garg",
+      "reviewedAt": "2026-08-19T12:49:00+05:30",
+      "scope": [
+        "Staging drill completed",
+        "Activation drill completed",
+        "Rollback drill completed",
+        "Extension compatibility verified",
+        "Release package contents reviewed"
+      ],
+      "notes": "Maintainer authorizes production release of sequence 2."
+    }
+  },
+  "finalDecision": "approved-for-production",
+  "stagingAuthorized": true,
+  "canaryAuthorized": true,
+  "productionAuthorized": true
+}
