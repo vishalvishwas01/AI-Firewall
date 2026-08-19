@@ -74,6 +74,20 @@ M3_WORKFLOW_AUTHORIZATION_FILE = Path("datasets/manifests") / WORKFLOW_AUTHORIZA
 M3_COVERAGE_REVIEW_FILE = Path("datasets/manifests/m3-representative-coverage-review-v1.review.json")
 M4_SHADOW_ARTIFACT_FILE = Path("artifacts/m4-secret-logistic-b2-limited-v1.shadow-artifact.json")
 SUPPLEMENTAL_REVIEW_FIELDS = {
+    "m4-staging-drill-result-v1.manifest.json": {
+        "schemaVersion",
+        "manifestVersion",
+        "manifestType",
+        "recordedOn",
+        "packageVersion",
+        "sequence",
+        "artifactSha256",
+        "checks",
+        "releaseDecision",
+        "stagingEligible",
+        "blockingReason",
+        "nextStep",
+    },
     "m4-staging-review-request-v1.manifest.json": {
         "schemaVersion",
         "requestVersion",

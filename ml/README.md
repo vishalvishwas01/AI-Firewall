@@ -262,3 +262,7 @@ replay, and rollback checks pass; staging remains explicitly ineligible pending 
 The final staging-review request is recorded in
 `datasets/manifests/m4-staging-review-request-v1.manifest.json`. It is a non-authorizing checklist for
 the external staging drill and release decision.
+
+The external technical drill passed and is recorded in
+`datasets/manifests/m4-staging-drill-result-v1.manifest.json`. Final release remains blocked until the
+three-role external release decision is recorded.

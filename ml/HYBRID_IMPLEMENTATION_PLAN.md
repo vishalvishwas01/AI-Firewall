@@ -154,6 +154,8 @@ The supplied external package was verified and recorded in `datasets/manifests/m
 
 Prepared `datasets/manifests/m4-staging-review-request-v1.manifest.json` for the final external staging drill. It binds the verified package and lists the required install, activation, rollback, and three-role release checks. No staging authorization or production deployment was performed.
 
+The supplied `external-signing/staging-drill-result-v1.json` passed every technical staging check. Its content-free result is recorded in `datasets/manifests/m4-staging-drill-result-v1.manifest.json`, bound to package sequence 2 and the verified artifact digest. The record does not include the final privacy/security/maintainer release decision, so staging and release remain false.
+
 ### Phase M4 - Train small local candidates reproducibly
 
 1. Use the exact pinned preprocessing and logistic-regression implementation with seed `20260801`.

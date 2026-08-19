@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "manifestVersion": "m4-staging-drill-result-v1",
+  "manifestType": "EXTERNAL_STAGING_DRILL_RESULT",
+  "recordedOn": "2026-08-19",
+  "packageVersion": "2026.08.18-v1",
+  "sequence": 2,
+  "artifactSha256": "0d5251ff7cdbd9e599f445ee381fd89b51b3016eb29959ba239e433a704b50fe",
+  "checks": {
+    "signatureVerification": true,
+    "artifactDigestVerification": true,
+    "trustedKeyVerification": true,
+    "extensionCompatibility": true,
+    "replayTest": true,
+    "activationTest": true,
+    "rollbackTest": true,
+    "tamperTest": true,
+    "wrongArtifactTest": true,
+    "wrongKeyTest": true,
+    "stagingDecision": true
+  },
+  "releaseDecision": {
+    "privacy": "Approved",
+    "security": "Approved",
+    "maintainer": "Approved",
+    "releaseEligible": true
+  },
+  "stagingEligible": true,
+  "blockingReason": "",
+  "nextStep": "record-final-three-role-release-decision"
+}

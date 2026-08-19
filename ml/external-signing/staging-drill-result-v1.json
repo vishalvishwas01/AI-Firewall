@@ -1,0 +1,15 @@
+{
+  "packageVersion": "2026.08.18-v1",
+  "sequence": 2,
+  "signatureVerification": "PASS",
+  "artifactDigestVerification": "PASS",
+  "trustedKeyVerification": "PASS",
+  "extensionCompatibility": "PASS",
+  "replayTest": "PASS",
+  "activationTest": "PASS",
+  "rollbackTest": "PASS",
+  "tamperTest": "PASS",
+  "wrongArtifactTest": "PASS",
+  "wrongKeyTest": "PASS",
+  "stagingDecision": "PASS"
+}
