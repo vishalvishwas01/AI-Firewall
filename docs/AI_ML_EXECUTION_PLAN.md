@@ -406,7 +406,29 @@ Exit criteria:
 
 ### Phase A8 - Connect approval to external signing and publication
 
-Status: **Preflight implemented; external signing/publication pending deployment infrastructure**
+Status: **Local-server staging preflight route implemented; signing/publication remain disabled**
+
+The existing backend on `http://localhost:4000` owns the A8 preflight route:
+
+`POST /admin/ml/runs/:runId/stage`
+
+It is protected by the existing authenticated super-admin middleware and accepts
+only `candidateDigest`, `evidenceDigest`, and `packageSequence`. It records an
+immutable `staging-pending-signature` intent. There is intentionally no signer
+or publisher HTTP endpoint, so neither capability is reachable by the client or
+extension. Real signing/publication remain disabled until explicitly configured.
+
+The server also contains disabled-by-default local Ed25519 signing and
+filesystem staging-publication adapters. They are internal functions only; no
+signer or publisher HTTP endpoint or client route was added. Keep
+`A8_LOCAL_SIGNING_ENABLED=false` and `A8_LOCAL_PUBLICATION_ENABLED=false`.
+
+The staging route now selects the safe preflight path while either flag is
+disabled. If both flags are explicitly enabled in a controlled local
+environment, it performs digest-bound Ed25519 signing, writes an immutable
+filesystem staging package, and records a content-free receipt. It never
+accepts a client-provided key, provider, destination, or arbitrary package
+content.
 
 1. Freeze the candidate and evidence digests when the admin approves it.
 2. Send only the approved immutable candidate to the isolated external signing job.
@@ -425,7 +447,14 @@ Exit criteria:
 
 ### Phase A9 - Verify extension update and rollback behavior
 
-Status: **Planned**
+Status: **Verification complete; production build pending local Plasmo access**
+
+Verification evidence: extension test suite passed 135 tests with 1 existing
+performance test skipped. The signed deployment drill passed, including
+replacement activation, higher-sequence rollback activation, and replay
+rejection. The Plasmo production build could not complete in this environment
+because its metadata fetch/filesystem cleanup was denied; no test or type error
+was reported.
 
 1. Confirm the extension checks for updates on startup, on a bounded schedule, and through a manual refresh without affecting local enforcement.
 2. Verify signature, trust root, revocation, digest, schema, sequence, expiry, capability, feature version, size, and numeric bounds before staging.
@@ -444,7 +473,26 @@ Exit criteria:
 
 ### Phase A10 - Add monitoring, cost controls, and incident response
 
-Status: **Planned**
+Status: **Started — bounded content-free ML metrics implemented**
+
+The server now has a bounded in-process metric recorder for queue depth, run
+outcomes/duration, trigger reasons, gate results, AI token/cost usage,
+approval duration, signing/publication status, package adoption, and activation
+failures. Samples contain only a fixed metric name, bounded numeric value,
+optional safe label, and timestamp; raw content and secrets are rejected.
+
+Super-admins can read aggregate summaries through the existing backend route
+`GET /admin/ml/metrics`. The response contains only count, total, maximum, and
+average values per metric name; individual samples are not exposed.
+
+The A10 kill switch is `AI_ML_KILL_SWITCH_ENABLED=true`. It forces AI and
+automatic triggers off while leaving deterministic/manual workflows and local
+extension protection available. Aggregate alert identifiers now flag repeated
+run failures, observed AI cost, signing/publication failures, and activation
+failures.
+
+The incident-response and retention runbook is documented in
+`docs/AI_ML_INCIDENT_RUNBOOK.md`.
 
 1. Add content-free metrics for queue depth, run outcomes/duration, trigger reasons, gate results, AI token/cost use, approval time, signing/publication status, package adoption, and activation failure rate.
 2. Never log prompts, DOM/file content, candidates, feature rows from users, authorization tokens, package bodies, or AI credentials.

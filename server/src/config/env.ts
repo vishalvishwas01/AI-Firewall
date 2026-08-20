@@ -90,4 +90,11 @@ export const env = {
     process.env.INTELLIGENCE_SIGNER_MODE
   ),
   aiWorkflow: parseAiWorkflowConfig()
+  ,a8: {
+    localSigningEnabled: parseBooleanEnv(process.env.A8_LOCAL_SIGNING_ENABLED),
+    localPublicationEnabled: parseBooleanEnv(process.env.A8_LOCAL_PUBLICATION_ENABLED),
+    signingKeyId: process.env.A8_SIGNING_KEY_ID?.trim() || "hallguard-staging-v1",
+    signingPrivateKeyPem: process.env.A8_SIGNING_PRIVATE_KEY_PEM ?? "",
+    stagingOutputDir: process.env.A8_STAGING_OUTPUT_DIR?.trim() || "./artifacts/staging"
+  }
 }

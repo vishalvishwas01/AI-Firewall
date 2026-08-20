@@ -1,5 +1,6 @@
 export type AiWorkflowConfig = {
   enabled: boolean
+  killSwitchEnabled: boolean
   provider: string
   model: string
   apiBaseUrl: string
@@ -43,6 +44,7 @@ const boundedText = (value: string | undefined, name: string, maximum: number) =
 }
 
 export const parseAiWorkflowConfig = (environment: NodeJS.ProcessEnv = process.env): AiWorkflowConfig => {
+  const killSwitchEnabled = parseBoolean(environment.AI_ML_KILL_SWITCH_ENABLED, false)
   const enabled = parseBoolean(environment.AI_ML_ENABLED, false)
   const providerConfigApproved = parseBoolean(environment.AI_PROVIDER_CONFIG_APPROVED, false)
   const provider = boundedText(environment.AI_PROVIDER, "AI_PROVIDER", 64)
@@ -55,13 +57,14 @@ export const parseAiWorkflowConfig = (environment: NodeJS.ProcessEnv = process.e
   if (enabled && apiBaseUrl !== "https://openrouter.ai/api/v1") throw new Error("AI_API_BASE_URL is not allowlisted")
   if (enabled && !apiKey) throw new Error("AI_ML_ENABLED requires server-side OPENROUTER_API_KEY")
   return {
-    enabled,
+    enabled: killSwitchEnabled ? false : enabled,
+    killSwitchEnabled,
     provider,
     model,
     apiBaseUrl,
     apiKey,
     providerConfigApproved,
-    autoTriggerEnabled: parseBoolean(environment.AI_ML_AUTO_TRIGGER_ENABLED, false),
+    autoTriggerEnabled: killSwitchEnabled ? false : parseBoolean(environment.AI_ML_AUTO_TRIGGER_ENABLED, false),
     maxRunsPerDay: parseInteger(environment.AI_ML_MAX_RUNS_PER_DAY, 1, 0, 100),
     maxActiveRuns: parseInteger(environment.AI_ML_MAX_ACTIVE_RUNS, 1, 1, 4),
     cooldownSeconds: parseInteger(environment.AI_ML_COOLDOWN_SECONDS, 86400, 0, 604800),

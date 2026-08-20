@@ -19,10 +19,24 @@ import { validateNoBody } from "../shared/validation.js"
 import { startVerificationCampaign, listVerificationCampaigns } from "../modules/auth/verificationAdmin.service.js"
 import { adminLoginActivity, type AdminLoginActivityFilters } from "../modules/auth/loginActivityAdmin.service.js"
 import { listServerLogs, type ServerLogFilters } from "../modules/admin/serverLogs.service.js"
+import { getApiMonitoring } from "../modules/admin/apiMonitoring.service.js"
 
 const router = Router()
 
 router.use(requireAuth)
+
+router.get("/api-monitoring", requireSuperAdmin, validateNoBody, async (req, res, next) => {
+  try {
+    const allowedQuery = new Set(["from", "to"])
+    if (Object.keys(req.query).some((key) => !allowedQuery.has(key)) || Object.values(req.query).some((value) => typeof value !== "string")) throw new ValidationError("Invalid API monitoring filters")
+    const scalar = (value: unknown) => typeof value === "string" ? value.trim() : ""
+    const fromValue = scalar(req.query.from); const toValue = scalar(req.query.to)
+    const from = fromValue ? new Date(`${fromValue}T00:00:00.000Z`) : undefined
+    const to = toValue ? new Date(`${toValue}T23:59:59.999Z`) : undefined
+    if ((fromValue && Number.isNaN(from!.getTime())) || (toValue && Number.isNaN(to!.getTime())) || (from && to && from > to)) throw new ValidationError("Invalid API monitoring date range")
+    sendJson(res, ["total", "byApi", "timeline"], await getApiMonitoring(await getDb(), { ...(from ? { from } : {}), ...(to ? { to } : {}) }))
+  } catch (error) { next(error) }
+})
 
 router.get("/server-logs", requireSuperAdmin, validateNoBody, async (req, res, next) => {
   try {

@@ -12,6 +12,10 @@ import { parseAdminReviewRequest } from "./review.schemas.js"
 import { submitAdminReview } from "./review.service.js"
 import { toTrainingRunDto } from "./workflow.service.js"
 import { findReleaseEligibilityForRun } from "./release-eligibility.repository.js"
+import { prepareStagingRelease } from "./release.service.js"
+import { executeLocalStagingRelease } from "./local.release.js"
+import { env } from "../../config/env.js"
+import { getMlMetricAlerts, getMlMetricSummary } from "./metrics.js"
 
 const routeParam = (value: unknown) => Array.isArray(value) ? value[0] : value
 const limit = (value: unknown) => {
@@ -30,6 +34,12 @@ export const listMlRuns = async (req: AuthenticatedRequest, res: Response, next:
   } catch (error) { next(error) }
 }
 
+export const getMlMetrics = async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    sendJson(res, ["metrics", "alerts"], { metrics: getMlMetricSummary(), alerts: getMlMetricAlerts() })
+  } catch (error) { next(error) }
+}
+
 export const getMlRun = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const run = await findTrainingRun(await getDb(), String(routeParam(req.params.runId)))
@@ -43,6 +53,22 @@ export const getMlRunEligibility = async (req: AuthenticatedRequest, res: Respon
     const runId = String(routeParam(req.params.runId))
     const record = await findReleaseEligibilityForRun(await getDb(), runId)
     sendJson(res, ["eligibility"], { eligibility: record ? { status: record.status, releaseEligible: record.releaseEligible, policyId: record.policyId, candidateDigest: record.candidateDigest, evidenceDigest: record.evidenceDigest, evaluatedAt: record.validatedAt.toISOString(), passedGateCount: Object.values(record.gateResults).filter((status) => status === "passed").length, gateCount: Object.keys(record.gateResults).length } : null })
+  } catch (error) { next(error) }
+}
+
+/** A8 preflight only: records an immutable intent; never signs or publishes. */
+export const prepareMlRunStaging = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const runId = String(routeParam(req.params.runId))
+    const body = req.body as Record<string, unknown>
+    const candidateDigest = typeof body?.candidateDigest === "string" ? body.candidateDigest : ""
+    const evidenceDigest = typeof body?.evidenceDigest === "string" ? body.evidenceDigest : ""
+    const packageSequence = typeof body?.packageSequence === "number" ? body.packageSequence : Number.NaN
+    const db = await getDb()
+    const result = env.a8.localSigningEnabled && env.a8.localPublicationEnabled
+      ? await executeLocalStagingRelease(db, { runId, candidateDigest, evidenceDigest, packageSequence })
+      : await prepareStagingRelease(db, { runId, candidateDigest, evidenceDigest, packageSequence })
+    sendJson(res.status(202), ["staging"], { staging: result })
   } catch (error) { next(error) }
 }
 

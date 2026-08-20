@@ -58,3 +58,14 @@ export const getServerLogs = (filters: ServerLogFilters) => {
     return { logs: array(input.logs, (item) => { const log = object(item, ["id", "level", "category", "message", "createdAt"], ["requestId", "method", "path", "statusCode", "ipAddress", "metadata"]); return { id: nonEmptyString(log.id, 64), level: oneOf(log.level, ["error", "warn", "security", "info"] as const), category: oneOf(log.category, ["http", "auth", "email", "system", "security", "database"] as const), message: nonEmptyString(log.message, 500), ...(log.requestId === undefined ? {} : { requestId: nonEmptyString(log.requestId, 100) }), ...(log.method === undefined ? {} : { method: nonEmptyString(log.method, 12) }), ...(log.path === undefined ? {} : { path: nonEmptyString(log.path, 300) }), ...(log.statusCode === undefined ? {} : { statusCode: nonNegativeInteger(log.statusCode) }), ...(log.ipAddress === undefined ? {} : { ipAddress: nonEmptyString(log.ipAddress, 64) }), ...(log.metadata === undefined ? {} : { metadata: dictionary(log.metadata) }), createdAt: isoDate(log.createdAt) } }, 5000) }
   })
 }
+
+export type ApiMonitoring = { total: number; byApi: Array<{ method: string; route: string; count: number }>; timeline: Array<{ bucketStart: string; count: number }> }
+export const getApiMonitoring = (filters: { from: string; to: string }) => {
+  const query = new URLSearchParams()
+  if (filters.from.trim()) query.set("from", filters.from.trim())
+  if (filters.to.trim()) query.set("to", filters.to.trim())
+  return apiRequest<ApiMonitoring>(`/admin/api-monitoring${query.toString() ? `?${query}` : ""}`, {}, (value) => {
+    const input = object(value, ["total", "byApi", "timeline"])
+    return { total: nonNegativeInteger(input.total), byApi: array(input.byApi, (item) => { const row = object(item, ["method", "route", "count"]); return { method: nonEmptyString(row.method, 12), route: nonEmptyString(row.route, 240), count: nonNegativeInteger(row.count) } }, 500), timeline: array(input.timeline, (item) => { const row = object(item, ["bucketStart", "count"]); return { bucketStart: isoDate(row.bucketStart), count: nonNegativeInteger(row.count) } }, 1000) }
+  })
+}

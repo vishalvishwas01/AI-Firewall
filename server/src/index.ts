@@ -33,6 +33,8 @@ import { ensureLoginActivityIndexes } from "./models/loginActivity.js"
 import { ensureServerLogIndexes } from "./models/serverLog.js"
 import { supportRouter } from "./modules/support/support.routes.js"
 import { logServerEvent, setServerLoggerDb } from "./shared/serverLogger.js"
+import { apiMetricsMiddleware, setApiMetricsDb, startApiMetricsFlusher, flushApiMetrics } from "./shared/apiMetrics.js"
+import { ensureApiMetricIndexes } from "./models/apiMetric.js"
 import { ensureTrainingTriggerIndexes } from "./modules/mlWorkflow/trigger.repository.js"
 import { ensureTrainingRunIndexes } from "./modules/mlWorkflow/run.repository.js"
 import { ensureTrainingEvidenceIndexes } from "./modules/mlWorkflow/evidence.repository.js"
@@ -55,6 +57,7 @@ const allowedOrigins = [
 // they are intentionally not written to stdout in production.
 
 app.use(requestIdMiddleware)
+app.use(apiMetricsMiddleware)
 app.use(structuredRequestLogger)
 app.use(globalRateLimiter)
 
@@ -120,6 +123,7 @@ await ensureVerificationCampaignIndexes(db)
 await ensurePasswordResetIndexes(db)
 await ensureLoginActivityIndexes(db)
 await ensureServerLogIndexes(db)
+await ensureApiMetricIndexes(db)
 await ensureTrainingTriggerIndexes(db)
 await ensureTrainingRunIndexes(db)
 await ensureTrainingEvidenceIndexes(db)
@@ -129,7 +133,9 @@ await ensureReleaseEligibilityIndexes(db)
 await ensureMlReviewDecisionIndexes(db)
 await ensureStagingIntentIndexes(db)
 setServerLoggerDb(db)
+setApiMetricsDb(db)
 ready = true
+const apiMetricsTimer = startApiMetricsFlusher()
 
 const retentionTimer = setInterval(async () => {
   try {
@@ -150,6 +156,8 @@ const server = app.listen(env.port, "0.0.0.0", () => {
 const shutdown = async (signal: string) => {
   ready = false
   clearInterval(retentionTimer)
+  clearInterval(apiMetricsTimer)
+  await flushApiMetrics()
   logServerEvent("info", "system", "Server stopping", { signal })
   await new Promise<void>((resolve) => server.close(() => resolve()))
   await closeMongoClient()
