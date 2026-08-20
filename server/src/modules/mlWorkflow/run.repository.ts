@@ -30,6 +30,7 @@ export const trainingRunsCollection = (db: Db): Collection<TrainingRunDocument> 
 export const ensureTrainingRunIndexes = async (db: Db) => {
   const collection = trainingRunsCollection(db)
   await collection.createIndex({ runId: 1 }, { unique: true })
+  await collection.createIndex({ triggerId: 1 }, { unique: true })
   await collection.createIndex({ state: 1, createdAt: -1 })
   await collection.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
 }
@@ -44,6 +45,11 @@ export const createTrainingRun = async (db: Db, input: CreateTrainingRunInput): 
 }
 
 export const findTrainingRun = (db: Db, runId: string) => trainingRunsCollection(db).findOne({ runId })
+export const findTrainingRunByTrigger = (db: Db, triggerId: string) => trainingRunsCollection(db).findOne({ triggerId })
+
+export const findTrainingRuns = (db: Db, limit = 50) => trainingRunsCollection(db)
+  .find({}, { sort: { createdAt: -1 }, limit })
+  .toArray()
 
 export const transitionTrainingRun = async (
   db: Db,

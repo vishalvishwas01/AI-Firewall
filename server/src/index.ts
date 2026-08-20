@@ -34,6 +34,12 @@ import { ensureServerLogIndexes } from "./models/serverLog.js"
 import { supportRouter } from "./modules/support/support.routes.js"
 import { logServerEvent, setServerLoggerDb } from "./shared/serverLogger.js"
 import { ensureTrainingTriggerIndexes } from "./modules/mlWorkflow/trigger.repository.js"
+import { ensureTrainingRunIndexes } from "./modules/mlWorkflow/run.repository.js"
+import { ensureTrainingEvidenceIndexes } from "./modules/mlWorkflow/evidence.repository.js"
+import { ensureMlAuditEventIndexes } from "./modules/mlWorkflow/audit.repository.js"
+import { mlWorkflowRouter } from "./modules/mlWorkflow/workflow.routes.js"
+import { ensureMlQueueIndexes } from "./modules/mlWorkflow/queue.repository.js"
+import { ensureReleaseEligibilityIndexes } from "./modules/mlWorkflow/release-eligibility.repository.js"
 
 const app = express()
 if (env.trustProxyHops > 0) app.set("trust proxy", env.trustProxyHops)
@@ -90,6 +96,7 @@ app.use("/logs", logsRouter)
 app.use("/sites", sitesRouter)
 app.use("/orgs", invitationsRouter)
 app.use("/orgs", orgsRouter)
+app.use("/admin/ml", mlWorkflowRouter)
 app.use("/admin", adminRouter)
 app.use("/improvement-events", improvementTelemetryRouter)
 app.use("/intelligence", intelligenceRouter)
@@ -112,6 +119,11 @@ await ensurePasswordResetIndexes(db)
 await ensureLoginActivityIndexes(db)
 await ensureServerLogIndexes(db)
 await ensureTrainingTriggerIndexes(db)
+await ensureTrainingRunIndexes(db)
+await ensureTrainingEvidenceIndexes(db)
+await ensureMlAuditEventIndexes(db)
+await ensureMlQueueIndexes(db)
+await ensureReleaseEligibilityIndexes(db)
 setServerLoggerDb(db)
 ready = true
 
