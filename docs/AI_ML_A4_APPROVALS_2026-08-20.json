@@ -1,0 +1,48 @@
+{
+  "recordVersion": 1,
+  "gate": "A4",
+  "status": "approved",
+  "reviewType": "three_role_gate_review",
+  "purpose": "Record privacy, security, and maintainer approval for A4.",
+  "recordedAt": "2026-08-20",
+  "evidence": {
+    "gatePolicy": "ml/contracts/a4-evaluation-gates-v1.json",
+    "candidateGateEvaluation": {
+      "candidate": "ml/artifacts/candidates/run-001",
+      "status": "shadow-only",
+      "releaseEligible": false,
+      "manifestSha256": "0ac16407d24f768cdbf3fa40226720af751c375022054b925fb9d0d6b488b7e1"
+    }
+  },
+  "reviews": [
+    {
+      "role": "privacy",
+      "reviewer": "umang aggarwal",
+      "decision": "approved",
+      "scope": ["Privacy controls", "Data handling and isolation", "Training and model-data governance", "Privacy requirements applicable to A4"],
+      "conditions": []
+    },
+    {
+      "role": "security",
+      "reviewer": "vishal vishwas",
+      "decision": "approved",
+      "scope": ["Security controls", "Threat-model alignment", "Execution and isolation boundaries", "Model and training artifact security", "Secrets and data-access controls"],
+      "conditions": []
+    },
+    {
+      "role": "maintainer",
+      "reviewer": "tushar garg",
+      "decision": "approved",
+      "scope": ["Repository readiness", "ADR and governance compliance", "A4 implementation and validation evidence", "Operational maintainability", "Readiness for the next gate"],
+      "conditions": []
+    }
+  ],
+  "gateDecision": {
+    "privacyApproved": true,
+    "securityApproved": true,
+    "maintainerApproved": true,
+    "allRequiredApprovalsRecorded": true,
+    "a4Complete": true,
+    "a5StartAllowed": true
+  }
+}

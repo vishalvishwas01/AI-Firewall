@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hallguard.local/contracts/a4-evidence-manifest-v1.schema.json",
+  "title": "HallGuard A4 Content-Free Gate Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "evidenceVersion", "evidenceType", "candidateArtifactSha256", "status", "sourceRevision", "measurements", "rawContentIncluded"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "evidenceVersion": { "const": "a4-evidence-manifest-v1" },
+    "evidenceType": {
+      "enum": ["unicode-adversarial", "stable-comparison", "extension-latency", "candidate-explosion", "bundle-growth", "extension-compatibility"]
+    },
+    "candidateArtifactSha256": { "$ref": "#/$defs/sha256" },
+    "status": { "enum": ["passed", "failed", "insufficient-evidence"] },
+    "sourceRevision": { "$ref": "#/$defs/sha256" },
+    "measurements": {
+      "type": "object",
+      "additionalProperties": { "type": ["number", "boolean", "string"] }
+    },
+    "rawContentIncluded": { "const": false }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

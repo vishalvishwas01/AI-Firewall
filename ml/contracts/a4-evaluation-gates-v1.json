@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "policyId": "a4-evaluation-gates-v1",
+  "status": "active-shadow-only",
+  "decisionRule": "release is ineligible unless every required gate is passed with sufficient evidence; missing or inconclusive evidence is a failure for release and preserves shadow-only status",
+  "candidateContract": {
+    "classifierType": "logistic-regression",
+    "featureVersion": "candidate-features-v1",
+    "artifactMaxBytes": 5242880,
+    "networkAllowed": false,
+    "signingAllowed": false,
+    "publicationAllowed": false
+  },
+  "numericGates": {
+    "supportedSensitiveRecall": { "minimum": 0.95, "minimumSupport": 100 },
+    "supportedSensitiveFalseNegativeRate": { "maximum": 0.05, "minimumSupport": 100 },
+    "balancedBenignFalsePositiveRate": { "maximum": 0.02, "minimumSupport": 100 },
+    "precision": { "minimum": 0.95, "minimumSupport": 100 },
+    "expectedCalibrationError": { "maximum": 0.05, "minimumSupport": 100 },
+    "criticalKnownCategoryRecall": { "minimum": 1.0, "minimumSupport": 1 },
+    "rawLeakScanCoverage": { "required": 1.0 },
+    "artifactBytes": { "maximum": 5242880 }
+  },
+  "requiredEvidence": [
+    "held-out-group-isolation",
+    "deterministic-training-state",
+    "raw-leak-scan",
+    "supported-category-evaluation",
+    "balanced-benign-evaluation",
+    "calibration-report",
+    "unicode-normalization-and-adversarial-evaluation",
+    "stable-model-comparison",
+    "extension-latency-benchmark",
+    "extension-candidate-explosion-bound",
+    "extension-bundle-growth-benchmark",
+    "oldest-supported-extension-compatibility"
+  ],
+  "comparison": {
+    "baselineRequired": true,
+    "criticalSafetyRegressionAllowed": false,
+    "statisticallyWeakOutcome": "insufficient-evidence",
+    "missingEvidenceOutcome": "shadow-only",
+    "failedGateOutcome": "shadow-only"
+  },
+  "authority": {
+    "gateResultsSource": "deterministic-code-only",
+    "aiMayModifyGateResults": false,
+    "humanApprovalMayOverrideFailedGate": false
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "recordVersion": 1,
+  "gate": "A3",
+  "status": "approved",
+  "reviewType": "three_role_gate_review",
+  "purpose": "Record privacy, security, and maintainer approval for A3, the isolated deterministic training job.",
+  "recordedAt": "2026-08-20",
+  "evidence": {
+    "candidateRun": {
+      "outputPath": "ml/artifacts/candidates/run-001",
+      "manifestSha256": "0ac16407d24f768cdbf3fa40226720af751c375022054b925fb9d0d6b488b7e1",
+      "repeatRunsMatched": true,
+      "workspaceValidation": "passed",
+      "networkAllowed": false,
+      "releaseEligible": false,
+      "signingAllowed": false,
+      "publicationAllowed": false
+    }
+  },
+  "reviews": [
+    {
+      "role": "privacy",
+      "reviewer": "umang aggarwal",
+      "decision": "approved",
+      "scope": ["Privacy controls", "Training-data handling and boundaries", "Data isolation requirements", "Privacy compliance for the deterministic training workflow"],
+      "conditions": []
+    },
+    {
+      "role": "security",
+      "reviewer": "vishal vishwas",
+      "decision": "approved",
+      "scope": ["Security controls", "Threat-model alignment", "Training-job isolation", "Deterministic execution security", "Secrets and data-access boundaries"],
+      "conditions": []
+    },
+    {
+      "role": "maintainer",
+      "reviewer": "tushar garg",
+      "decision": "approved",
+      "scope": ["Repository readiness", "ADR and governance compliance", "A3 implementation and test evidence", "Training workflow maintainability", "Operational readiness"],
+      "conditions": []
+    }
+  ],
+  "gateDecision": {
+    "privacyApproved": true,
+    "securityApproved": true,
+    "maintainerApproved": true,
+    "allRequiredApprovalsRecorded": true,
+    "a3Complete": true,
+    "a4StartAllowed": true
+  }
+}

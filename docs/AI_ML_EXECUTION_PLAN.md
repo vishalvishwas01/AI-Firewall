@@ -206,7 +206,7 @@ Exit criteria:
 
 ### Phase A3 - Build the isolated deterministic training job
 
-Status: **In progress — 2026-08-20**
+Status: **Complete — 2026-08-20**
 
 Implementation update — 2026-08-20:
 
@@ -219,6 +219,7 @@ Implementation update — 2026-08-20:
 - Local execution evidence — 2026-08-20: the user ran the pinned candidate command twice for `artifacts/candidates/run-001`. Both runs passed the A3 workspace audit and produced the identical manifest SHA-256 `0ac16407d24f768cdbf3fa40226720af751c375022054b925fb9d0d6b488b7e1`. The output is still `pending-human-review`, content-free, network-disabled, and release/signing/publication-ineligible.
 - Retry-hardening update — 2026-08-20: A3 now audits candidate directories strictly before retrying. Only the exact four contract-validated files are permitted; their canonical encodings, digests, artifact byte count, semantic digests, safety flags, and no-symlink boundary are checked. The M3 gate validator now checks the exact gate-name set rather than incidental JSON object key order, so canonical JSON output remains valid.
 - Local A3 workspace validation passed on 2026-08-20. The full ML suite initially had one expected stale-stage failure: its “current workspace” test audited at B2, which correctly rejects an A3 candidate directory. The test now audits the current A3 workspace; rerun the suite to record the final result, then obtain privacy, security, and maintainer approval before A4 begins.
+- Approval record: `AI_ML_A3_APPROVALS_2026-08-20.json` records privacy, security, and maintainer approval without conditions. A3 is complete and A4 is authorized to start.
 
 1. Wrap the existing ML commands in a single non-interactive job entry point, for example `hallguard_ml.run_candidate`.
 2. Accept only an allowlisted, versioned run profile; do not accept arbitrary commands or Python from the AI agent.
@@ -244,7 +245,17 @@ Exit criteria:
 
 ### Phase A4 - Add predeclared evaluation and release gates
 
-Status: **Planned**
+Status: **Complete — 2026-08-20**
+
+Implementation update — 2026-08-20:
+
+- Added `ml/contracts/a4-evaluation-gates-v1.json`, the predeclared A4 gate policy. It fixes the supported-category recall, false-negative, benign false-positive, precision, calibration, critical-category, raw-leak coverage, and artifact-size thresholds before comparison work begins.
+- The policy requires deterministic evidence for stable-model comparison, Unicode/adversarial coverage, extension latency, candidate-explosion bounds, bundle growth, and oldest-supported-extension compatibility. Missing, failed, or statistically insufficient evidence remains `shadow-only`; AI text and human approval cannot override a failed gate.
+- Added `hallguard_ml.evaluation_gates`, a deterministic A4 evaluator for a content-free A3 candidate bundle. It binds gate output to the evidence file digests and reports every missing predeclared evidence item as `insufficient-evidence`, preserving `status: shadow-only` and `releaseEligible: false`.
+- Local A4 gate execution for `run-001` passed all currently measurable offline checks and correctly reported Unicode/adversarial coverage, stable-model comparison, extension latency/candidate-explosion/bundle benchmarks, and oldest-extension compatibility as `insufficient-evidence`. The candidate remains shadow-only. The evaluator now emits explicit results for every numeric policy threshold, including false-negative rate, precision, critical-category recall, raw-leak coverage, and artifact size.
+- Added `ml/contracts/a4-evidence-manifest-v1.schema.json` and `hallguard_ml.a4_evidence` for the six missing evidence types. Every submitted evidence record is exact-field, scalar-only/content-free, candidate-artifact digest-bound, revision-pinned, and rejects raw content. No evidence record has been created or treated as passing.
+- `hallguard_ml.evaluation_gates` now accepts an optional explicit A4 evidence directory. It rejects non-JSON files, duplicate evidence types, malformed records, and digest mismatches; a passed evidence record can update only its mapped gate. Remaining required evidence still keeps the candidate shadow-only.
+- Approval record: `AI_ML_A4_APPROVALS_2026-08-20.json` records privacy, security, and maintainer approval without conditions. A4 is complete and A5 is authorized to start.
 
 1. Define numeric gates before running candidate comparisons:
    - supported-category recall and false-negative rate;
@@ -270,7 +281,12 @@ Exit criteria:
 
 ### Phase A5 - Add the constrained AI coordinator and summary
 
-Status: **Planned**
+Status: **In progress — 2026-08-20**
+
+Implementation update — 2026-08-20:
+
+- Added `hallguard_ml.review_summary`, a deterministic, content-free fallback summary bound to the A4 gate-report digest. It identifies itself as `provider: deterministic-template`, records zero tokens, cost, and latency, is explicitly non-authoritative, and always returns `insufficient-evidence`; it cannot approve, sign, or publish a candidate.
+- No AI provider request is implemented or permitted yet. `AI_ML_ENABLED` remains false and the provider/model/base URL/API-key environment placeholders must remain unset until a separately reviewed provider configuration is supplied.
 
 1. Give the AI coordinator access only to typed, allowlisted tools such as:
    - inspect trigger metadata;

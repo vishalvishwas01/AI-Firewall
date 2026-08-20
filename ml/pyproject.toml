@@ -31,6 +31,8 @@ hallguard-ml-targeted-review = "hallguard_ml.targeted_review:main"
 hallguard-ml-representative = "hallguard_ml.representative:main"
 hallguard-ml-run-profile = "hallguard_ml.run_profile:main"
 hallguard-ml-run-candidate = "hallguard_ml.run_candidate:main"
+hallguard-ml-evaluate-gates = "hallguard_ml.evaluation_gates:main"
+hallguard-ml-review-summary = "hallguard_ml.review_summary:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
