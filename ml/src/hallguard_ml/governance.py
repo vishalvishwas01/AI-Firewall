@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
+import re
 from pathlib import Path
+from typing import Any
 
 from .contracts import (
     FEATURE_NAMES,
     ContractError,
+    serialize_artifact,
     validate_artifact,
     validate_b2_training_state_approval,
     validate_corpus_review_package,
@@ -73,6 +77,28 @@ M3_SCOPE_AMENDMENT_FILE = Path("datasets/manifests") / SCOPE_AMENDMENT_FILE
 M3_WORKFLOW_AUTHORIZATION_FILE = Path("datasets/manifests") / WORKFLOW_AUTHORIZATION_FILE
 M3_COVERAGE_REVIEW_FILE = Path("datasets/manifests/m3-representative-coverage-review-v1.review.json")
 M4_SHADOW_ARTIFACT_FILE = Path("artifacts/m4-secret-logistic-b2-limited-v1.shadow-artifact.json")
+A3_CANDIDATE_ROOT = Path("artifacts/candidates")
+A3_CANDIDATE_FILES = {
+    "training-state.json",
+    "evaluation.metrics.json",
+    "runtime-artifact.json",
+    "run-manifest.json",
+}
+A3_RUN_MANIFEST_FIELDS = {
+    "schemaVersion",
+    "profileId",
+    "status",
+    "releaseEligible",
+    "networkUsed",
+    "signingAllowed",
+    "publicationAllowed",
+    "trainingStateSha256",
+    "evaluationSha256",
+    "artifactSha256",
+    "artifactBytes",
+    "trainingStateDigest",
+    "evaluationDigest",
+}
 SUPPLEMENTAL_REVIEW_FIELDS = {
     "m4-staging-drill-result-v1.manifest.json": {
         "schemaVersion",
@@ -641,6 +667,99 @@ def _audit_b2_representative_boundary(root: Path) -> list[str]:
     return errors
 
 
+def _canonical_json_bytes(value: dict[str, Any]) -> bytes:
+    return (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
+
+
+def _audit_a3_candidate_boundary(root: Path) -> list[str]:
+    """Accept only complete, validated, content-free isolated-run outputs."""
+
+    errors = _audit_b2_representative_boundary(root)
+    candidate_prefix = str(A3_CANDIDATE_ROOT).replace("/", "\\") + "\\"
+    errors = [
+        error
+        for error in errors
+        if not (
+            error.startswith("M2 forbids non-draft artifact file:")
+            and error.split(":", maxsplit=1)[1].strip().replace("/", "\\").startswith(candidate_prefix)
+        )
+    ]
+
+    candidate_root = root / A3_CANDIDATE_ROOT
+    if not candidate_root.exists():
+        return errors
+    if not candidate_root.is_dir():
+        return [*errors, f"A3 candidate root must be a directory: {A3_CANDIDATE_ROOT}"]
+
+    for path in sorted(candidate_root.rglob("*")):
+        if path.is_symlink():
+            errors.append(f"A3 forbids symbolic links in candidate output: {path.relative_to(root)}")
+        if path.is_dir() and path.parent != candidate_root:
+            errors.append(f"A3 forbids nested candidate directories: {path.relative_to(root)}")
+        if path.is_file() and path.parent == candidate_root:
+            errors.append(f"A3 forbids files directly in candidate root: {path.relative_to(root)}")
+        elif path.is_file() and path.parent.parent != candidate_root:
+            errors.append(f"A3 forbids nested candidate files: {path.relative_to(root)}")
+
+    for run_dir in sorted(path for path in candidate_root.iterdir() if path.is_dir()):
+        if run_dir.is_symlink():
+            continue
+        files = {path.name: path for path in run_dir.iterdir() if path.is_file()}
+        if set(files) != A3_CANDIDATE_FILES:
+            errors.append(f"A3 candidate output files are invalid: {run_dir.relative_to(root)}")
+            continue
+        try:
+            state_bytes = files["training-state.json"].read_bytes()
+            evaluation_bytes = files["evaluation.metrics.json"].read_bytes()
+            artifact_bytes = files["runtime-artifact.json"].read_bytes()
+            manifest_bytes = files["run-manifest.json"].read_bytes()
+            state = json.loads(state_bytes)
+            evaluation = json.loads(evaluation_bytes)
+            artifact = json.loads(artifact_bytes)
+            manifest = json.loads(manifest_bytes)
+            if not all(isinstance(value, dict) for value in (state, evaluation, artifact, manifest)):
+                raise ContractError("candidate JSON roots must be objects")
+            validate_training_state(state)
+            validate_evaluation_report(evaluation)
+            validate_artifact(artifact)
+            if state_bytes != _canonical_json_bytes(state) or evaluation_bytes != _canonical_json_bytes(evaluation):
+                raise ContractError("candidate evidence must use canonical JSON")
+            if artifact_bytes != serialize_artifact(artifact) + b"\n":
+                raise ContractError("candidate runtime artifact must use canonical JSON")
+            if set(manifest) != A3_RUN_MANIFEST_FIELDS:
+                raise ContractError("candidate run manifest fields mismatch")
+            if (
+                manifest["schemaVersion"] != 1
+                or manifest["profileId"] != "profile-logistic-v1"
+                or manifest["status"] != "pending-human-review"
+                or any(manifest[field] is not False for field in ("releaseEligible", "networkUsed", "signingAllowed", "publicationAllowed"))
+            ):
+                raise ContractError("candidate run manifest safety flags are invalid")
+            for field in ("trainingStateSha256", "evaluationSha256", "artifactSha256", "trainingStateDigest", "evaluationDigest"):
+                if not isinstance(manifest[field], str) or not re.fullmatch(r"[0-9a-f]{64}", manifest[field]):
+                    raise ContractError(f"candidate run manifest {field} is malformed")
+            if not isinstance(manifest["artifactBytes"], int) or isinstance(manifest["artifactBytes"], bool):
+                raise ContractError("candidate run manifest artifactBytes is invalid")
+            if manifest["trainingStateSha256"] != hashlib.sha256(state_bytes).hexdigest():
+                raise ContractError("candidate training-state file digest mismatch")
+            if manifest["evaluationSha256"] != hashlib.sha256(evaluation_bytes).hexdigest():
+                raise ContractError("candidate evaluation file digest mismatch")
+            if manifest["artifactSha256"] != hashlib.sha256(artifact_bytes).hexdigest():
+                raise ContractError("candidate artifact digest mismatch")
+            if manifest["artifactBytes"] != len(artifact_bytes):
+                raise ContractError("candidate artifact size mismatch")
+            from .evaluation import report_digest
+            from .training import training_state_digest
+
+            if manifest["trainingStateDigest"] != training_state_digest(state):
+                raise ContractError("candidate training-state semantic digest mismatch")
+            if manifest["evaluationDigest"] != report_digest(evaluation):
+                raise ContractError("candidate evaluation semantic digest mismatch")
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ContractError) as error:
+            errors.append(f"{run_dir.relative_to(root)}: {error}")
+    return errors
+
+
 def audit_workspace(root: Path, *, stage: str = "m0") -> None:
     """Audit isolation, manifest privacy, and the current roadmap stop boundary."""
 
@@ -665,6 +784,8 @@ def audit_workspace(root: Path, *, stage: str = "m0") -> None:
         errors.extend(_audit_b2_final_boundary(root))
     elif stage == "b2-representative":
         errors.extend(_audit_b2_representative_boundary(root))
+    elif stage == "a3":
+        errors.extend(_audit_a3_candidate_boundary(root))
     else:
         raise ValueError(f"unsupported governance stage: {stage}")
     if errors:

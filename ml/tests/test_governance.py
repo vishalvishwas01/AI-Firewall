@@ -12,8 +12,8 @@ WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
 
 class GovernanceTests(unittest.TestCase):
-    def test_current_b2_pre_intake_workspace_passes(self) -> None:
-        validate_workspace(WORKSPACE_ROOT, stage="b2")
+    def test_current_a3_workspace_passes(self) -> None:
+        validate_workspace(WORKSPACE_ROOT, stage="a3")
 
     def test_b2_rejects_unknown_or_extended_supplemental_metadata(self) -> None:
         source = WORKSPACE_ROOT / "datasets" / "manifests" / "b2-m4-runtime-compatibility-evidence-v1.json"

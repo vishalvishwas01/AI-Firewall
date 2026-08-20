@@ -2465,8 +2465,8 @@ def validate_evaluation_report(value: dict[str, Any]) -> None:
             _bounded_metric(item[field], f"evaluationReport.calibrationBins[{index}].{field}", nullable=True)
 
     gates = value["gates"]
-    if not isinstance(gates, dict) or tuple(gates) != M3_GATE_NAMES:
-        raise ContractError("M3 gate order or names are invalid")
+    if not isinstance(gates, dict) or set(gates) != set(M3_GATE_NAMES):
+        raise ContractError("M3 gate names are invalid")
     if any(not isinstance(result, bool) for result in gates.values()):
         raise ContractError("M3 gate results must be booleans")
     expected_blockers = [name for name in M3_GATE_NAMES if not gates[name]]

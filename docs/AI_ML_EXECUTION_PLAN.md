@@ -169,7 +169,7 @@ Exit criteria:
 
 ### Phase A2 - Define safe retraining triggers and budgets
 
-Status: **In progress — 2026-08-20**
+Status: **Complete — 2026-08-20**
 
 Implementation update — 2026-08-20:
 
@@ -183,6 +183,7 @@ Implementation update — 2026-08-20:
 - Added `trigger.schemas.ts` as the future admin-API boundary. It accepts only `triggerId`, a lowercase SHA-256 `inputDigest`, and the allowlisted `profile-logistic-v1`; unknown fields, raw-content fields, network authorization, and arbitrary run profiles fail closed. No route is exposed yet.
 - Added `trigger.service.ts` to compose validation output, eligibility policy, and idempotent persistence. A retry returns the original trigger record; policy outcomes are recorded without creating a training run. Run-count/history context remains an explicit dependency for the future run coordinator.
 - Added `docs/contracts/ai-ml-trigger-policy-v1.json` as the reviewable baseline for A2. It locks the manual-only trigger type, deferred automatic types, no-network/no-provider state, deduplication outcomes, resource/token/cost limits, and prohibited input fields. A2 implementation is ready for privacy, security, and maintainer review; A3 must not start until that approval is recorded.
+- Approval record: `AI_ML_A2_APPROVALS_2026-08-20.json` binds the trigger-policy digest and records privacy, security, and maintainer approval without conditions. A2 is complete and A3 is authorized to begin.
 
 1. Begin with manual admin-triggered runs and scheduled checks; do not begin with autonomous event-based training.
 2. Add eligible automatic triggers only after the manual workflow is stable:
@@ -205,7 +206,19 @@ Exit criteria:
 
 ### Phase A3 - Build the isolated deterministic training job
 
-Status: **Planned**
+Status: **In progress — 2026-08-20**
+
+Implementation update — 2026-08-20:
+
+- Added the sole allowlisted `profile-logistic-v1` at `ml/contracts/ai-ml-run-profile-v1.json`. It pins logistic regression, `candidate-features-v1`, seed `20260801`, group count `32`, no network, bounded resources, content-free output, and release/signing/publication disabled.
+- Added `hallguard_ml.run_profile`, a fail-closed profile validator and read-only CLI. Drift in the profile identity, deterministic settings, allowed operations, limits, or output policy is rejected.
+- Server typecheck and JSON parsing passed. Focused ML tests, compilation, and Ruff could not execute in this sandbox because the virtual environment's Python 3.14 base executable returns Windows access denied. An elevated retry was unavailable due a transient approval-channel failure; no workaround was attempted. The user-provided A1 evidence reports the local ML environment as passing.
+- Next A3 implementation: add the non-interactive runner preflight and its content-free evidence directory contract; do not invoke training until the preflight is verified.
+- Added `hallguard_ml.run_candidate` in preflight-only mode. It validates the B2 representative governance boundary, the allowlisted profile, workspace-contained candidate output, no-network policy, content-free output policy, and disabled release/signing/publication flags. It reports `trainingStarted: false` and performs no model or artifact write.
+- Added the explicit `--execute` branch behind that preflight. It invokes only the pinned `train_logistic_model`, `evaluate_draft`, and bounded shadow-artifact serialization, then writes `training-state.json`, `evaluation.metrics.json`, `runtime-artifact.json`, and a content-free `run-manifest.json` under the workspace-contained candidate directory. The manifest remains `pending-human-review`, `releaseEligible: false`, `networkUsed: false`, and signing/publication disabled.
+- Local execution evidence — 2026-08-20: the user ran the pinned candidate command twice for `artifacts/candidates/run-001`. Both runs passed the A3 workspace audit and produced the identical manifest SHA-256 `0ac16407d24f768cdbf3fa40226720af751c375022054b925fb9d0d6b488b7e1`. The output is still `pending-human-review`, content-free, network-disabled, and release/signing/publication-ineligible.
+- Retry-hardening update — 2026-08-20: A3 now audits candidate directories strictly before retrying. Only the exact four contract-validated files are permitted; their canonical encodings, digests, artifact byte count, semantic digests, safety flags, and no-symlink boundary are checked. The M3 gate validator now checks the exact gate-name set rather than incidental JSON object key order, so canonical JSON output remains valid.
+- Local A3 workspace validation passed on 2026-08-20. The full ML suite initially had one expected stale-stage failure: its “current workspace” test audited at B2, which correctly rejects an A3 candidate directory. The test now audits the current A3 workspace; rerun the suite to record the final result, then obtain privacy, security, and maintainer approval before A4 begins.
 
 1. Wrap the existing ML commands in a single non-interactive job entry point, for example `hallguard_ml.run_candidate`.
 2. Accept only an allowlisted, versioned run profile; do not accept arbitrary commands or Python from the AI agent.

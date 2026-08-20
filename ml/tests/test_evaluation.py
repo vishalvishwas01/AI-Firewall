@@ -98,6 +98,11 @@ class EvaluationTests(unittest.TestCase):
             with self.assertRaises(ContractError):
                 validate_evaluation_report(report)
 
+    def test_contract_accepts_canonicalized_gate_key_order(self) -> None:
+        report = copy.deepcopy(self.report)
+        report["gates"] = dict(sorted(report["gates"].items()))
+        validate_evaluation_report(report)
+
     def test_report_serialization_is_byte_identical(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             first = Path(directory) / "first.metrics.json"

@@ -211,7 +211,7 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
             (root / "datasets" / "manifests" / "b2-intake-evidence-v1.intake.json").read_text(encoding="utf-8")
         )
         validate_intake_evidence(intake_evidence)
-    if stage in {"b2-remediation", "b2-final", "b2-representative"}:
+    if stage in {"b2-remediation", "b2-final", "b2-representative", "a3"}:
         intake_evidence = json.loads(
             (root / "datasets" / "manifests" / "b2-intake-evidence-v1.intake.json").read_text(encoding="utf-8")
         )
@@ -230,7 +230,7 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
             (root / "datasets" / "manifests" / "b2-manual-disposition-v1.review.json").read_text(encoding="utf-8")
         )
         validate_manual_disposition(manual_disposition)
-        if stage in {"b2-final", "b2-representative"}:
+        if stage in {"b2-final", "b2-representative", "a3"}:
             targeted_review = json.loads(
                 (root / "datasets" / "manifests" / "b2-targeted-review-evidence-v1.targeted.json").read_text(
                     encoding="utf-8"
@@ -243,7 +243,7 @@ def validate_workspace(root: Path, *, stage: str = "m1") -> None:
                 )
             )
             validate_final_remediation_approval(final_approval)
-        if stage == "b2-representative":
+        if stage in {"b2-representative", "a3"}:
             representative = json.loads(
                 (root / "datasets" / "manifests" / "b2-representative-set-v1.representative.json").read_text(
                     encoding="utf-8"
@@ -295,7 +295,7 @@ def main() -> None:
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument(
         "--stage",
-        choices=("m0", "m1", "m2", "m3", "b1", "b2", "b2-intake", "b2-remediation", "b2-final", "b2-representative"),
+        choices=("m0", "m1", "m2", "m3", "b1", "b2", "b2-intake", "b2-remediation", "b2-final", "b2-representative", "a3"),
         default="b2",
     )
     args = parser.parse_args()

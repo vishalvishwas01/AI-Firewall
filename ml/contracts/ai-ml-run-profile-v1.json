@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "profileId": "profile-logistic-v1",
+  "classifierType": "logistic-regression",
+  "featureVersion": "candidate-features-v1",
+  "seed": 20260801,
+  "groupsPerGenerator": 32,
+  "networkAllowed": false,
+  "allowedOperations": ["workspace-validation", "deterministic-training", "deterministic-evaluation", "shadow-export"],
+  "resourceLimits": {
+    "maxWallSeconds": 1800,
+    "maxDatasetRows": 100000,
+    "maxArtifactBytes": 5242880
+  },
+  "outputPolicy": {
+    "contentFreeEvidenceOnly": true,
+    "releaseEligible": false,
+    "signingAllowed": false,
+    "publicationAllowed": false
+  }
+}

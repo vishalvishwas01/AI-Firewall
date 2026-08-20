@@ -1,0 +1,24 @@
+{
+  "recordVersion": 1,
+  "gate": "A2",
+  "status": "approved",
+  "reviewType": "three_role_gate_review",
+  "purpose": "Approve A2 completion and authorize transition to A3, the isolated deterministic training job.",
+  "recordedAt": "2026-08-20",
+  "evidence": {
+    "triggerPolicy": {
+      "path": "docs/contracts/ai-ml-trigger-policy-v1.json",
+      "sha256": "c5d2aee70b487285ef206c3a273ca625352756befb3a7695ce768dd53c6df1d8"
+    },
+    "technicalEvidence": {
+      "triggerPolicyServiceSchemaRepositoryTests": { "passed": 11, "failed": 0 },
+      "serverTypecheck": "passed"
+    }
+  },
+  "reviews": [
+    { "role": "privacy", "reviewer": "umang aggarwal", "decision": "approved", "scope": ["Privacy controls", "Data handling boundaries", "Training-data governance", "Privacy requirements applicable before isolated training"], "conditions": [] },
+    { "role": "security", "reviewer": "vishal vishwas", "decision": "approved", "scope": ["Security controls", "Threat-model alignment", "Training isolation requirements", "Deterministic training-job security boundaries", "Pre-A3 security readiness"], "conditions": [] },
+    { "role": "maintainer", "reviewer": "tushar garg", "decision": "approved", "scope": ["Repository readiness", "ADR and governance compliance", "A2 implementation evidence", "Training workflow readiness", "Maintainer readiness for A3"], "conditions": [] }
+  ],
+  "gateDecision": { "privacyApproved": true, "securityApproved": true, "maintainerApproved": true, "allRequiredApprovalsRecorded": true, "a2Complete": true, "a3StartAllowed": true }
+}

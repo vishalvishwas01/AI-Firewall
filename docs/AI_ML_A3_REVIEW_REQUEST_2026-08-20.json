@@ -1,0 +1,42 @@
+{
+  "recordVersion": 1,
+  "gate": "A3",
+  "status": "awaiting-approvals",
+  "reviewType": "three_role_gate_review",
+  "purpose": "Review the isolated deterministic training-job implementation and authorize transition to A4 only after all required evidence and approvals are recorded.",
+  "recordedAt": "2026-08-20",
+  "evidence": {
+    "runProfile": {
+      "path": "ml/contracts/ai-ml-run-profile-v1.json",
+      "profileId": "profile-logistic-v1"
+    },
+    "candidateRun": {
+      "outputPath": "ml/artifacts/candidates/run-001",
+      "manifestSha256": "0ac16407d24f768cdbf3fa40226720af751c375022054b925fb9d0d6b488b7e1",
+      "repeatRunsMatched": true,
+      "networkAllowed": false,
+      "releaseEligible": false,
+      "signingAllowed": false,
+      "publicationAllowed": false,
+      "status": "pending-human-review"
+    },
+    "remainingRequiredValidation": [
+      "Local ML test suite passes after the A3 governance-stage test update.",
+      "Privacy, security, and maintainer approvals are recorded."
+    ],
+    "completedValidation": {
+      "candidateRun": "passed repeatedly with the recorded deterministic manifest SHA-256",
+      "a3WorkspaceValidation": "passed"
+    }
+  },
+  "reviews": {
+    "privacy": { "status": "pending" },
+    "security": { "status": "pending" },
+    "maintainer": { "status": "pending" }
+  },
+  "gateDecision": {
+    "allRequiredApprovalsRecorded": false,
+    "a3Complete": false,
+    "a4StartAllowed": false
+  }
+}
