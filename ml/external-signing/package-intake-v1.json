@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "packageIntakeVersion": "external-signing-package-intake-v1",
+  "status": "WAITING_FOR_EXTERNAL_ARTIFACTS",
+  "sourceHandoff": "ml/datasets/manifests/m4-external-signing-request-v1.review.json",
+  "package": {
+    "packageVersion": "2026.08.18-v1",
+    "sequence": 2,
+    "modelVersion": "secret-logistic-b2-limited-v1",
+    "distribution": "signed-data-package",
+    "executablePayloadAllowed": false,
+    "remoteRegexAllowed": false
+  },
+  "stage1": {
+    "name": "artifact-and-payload-sha256",
+    "status": "PENDING_EXTERNAL_ARTIFACT",
+    "artifactSha256ExpectedFromHandoff": "0d5251ff7cdbd9e599f445ee381fd89b51b3016eb29959ba239e433a704b50fe",
+    "artifactSha256Observed": null,
+    "payloadSha256": null,
+    "sha256Match": false,
+    "verificationMethod": "SHA-256 over exact received bytes",
+    "required": true
+  },
+  "stage2": {
+    "name": "ed25519-package-signature",
+    "status": "PENDING_EXTERNAL_SIGNATURE",
+    "algorithm": "Ed25519",
+    "signature": null,
+    "publicKey": null,
+    "signedMessageDigest": null,
+    "signatureValid": false,
+    "required": true
+  },
+  "stage3": {
+    "name": "trust-bundle-and-key-status",
+    "status": "PENDING_EXTERNAL_TRUST_METADATA",
+    "trustBundle": null,
+    "signerKeyId": null,
+    "keyStatus": "UNKNOWN",
+    "validFrom": null,
+    "validUntil": null,
+    "revocationStatus": "UNKNOWN",
+    "trustChainValid": false,
+    "required": true
+  },
+  "stage4": {
+    "name": "extension-compatibility-and-capabilities",
+    "status": "READY_FOR_EXTERNAL_EVIDENCE",
+    "minExtensionVersion": "0.1.0",
+    "maxExtensionVersion": "0.1.99",
+    "requiredCapabilities": [
+      "rules-v1",
+      "model-v2",
+      "candidate-features-v1"
+    ],
+    "schemaContract": "hallguard-logistic-artifact-v2",
+    "featureContract": "candidate-features-v1",
+    "executablePayloadAllowed": false,
+    "remoteRegexAllowed": false,
+    "compatible": false,
+    "required": true
+  },
+  "stage5": {
+    "name": "sequence-replay-and-rollback",
+    "status": "PENDING_EXTERNAL_SEQUENCE_METADATA",
+    "candidateSequence": 2,
+    "previousAcceptedSequence": 1,
+    "sequenceTransitionExpected": "1 -> 2",
+    "replayDetected": false,
+    "rollbackCandidateRequired": true,
+    "rollbackCandidate": "prior accepted sequence-1 package",
+    "rollbackMetadata": null,
+    "monotonicSequenceVerified": false,
+    "required": true
+  },
+  "stage6": {
+    "name": "staging-eligibility",
+    "status": "BLOCKED",
+    "eligibility": {
+      "digestVerified": false,
+      "signatureVerified": false,
+      "trustVerified": false,
+      "compatibilityVerified": false,
+      "sequenceVerified": false,
+      "rollbackReady": false
+    },
+    "eligible": false,
+    "blockingReasons": [
+      "externally signed artifact not yet supplied",
+      "payload SHA-256 not observed",
+      "Ed25519 signature and public key not supplied",
+      "trust bundle and key-status evidence not supplied",
+      "sequence/replay/rollback metadata not supplied"
+    ],
+    "required": true
+  },
+  "baselineEvidence": {
+    "trainingStateSha256": "3086b2f242051f383c7227bf0e2e4948b33903deeacbda819f1711939feea391",
+    "representativeEvaluationSha256": "ad62960b92bc6c51e23837a5fe01fc195fcd49725c174576f6824b2b21e516ce",
+    "extensionBenchmarkSha256": "4a057f56f3ad1b6c2f4132643bbdfc1dd544d65832045248a44517cad7a3b90e"
+  },
+  "releasePolicy": {
+    "privateSigningKeyInMlWorkspace": false,
+    "productionDeploymentAuthorized": false,
+    "stagingOnlyAfterAllSixStages": true,
+    "failClosedOnMissingEvidence": true
+  }
+}
