@@ -3,7 +3,12 @@ import type { AccountType, AuthResponse, SessionUser } from "./types"
 import { parseAuthResponse, parseSessionResponse, parseSessionUser } from "./schemas"
 import { boolean, nonEmptyString, object } from "../../lib/schema"
 
+let sessionCache: { value: { user: SessionUser | null }; expiresAt: number } | undefined
+let sessionInFlight: Promise<{ user: SessionUser | null }> | undefined
 export const getSession = async () => {
+  if (sessionCache && sessionCache.expiresAt > Date.now()) return sessionCache.value
+  if (sessionInFlight) return sessionInFlight
+  sessionInFlight = (async () => {
   try {
     const response = await fetch(`${apiBaseUrl}/auth/session`, { credentials: "include" })
     if (response.status === 401) return { user: null }
@@ -12,21 +17,24 @@ export const getSession = async () => {
     if (error instanceof TransportError) throw error
     throw new TransportError("network_error")
   }
+  })()
+  sessionInFlight = sessionInFlight.then((value) => { sessionCache = { value, expiresAt: Date.now() + 30_000 }; sessionInFlight = undefined; return value }, (error) => { sessionInFlight = undefined; throw error })
+  return sessionInFlight
 }
+
+const invalidateSessionCache = () => { sessionCache = undefined }
 
 export const getInvitation = (token: string) =>
   apiRequest<{ organizationName: string; email: string; role: string; expiresAt: string }>(`/orgs/invitations/${encodeURIComponent(token)}`)
 
-export const signup = (accountType: AccountType, data: { email?: string; password: string; name: string; companyName?: string; companyEmail?: string }) =>
-  apiRequest<AuthResponse>("/auth/signup", { method: "POST", body: JSON.stringify({ ...data, accountType }) }, parseAuthResponse)
+export const signup = async (accountType: AccountType, data: { email?: string; password: string; name: string; companyName?: string; companyEmail?: string }) => { const result = await apiRequest<AuthResponse>("/auth/signup", { method: "POST", body: JSON.stringify({ ...data, accountType }) }, parseAuthResponse); invalidateSessionCache(); return result }
 
-export const login = (accountType: AccountType, email: string, password: string) =>
-  apiRequest<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify({ email, password, accountType }) }, parseAuthResponse)
+export const login = async (accountType: AccountType, email: string, password: string) => { const result = await apiRequest<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify({ email, password, accountType }) }, parseAuthResponse); invalidateSessionCache(); return result }
 
 export const acceptOrganizationInvitation = (token: string) =>
   apiRequest<{ organizationName: string; role: string }>(`/orgs/invitations/${encodeURIComponent(token)}/accept`, { method: "POST" })
 
-export const logout = () => apiRequest<void>("/auth/logout", { method: "POST" })
+export const logout = async () => { const result = await apiRequest<void>("/auth/logout", { method: "POST" }); invalidateSessionCache(); return result }
 export const startGoogleLogin = (accountType: AccountType) => {
   const invite = new URLSearchParams(window.location.search).get("invite")
   const inviteQuery = invite ? `&invite=${encodeURIComponent(invite)}` : ""

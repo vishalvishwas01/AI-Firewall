@@ -11,6 +11,8 @@ export type AuthStatus =
 const apiBaseUrl = process.env.PLASMO_PUBLIC_API_BASE_URL ?? "http://localhost:4000"
 const clientBaseUrl = process.env.PLASMO_PUBLIC_CLIENT_BASE_URL ?? "http://localhost:5173"
 const authTokenKey = "ai-firewall-auth-token"
+let authStatusCache: { value: AuthStatus; expiresAt: number } | undefined
+let authStatusInFlight: Promise<AuthStatus> | undefined
 
 const pageUrl = (path: string) => `${clientBaseUrl}${path}?source=extension`
 
@@ -33,6 +35,9 @@ const openPage = async (url: string) => {
 }
 
 export const getAuthStatus = async (): Promise<AuthStatus> => {
+  if (authStatusCache && authStatusCache.expiresAt > Date.now()) return authStatusCache.value
+  if (authStatusInFlight) return authStatusInFlight
+  authStatusInFlight = (async () => {
   try {
     const token = await getAuthToken()
     const response = await fetch(`${apiBaseUrl}/auth/session`, {
@@ -62,6 +67,9 @@ export const getAuthStatus = async (): Promise<AuthStatus> => {
   } catch {
     return { isAuthenticated: false, error: "Report account check unavailable" }
   }
+  })()
+  authStatusInFlight = authStatusInFlight.then((value) => { authStatusCache = { value, expiresAt: Date.now() + 30_000 }; authStatusInFlight = undefined; return value }, (error) => { authStatusInFlight = undefined; throw error })
+  return authStatusInFlight
 }
 
 export const openLoginPage = () => openPage(pageUrl("/login"))
@@ -90,4 +98,5 @@ export const saveAuthToken = async (token: string): Promise<void> => {
   }
 
   await chrome.storage.local.set({ [authTokenKey]: token })
+  authStatusCache = undefined
 }

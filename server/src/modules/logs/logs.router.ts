@@ -175,4 +175,16 @@ router.post("/", validateNoQuery, async (req: AuthenticatedRequest, res, next) =
   }
 })
 
+router.post("/batch", validateNoQuery, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    if (!req.user || !req.body || !Array.isArray(req.body.logs) || req.body.logs.length < 1 || req.body.logs.length > 25) { res.status(400).json({ error: "Invalid log batch" }); return }
+    const inputs = req.body.logs.map((item: unknown) => parseLogInput(item))
+    if (inputs.some((input: ReturnType<typeof parseLogInput>) => !isParsedLogInput(input))) { res.status(400).json({ error: "Invalid log batch" }); return }
+    const db = await getDb()
+    const saved = []
+    for (const input of inputs) saved.push(await saveLog(db, req.user.id, input as never))
+    sendJson(res.status(201), ["accepted"], { accepted: saved.length })
+  } catch (error) { next(error) }
+})
+
 export const logsRouter = router

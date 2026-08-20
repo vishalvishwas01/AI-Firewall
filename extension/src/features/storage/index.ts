@@ -9,6 +9,7 @@ export {
   getQueuedSyncLogs,
   getSettings,
   retryQueuedSyncLogs,
+  requestQueuedSync,
   saveProtectedSites,
   setAllProtections,
   setSetting,

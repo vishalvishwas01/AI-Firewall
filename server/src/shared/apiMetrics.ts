@@ -35,6 +35,7 @@ export const flushApiMetrics = async () => {
 
 export const apiMetricsMiddleware: RequestHandler = (req, res, next) => {
   res.once("finish", () => {
+    if (req.originalUrl.split("?", 1)[0] === "/admin/api-monitoring") return
     const bucketStart = bucketFor(new Date())
     const method = req.method.toUpperCase()
     const route = routeFor(req)

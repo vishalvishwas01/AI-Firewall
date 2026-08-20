@@ -1,4 +1,4 @@
-import { apiUrl, getAuthStatus, getAuthToken } from "../auth/auth"
+import { apiUrl, getAuthToken } from "../auth/auth"
 import type { ActivityLog } from "../../firewall/types"
 
 const toolFromSite = (site: string) => {
@@ -30,30 +30,22 @@ const payloadFromLog = (log: ActivityLog) => ({
   evidence: log.evidence ?? []
 })
 
-export const syncActivityLog = async (log: ActivityLog): Promise<boolean> => {
-  const authStatus = await getAuthStatus()
-  if (!authStatus.isAuthenticated) {
-    return false
-  }
+export const syncActivityLogs = async (logs: ActivityLog[]): Promise<boolean[]> => {
+  if (logs.length === 0) return []
   const token = await getAuthToken()
-
-  const response = await fetch(apiUrl("/logs"), {
+  if (!token) return logs.map(() => false)
+  const response = await fetch(apiUrl("/logs/batch"), {
     method: "POST",
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {})
     },
-    body: JSON.stringify(payloadFromLog(log))
+    body: JSON.stringify({ logs: logs.map(payloadFromLog) })
   })
-
-  if (response.status === 401) {
-    return false
-  }
-
-  if (!response.ok) {
-    throw new Error("Failed to sync activity log")
-  }
-
-  return true
+  if (response.status === 401) return logs.map(() => false)
+  if (!response.ok) throw new Error("Failed to sync activity logs")
+  return logs.map(() => true)
 }
+
+export const syncActivityLog = async (log: ActivityLog) => (await syncActivityLogs([log]))[0] ?? false

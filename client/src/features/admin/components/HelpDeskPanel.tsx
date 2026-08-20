@@ -14,7 +14,6 @@ export function HelpDeskPanel({ active }: { active: boolean }) {
   const [loading, setLoading] = useState(false); const [error, setError] = useState(""); const [sending, setSending] = useState<string | null>(null); const [draftState, setDraftState] = useState("")
 
   const refresh = async () => { setLoading(true); setError(""); try { const result = await getHelpDeskThreads(); dispatch(setHelpDeskThreads(result.threads)) } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load help desk") } finally { setLoading(false) } }
-  useEffect(() => { void refresh() }, [])
   useEffect(() => { if (active) void refresh() }, [active])
 
   const draft = expandedUserId ? drafts[expandedUserId] ?? { subject: "", message: "" } : undefined

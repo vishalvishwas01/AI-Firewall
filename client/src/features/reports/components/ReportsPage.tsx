@@ -188,7 +188,7 @@ export function ReportsPage({
       to: to || undefined
     };
 
-    Promise.all([getLogs(filters), getLogSummary(filters)])
+    const timer = window.setTimeout(() => Promise.all([getLogs(filters), getLogSummary(filters)])
       .then(([logsResponse, summaryResponse]) => {
         if (active) {
           setLogs(logsResponse.logs);
@@ -200,10 +200,11 @@ export function ReportsPage({
       })
       .finally(() => {
         if (active) setLoading(false);
-      });
+      }), 350);
 
     return () => {
       active = false;
+      window.clearTimeout(timer);
     };
   }, [user, selectedHostname, selectedTool, from, to]);
 

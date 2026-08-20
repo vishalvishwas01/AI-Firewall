@@ -1,9 +1,12 @@
 import { getSettings } from "../storage"
 import type { ImprovementEvent } from "./contracts"
-import { deleteRemoteImprovementEvents, syncImprovementEvent } from "./sync"
+import { deleteRemoteImprovementEvents, syncImprovementEvents } from "./sync"
 
 const queueKey = "ai-firewall-improvement-queue"
 const maxQueuedEvents = 100
+let syncInFlight: Promise<void> | undefined
+let syncRequested = false
+let syncDebounceTimer: ReturnType<typeof setTimeout> | undefined
 const fallback = new Map<string, unknown>()
 const area = () => typeof chrome !== "undefined" && chrome.storage?.local ? chrome.storage.local : undefined
 const getValue = async <T>(key: string, defaultValue: T) => { const storage = area(); if (!storage) return (fallback.get(key) as T | undefined) ?? defaultValue; const result = await storage.get(key); return (result[key] as T | undefined) ?? defaultValue }
@@ -11,7 +14,7 @@ const setValue = async (key: string, value: unknown) => { const storage = area()
 
 export const getQueuedImprovementEvents = () => getValue<ImprovementEvent[]>(queueKey, [])
 const saveQueue = (events: ImprovementEvent[]) => setValue(queueKey, events.slice(0, maxQueuedEvents))
-const requestSync = () => { if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) return; chrome.runtime.sendMessage({ type: "AI_FIREWALL_SYNC_IMPROVEMENT_EVENTS" }, () => { void chrome.runtime.lastError }) }
+const requestSync = () => { if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) return; if (syncDebounceTimer) clearTimeout(syncDebounceTimer); syncDebounceTimer = setTimeout(() => { syncDebounceTimer = undefined; if (syncRequested) return; syncRequested = true; chrome.runtime.sendMessage({ type: "AI_FIREWALL_SYNC_IMPROVEMENT_EVENTS" }, () => { void chrome.runtime.lastError }) }, 1500) }
 
 export const queueImprovementEvents = async (events: ImprovementEvent[]) => {
   if (events.length === 0 || !(await getSettings()).improveDetection) return
@@ -22,11 +25,16 @@ export const queueImprovementEvents = async (events: ImprovementEvent[]) => {
 }
 
 export const retryQueuedImprovementEvents = async () => {
+  if (syncInFlight) return syncInFlight
+  syncRequested = false
+  syncInFlight = (async () => {
   if (!(await getSettings()).improveDetection) return
   const queued = await getQueuedImprovementEvents()
   const remaining: ImprovementEvent[] = []
-  for (const event of queued) { try { if (!(await syncImprovementEvent(event))) remaining.push(event) } catch { remaining.push(event) } }
+  for (let index = 0; index < queued.length; index += 25) { const chunk = queued.slice(index, index + 25); try { const synced = await syncImprovementEvents(chunk); chunk.forEach((event, offset) => { if (!synced[offset]) remaining.push(event) }) } catch { remaining.push(...chunk) } }
   await saveQueue(remaining)
+  })().finally(() => { syncInFlight = undefined })
+  return syncInFlight
 }
 
 export const clearImprovementTelemetry = async () => {

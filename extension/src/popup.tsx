@@ -20,7 +20,7 @@ import {
   getProtectedSites,
   getQueuedSyncLogs,
   getSettings,
-  retryQueuedSyncLogs,
+  requestQueuedSync,
   setAllProtections,
   setSetting,
   updateActivityLogFeedback
@@ -248,7 +248,7 @@ const Popup = () => {
   }
 
   const retrySync = async () => {
-    await retryQueuedSyncLogs()
+    await requestQueuedSync()
     const queued = await getQueuedSyncLogs()
     setQueuedSyncCount(queued.length)
   }

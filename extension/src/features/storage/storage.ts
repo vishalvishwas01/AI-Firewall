@@ -1,5 +1,5 @@
 import { defaultSettings } from "../detection/detectors"
-import { syncActivityLog } from "./sync"
+import { syncActivityLogs } from "./sync"
 import type {
   ActivityLog,
   ProtectedSite,
@@ -16,6 +16,9 @@ const protectedSitesKey = "ai-firewall-protected-sites"
 const maxLogs = 50
 const maxFeedbackRecords = 100
 const maxQueuedLogs = 100
+let syncInFlight: Promise<void> | undefined
+let syncRequested = false
+let syncDebounceTimer: ReturnType<typeof setTimeout> | undefined
 
 export const defaultProtectedSites: ProtectedSite[] = [
   {
@@ -176,12 +179,19 @@ const requestBackgroundSync = () => {
     return
   }
 
-  chrome.runtime.sendMessage({ type: "AI_FIREWALL_SYNC_QUEUED_LOGS" }, () => {
-    void chrome.runtime.lastError
-  })
+  if (syncDebounceTimer) clearTimeout(syncDebounceTimer)
+  syncDebounceTimer = setTimeout(() => {
+    syncDebounceTimer = undefined
+    if (syncRequested) return
+    syncRequested = true
+    chrome.runtime.sendMessage({ type: "AI_FIREWALL_SYNC_QUEUED_LOGS" }, () => { void chrome.runtime.lastError })
+  }, 1500)
 }
 
 export const retryQueuedSyncLogs = async (): Promise<void> => {
+  if (syncInFlight) return syncInFlight
+  syncRequested = false
+  syncInFlight = (async () => {
   const settings = await getSettings()
   if (!settings.redactedSync) return
 
@@ -190,19 +200,22 @@ export const retryQueuedSyncLogs = async (): Promise<void> => {
 
   const remaining: ActivityLog[] = []
 
-  for (const log of queued) {
+  for (let index = 0; index < queued.length; index += 25) {
+    const chunk = queued.slice(index, index + 25)
     try {
-      const synced = await syncActivityLog(log)
-      if (!synced) {
-        remaining.push(log)
-      }
-    } catch {
-      remaining.push(log)
-    }
+      const synced = await syncActivityLogs(chunk)
+      chunk.forEach((log, offset) => { if (!synced[offset]) remaining.push(log) })
+    } catch { remaining.push(...chunk) }
   }
 
   await saveQueuedSyncLogs(remaining)
+  })().finally(() => { syncInFlight = undefined })
+  return syncInFlight
 }
+export const requestQueuedSync = () => new Promise<void>((resolve) => {
+  if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) { void retryQueuedSyncLogs().finally(resolve); return }
+  chrome.runtime.sendMessage({ type: "AI_FIREWALL_SYNC_QUEUED_LOGS" }, () => resolve())
+})
 
 export const addActivityLog = async (log: ActivityLog): Promise<ActivityLog[]> => {
   const logs = await getActivityLogs()

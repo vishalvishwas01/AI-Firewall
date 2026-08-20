@@ -1,19 +1,22 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { getSession, logout } from "./features/auth/api";
 import type { SessionUser } from "./features/auth/types";
-import { AuthPage } from "./features/auth/components/AuthPage";
-import { ReportsPage } from "./features/reports/components/ReportsPage";
-import { TeamPage } from "./features/organizations/components/TeamPage";
-import { TrustPage } from "./features/trust/components/TrustPage";
+const AuthPage = lazy(() => import("./features/auth/components/AuthPage").then((module) => ({ default: module.AuthPage })));
+const ReportsPage = lazy(() => import("./features/reports/components/ReportsPage").then((module) => ({ default: module.ReportsPage })));
+const TeamPage = lazy(() => import("./features/organizations/components/TeamPage").then((module) => ({ default: module.TeamPage })));
+const TrustPage = lazy(() => import("./features/trust/components/TrustPage").then((module) => ({ default: module.TrustPage })));
 import { SiteHeader } from "./components/SiteHeader";
 import { HomePage } from "./components/HomePage";
 import { authRedirectKey } from "./features/auth/extensionBridge";
-import { AdminPage } from "./features/admin/components/AdminPage";
+const AdminPage = lazy(() => import("./features/admin/components/AdminPage").then((module) => ({ default: module.AdminPage })));
 import { AccountExperienceBoundary, FeatureBoundary } from "./features/featureFlags/components/FeatureBoundary";
-import { HelpPage } from "./features/profile/components/HelpPage";
-import { SettingsPage } from "./features/profile/components/SettingsPage";
-import { EmailVerificationPage, VerificationPrompt } from "./features/auth/components/EmailVerificationPage";
-import { ForgotPasswordPage } from "./features/auth/components/ForgotPasswordPage";
+const HelpPage = lazy(() => import("./features/profile/components/HelpPage").then((module) => ({ default: module.HelpPage })));
+const SettingsPage = lazy(() => import("./features/profile/components/SettingsPage").then((module) => ({ default: module.SettingsPage })));
+const EmailVerificationPage = lazy(() => import("./features/auth/components/EmailVerificationPage").then((module) => ({ default: module.EmailVerificationPage })));
+const ForgotPasswordPage = lazy(() => import("./features/auth/components/ForgotPasswordPage").then((module) => ({ default: module.ForgotPasswordPage })));
+const VerificationPrompt = lazy(() => import("./features/auth/components/EmailVerificationPage").then((module) => ({ default: module.VerificationPrompt })));
+
+const PageLoader = () => <div className="min-h-[55vh] bg-[#faf9f6]" aria-label="Loading page" />;
 
 function App() {
   const [user, setUser] = useState<SessionUser | null>(null);
@@ -42,10 +45,10 @@ function App() {
 
   useEffect(() => {
     if (!user) return;
-    const timer = window.setInterval(() => {
-      getSession().then(({ user: sessionUser }) => setUser(sessionUser)).catch(() => undefined);
-    }, 60_000);
-    return () => window.clearInterval(timer);
+    const refreshOnFocus = () => { if (document.visibilityState === "visible") void getSession().then(({ user: sessionUser }) => setUser(sessionUser)).catch(() => undefined); };
+    window.addEventListener("focus", refreshOnFocus);
+    document.addEventListener("visibilitychange", refreshOnFocus);
+    return () => { window.removeEventListener("focus", refreshOnFocus); document.removeEventListener("visibilitychange", refreshOnFocus); };
   }, [user?.id]);
 
   useEffect(() => {
@@ -122,20 +125,20 @@ function App() {
     setPath("/");
   };
 
-  if (authMode) return <main className="min-h-screen bg-[#faf9f6] text-[#1a1c1a]"><AuthPage mode={authMode} user={user} onAuthenticated={setUser} /></main>;
+  if (authMode) return <main className="min-h-screen bg-[#faf9f6] text-[#1a1c1a]"><Suspense fallback={<PageLoader />}><AuthPage mode={authMode} user={user} onAuthenticated={setUser} /></Suspense></main>;
 
-  if (isForgotPassword) return <ForgotPasswordPage />;
+  if (isForgotPassword) return <Suspense fallback={<PageLoader />}><ForgotPasswordPage /></Suspense>;
 
   if (isVerification) {
     if (sessionLoading || !user) return null;
-    return <PageFrame user={user} sessionLoading={false} onLogout={handleLogout} identityGate={false}><EmailVerificationPage user={user} onVerified={setUser} /></PageFrame>;
+    return <Suspense fallback={<PageLoader />}><PageFrame user={user} sessionLoading={false} onLogout={handleLogout} identityGate={false}><EmailVerificationPage user={user} onVerified={setUser} /></PageFrame></Suspense>;
   }
 
-  if (isReports) return <PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout}><AccountExperienceBoundary user={user}><FeatureBoundary featureKey="reports" user={user}><ReportsPage user={user} sessionLoading={sessionLoading} /></FeatureBoundary></AccountExperienceBoundary></PageFrame>;
+  if (isReports) return <Suspense fallback={<PageLoader />}><PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout}><AccountExperienceBoundary user={user}><FeatureBoundary featureKey="reports" user={user}><ReportsPage user={user} sessionLoading={sessionLoading} /></FeatureBoundary></AccountExperienceBoundary></PageFrame></Suspense>;
 
   if (isTeam) {
     if (sessionLoading || (!user?.teamAccess && user?.platformRole !== "super_admin")) return null;
-    return <PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout}><AccountExperienceBoundary user={user}><FeatureBoundary featureKey="organization-management" user={user}><TeamPage user={user} sessionLoading={sessionLoading} /></FeatureBoundary></AccountExperienceBoundary></PageFrame>;
+    return <Suspense fallback={<PageLoader />}><PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout}><AccountExperienceBoundary user={user}><FeatureBoundary featureKey="organization-management" user={user}><TeamPage user={user} sessionLoading={sessionLoading} /></FeatureBoundary></AccountExperienceBoundary></PageFrame></Suspense>;
   }
 
   if (isPrivacy) return <PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout} footer><PrivacyPolicyPage /></PageFrame>;
@@ -145,17 +148,17 @@ function App() {
   if (isAdmin) {
     if (sessionLoading || !user) return null;
     if (user.platformRole !== "super_admin") return <PageFrame user={user} sessionLoading={false} onLogout={handleLogout}><section className="px-6 py-20"><div className="mx-auto max-w-xl rounded-2xl border border-rose-200 bg-white p-8"><h1 className="text-3xl font-semibold text-[#33312b]">Access denied</h1><p className="mt-3 text-[#65645e]">This private route requires the platform super_admin role.</p></div></section></PageFrame>;
-    return <PageFrame user={user} sessionLoading={false} onLogout={handleLogout}><AdminPage /></PageFrame>;
+    return <Suspense fallback={<PageLoader />}><PageFrame user={user} sessionLoading={false} onLogout={handleLogout}><AdminPage /></PageFrame></Suspense>;
   }
 
   if (isHelp) {
     if (sessionLoading || !user) return null;
-    return <PageFrame user={user} sessionLoading={false} onLogout={handleLogout}><HelpPage /></PageFrame>;
+    return <Suspense fallback={<PageLoader />}><PageFrame user={user} sessionLoading={false} onLogout={handleLogout}><HelpPage /></PageFrame></Suspense>;
   }
 
   if (isSettings) {
     if (sessionLoading || !user) return null;
-    return <PageFrame user={user} sessionLoading={false} onLogout={handleLogout}><SettingsPage user={user} onUserUpdated={setUser} /></PageFrame>;
+    return <Suspense fallback={<PageLoader />}><PageFrame user={user} sessionLoading={false} onLogout={handleLogout}><SettingsPage user={user} onUserUpdated={setUser} /></PageFrame></Suspense>;
   }
 
   return <PageFrame user={user} sessionLoading={sessionLoading} onLogout={handleLogout} warm footer>{user ? <AccountExperienceBoundary user={user}><HomePage /></AccountExperienceBoundary> : <HomePage />}</PageFrame>;
@@ -165,7 +168,7 @@ function PageFrame({ user, sessionLoading, onLogout, footer = false, warm = fals
   return <main className={`min-h-screen ${warm ? "bg-[#faf9f6] text-[#1a1c1a]" : "bg-slate-50 text-slate-950"}`}>
     <SiteHeader user={user} sessionLoading={sessionLoading} onLogout={onLogout} />
     {children}
-    {identityGate && user?.verificationRequired && user.verificationReason === "admin" ? <VerificationPrompt user={user} /> : null}
+    {identityGate && user?.verificationRequired && user.verificationReason === "admin" ? <Suspense fallback={null}><VerificationPrompt user={user} /></Suspense> : null}
     {footer ? <SiteFooter /> : null}
   </main>;
 }
