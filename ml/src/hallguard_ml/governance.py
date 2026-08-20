@@ -704,6 +704,11 @@ def _audit_a3_candidate_boundary(root: Path) -> list[str]:
     for run_dir in sorted(path for path in candidate_root.iterdir() if path.is_dir()):
         if run_dir.is_symlink():
             continue
+        # Empty directories are harmless temporary staging locations. Once a
+        # file appears, the directory becomes a candidate and must satisfy the
+        # exact four-file contract below.
+        if not any(run_dir.iterdir()):
+            continue
         files = {path.name: path for path in run_dir.iterdir() if path.is_file()}
         if set(files) != A3_CANDIDATE_FILES:
             errors.append(f"A3 candidate output files are invalid: {run_dir.relative_to(root)}")

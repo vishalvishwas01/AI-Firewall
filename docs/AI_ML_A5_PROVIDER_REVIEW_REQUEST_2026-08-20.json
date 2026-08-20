@@ -1,0 +1,34 @@
+{
+  "recordVersion": 1,
+  "gate": "A5-provider-configuration",
+  "status": "approved-implementation-authorized",
+  "recordedAt": "2026-08-20",
+  "configuration": {
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-lightning:free",
+    "baseUrl": "https://openrouter.ai/api/v1",
+    "keyEnvironmentVariable": "OPENROUTER_API_KEY",
+    "keyStorage": "server-side environment secret; never committed or exposed to client/extension",
+    "externalRequests": "HallGuard server/control plane to OpenRouter only",
+    "maximumOutputTokensPerRun": 2048,
+    "maximumCostUsdPerRun": 0,
+    "automaticTriggersEnabled": false
+  },
+  "activation": {
+    "aiMlEnabled": false,
+    "providerConfigApproved": false,
+    "requestsAllowed": false
+  },
+  "reviews": {
+    "privacy": { "status": "approved", "conditions": ["Do not expose the OpenRouter API key to the extension or browser client.", "Do not enable real provider calls until the constrained client and mocked tests pass."] },
+    "security": { "status": "approved", "conditions": ["Only the approved provider and model configuration may be used.", "Provider credentials must remain server-side.", "No real external call is permitted during the mocked-test phase."] },
+    "maintainer": { "status": "approved", "conditions": ["The constrained client and mocked tests must be implemented before enabling real calls.", "The approved provider/model configuration must remain explicit and reviewable."] }
+  },
+  "gateDecision": {
+    "allRequiredApprovalsRecorded": true,
+    "constrainedClientImplementationAllowed": true,
+    "mockedTestsRequired": true,
+    "realProviderCallsAllowed": false,
+    "providerActivationAllowed": false
+  }
+}

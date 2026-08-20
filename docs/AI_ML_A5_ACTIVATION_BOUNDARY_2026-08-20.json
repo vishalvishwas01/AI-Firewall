@@ -1,0 +1,41 @@
+{
+  "recordVersion": 1,
+  "gate": "A5",
+  "status": "in-progress-provider-disabled",
+  "recordedAt": "2026-08-20",
+  "repository": "vishalvishwas01/AI-Firewall",
+  "baselineCommit": {
+    "sha": "09f4b1f7593f08923bbd38aa718fb49b2f7f570b",
+    "message": "A4_done",
+    "date": "2026-08-20"
+  },
+  "deterministicFallback": {
+    "component": "hallguard_ml.review_summary",
+    "provider": "deterministic-template",
+    "authoritative": false,
+    "tokenCount": 0,
+    "estimatedCost": 0,
+    "latencyMs": 0,
+    "recommendation": "insufficient-evidence",
+    "canApprove": false,
+    "canSign": false,
+    "canPublish": false
+  },
+  "providerModelConfiguration": {
+    "configured": false,
+    "provider": null,
+    "model": null,
+    "baseUrl": null,
+    "apiKeyConfiguration": null,
+    "aiMlEnabled": false,
+    "aiRequestsAllowed": false
+  },
+  "requiredBeforeEnable": [
+    "Separately reviewed and approved provider configuration.",
+    "Explicit provider selection.",
+    "Explicit model selection.",
+    "Approved base URL.",
+    "Approved API-key/environment configuration."
+  ],
+  "decision": "AI remains disabled. No real external AI provider or model is authorized."
+}

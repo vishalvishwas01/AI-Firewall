@@ -1,0 +1,51 @@
+{
+  "recordVersion": 1,
+  "gate": "A5",
+  "status": "approved-implementation-authorized",
+  "reviewType": "three_role_provider_model_gate_review",
+  "purpose": "Approve the constrained OpenRouter integration and authorize implementation of the client and mocked tests before any real provider call.",
+  "recordedAt": "2026-08-20",
+  "providerModelConfiguration": {
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-lightning:free",
+    "approvedBaseUrl": "https://openrouter.ai/api/v1",
+    "keyStorageMethod": "server-side secret/environment variable only",
+    "keyEnvironmentVariable": "OPENROUTER_API_KEY",
+    "requestsAllowedOutsideInfrastructure": true,
+    "maximumTokensPerRun": 2048,
+    "maximumCostUsdPerRun": 0,
+    "realProviderCalls": false
+  },
+  "reviews": [
+    {
+      "role": "privacy",
+      "reviewer": "umang aggarwal",
+      "decision": "approved",
+      "conditions": ["Do not expose the OpenRouter API key to the extension or browser client.", "Do not enable real provider calls until the constrained client and mocked tests pass."]
+    },
+    {
+      "role": "security",
+      "reviewer": "vishal vishwas",
+      "decision": "approved",
+      "conditions": ["Only the approved provider and model configuration may be used.", "Provider credentials must remain server-side.", "No real external call is permitted during the mocked-test phase."]
+    },
+    {
+      "role": "maintainer",
+      "reviewer": "tushar garg",
+      "decision": "approved",
+      "conditions": ["The constrained client and mocked tests must be implemented before enabling real calls.", "The approved provider/model configuration must remain explicit and reviewable."]
+    }
+  ],
+  "gateDecision": {
+    "privacyApproved": true,
+    "securityApproved": true,
+    "maintainerApproved": true,
+    "providerConfigurationApproved": true,
+    "modelConfigurationApproved": true,
+    "constrainedClientImplementationAllowed": true,
+    "mockedTestsRequired": true,
+    "realProviderCallsAllowedNow": false,
+    "a5ActivationAllowed": false,
+    "nextStep": "Complete mocked-test evidence review before considering real provider activation."
+  }
+}

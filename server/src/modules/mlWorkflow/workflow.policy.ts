@@ -4,6 +4,7 @@ export type AiWorkflowConfig = {
   model: string
   apiBaseUrl: string
   apiKey: string
+  providerConfigApproved: boolean
   autoTriggerEnabled: boolean
   maxRunsPerDay: number
   maxActiveRuns: number
@@ -43,17 +44,23 @@ const boundedText = (value: string | undefined, name: string, maximum: number) =
 
 export const parseAiWorkflowConfig = (environment: NodeJS.ProcessEnv = process.env): AiWorkflowConfig => {
   const enabled = parseBoolean(environment.AI_ML_ENABLED, false)
+  const providerConfigApproved = parseBoolean(environment.AI_PROVIDER_CONFIG_APPROVED, false)
   const provider = boundedText(environment.AI_PROVIDER, "AI_PROVIDER", 64)
   const model = boundedText(environment.AI_MODEL, "AI_MODEL", 128)
   const apiBaseUrl = boundedText(environment.AI_API_BASE_URL, "AI_API_BASE_URL", 512)
-  const apiKey = boundedText(environment.AI_API_KEY, "AI_API_KEY", 4096)
-  if (enabled && (!provider || !model || !apiBaseUrl || !apiKey)) throw new Error("AI_ML_ENABLED requires AI_PROVIDER, AI_MODEL, AI_API_BASE_URL, and AI_API_KEY")
+  const apiKey = boundedText(environment.OPENROUTER_API_KEY, "OPENROUTER_API_KEY", 4096)
+  if (enabled && !providerConfigApproved) throw new Error("AI_ML_ENABLED requires separately recorded provider configuration approval")
+  if (enabled && provider !== "openrouter") throw new Error("AI_PROVIDER is not allowlisted")
+  if (enabled && model !== "nvidia/nemotron-3.5-lightning:free") throw new Error("AI_MODEL is not allowlisted")
+  if (enabled && apiBaseUrl !== "https://openrouter.ai/api/v1") throw new Error("AI_API_BASE_URL is not allowlisted")
+  if (enabled && !apiKey) throw new Error("AI_ML_ENABLED requires server-side OPENROUTER_API_KEY")
   return {
     enabled,
     provider,
     model,
     apiBaseUrl,
     apiKey,
+    providerConfigApproved,
     autoTriggerEnabled: parseBoolean(environment.AI_ML_AUTO_TRIGGER_ENABLED, false),
     maxRunsPerDay: parseInteger(environment.AI_ML_MAX_RUNS_PER_DAY, 1, 0, 100),
     maxActiveRuns: parseInteger(environment.AI_ML_MAX_ACTIVE_RUNS, 1, 1, 4),
