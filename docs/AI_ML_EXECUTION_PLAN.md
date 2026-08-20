@@ -282,7 +282,7 @@ Exit criteria:
 
 ### Phase A5 - Add the constrained AI coordinator and summary
 
-Status: **In progress — 2026-08-20**
+Status: **Complete — 2026-08-20**
 
 Implementation update — 2026-08-20:
 
@@ -292,6 +292,7 @@ Implementation update — 2026-08-20:
 - Proposed provider configuration is recorded in `AI_ML_A5_PROVIDER_REVIEW_REQUEST_2026-08-20.json`: OpenRouter, `nvidia/nemotron-3.5-lightning:free`, `https://openrouter.ai/api/v1`, server-only `OPENROUTER_API_KEY`, 2048 output tokens, and zero-dollar budget. Server configuration is exact-allowlisted and requires both `AI_PROVIDER_CONFIG_APPROVED=true` and `AI_ML_ENABLED=true`; both remain false pending three-role approval. No provider request code has been added.
 - A5 provider/model review approved constrained-client implementation with conditions; real calls remain prohibited until mocked-test evidence is separately reviewed. Added the server-only `openrouter.client.ts` adapter and mocked tests. The client accepts only structured digests, metrics, gate IDs, and bounded limitations; it rejects arbitrary providers/models, requires the approved base URL and server-side key, caps output at 2048 tokens, uses a timeout, and never exposes credentials to client/extension code. Approval is recorded in `AI_ML_A5_PROVIDER_APPROVALS_2026-08-20.json`.
 - Implementation-review request: `AI_ML_A5_IMPLEMENTATION_REVIEW_REQUEST_2026-08-20.json` records the passing typecheck and focused mocked tests (6/6), credential/input boundaries, and CI success. The separate privacy/security/maintainer implementation review is pending; `AI_ML_ENABLED=false`, and real OpenRouter calls remain prohibited.
+- Approval record: `AI_ML_A5_IMPLEMENTATION_APPROVALS_2026-08-20.json` records privacy, security, and maintainer approval of the mocked-test evidence. A5 is complete and A6 is authorized. Live calls remain an explicit deployment-time action; no API key is committed or invoked by this change.
 
 1. Give the AI coordinator access only to typed, allowlisted tools such as:
    - inspect trigger metadata;
@@ -322,7 +323,11 @@ Exit criteria:
 
 ### Phase A6 - Implement server orchestration and persistence
 
-Status: **Planned**
+Status: **In progress — 2026-08-20**
+
+Implementation update — 2026-08-20:
+
+- A6 started with `run.repository.ts`, an append-only/content-free training-run persistence boundary. It adds unique run identity, state/creation selection, and TTL expiry indexes, plus optimistic-concurrency state transitions that reject stale record versions. No API route, queue invocation, provider call, signing, or publication is included yet.
 
 1. Add separate server modules for training triggers, runs, evidence, reviews, releases, and audit events.
 2. Keep controllers, services, repositories, schemas, DTOs, queue adapters, and authorization middleware separated.

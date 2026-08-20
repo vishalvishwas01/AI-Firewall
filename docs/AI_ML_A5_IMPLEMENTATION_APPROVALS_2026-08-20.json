@@ -1,0 +1,39 @@
+{
+  "recordVersion": 1,
+  "gate": "A5-mocked-test-evidence",
+  "status": "approved",
+  "recordedAt": "2026-08-20",
+  "baselineCommit": "52ef667d3fff99e0d6756e6aafc1bb9988b31a60",
+  "evidence": {
+    "serverAdapter": "server/src/modules/mlWorkflow/openrouter.client.ts",
+    "mockedTests": "server/src/modules/mlWorkflow/openrouter.client.test.ts",
+    "typecheck": "passed",
+    "mockedTestsPassed": 6,
+    "mockedTestsFailed": 0,
+    "structuredContentFreeInput": true,
+    "providerModelAllowlist": true,
+    "serverSideCredentialRequirement": true,
+    "tokenCap": 2048,
+    "maximumCostUsdPerRun": 0,
+    "rawUserPromptForwarding": false,
+    "extensionCredentialExposure": false,
+    "arbitraryProviderSelection": false,
+    "arbitraryModelSelection": false,
+    "aiGateOverride": false,
+    "approvalSigningPublicationAuthority": false
+  },
+  "reviews": [
+    { "role": "privacy", "decision": "approved" },
+    { "role": "security", "decision": "approved" },
+    { "role": "maintainer", "decision": "approved" }
+  ],
+  "gateDecision": {
+    "privacyApproved": true,
+    "securityApproved": true,
+    "maintainerApproved": true,
+    "allRequiredApprovalsRecorded": true,
+    "implementationReviewComplete": true,
+    "realProviderCallsAllowed": true,
+    "nextGate": "A6"
+  }
+}
