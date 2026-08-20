@@ -3,6 +3,7 @@ import type { Db } from "mongodb"
 import { ConflictError, NotFoundError, ValidationError } from "../../shared/errors.js"
 import { findReleaseEligibleRecord } from "./release-eligibility.repository.js"
 import { findTrainingRun } from "./run.repository.js"
+import { recordStagingIntent } from "./release.repository.js"
 
 const digest = /^[a-f0-9]{64}$/
 const id = /^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$/
@@ -24,5 +25,6 @@ export const prepareStagingRelease = async (db: Db, input: { runId: string; cand
   if (run.candidateDigest !== input.candidateDigest || run.evidenceDigest !== input.evidenceDigest) throw new ConflictError("Release preflight digests do not match the approved run")
   const eligibility = await findReleaseEligibleRecord(db, input.runId, input.candidateDigest, input.evidenceDigest)
   if (!eligibility) throw new ConflictError("Release preflight requires release-eligible evidence")
+  await recordStagingIntent(db, { intentId: `staging-${run.runId}`, runId: run.runId, candidateDigest: run.candidateDigest, evidenceDigest: run.evidenceDigest, channel: "staging", packageSequence: input.packageSequence, status: "staging-pending-signature" })
   return { status: "staging-pending-signature", runId: run.runId, candidateDigest: run.candidateDigest, evidenceDigest: run.evidenceDigest, channel: "staging", packageSequence: input.packageSequence }
 }

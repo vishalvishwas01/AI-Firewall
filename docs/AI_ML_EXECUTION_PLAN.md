@@ -350,6 +350,7 @@ Implementation update — 2026-08-20:
 - Added pure UI guards for manual-run input and review eligibility, with regression coverage for invalid casing, malformed IDs/digests, missing digests, and non-reviewable states. Client typecheck passes and the contract suite now passes 12/12.
 - Wired the shared UI guards into the live review handler and completed production builds. Client build, client typecheck, client contract tests (12/12), and server build all pass. A7 remains limited to content-free DTOs and manual admin actions; no automatic trigger or provider activation was introduced.
 - Started A8 with `release.service.ts` staging preflight. It accepts only an approved run, exact candidate/evidence digests, release-eligible evidence, and a positive package sequence, then returns a content-free `staging-pending-signature` intent. No signer, private key, publication call, or external provider is invoked. Preflight tests pass 2/2 and the server build passes.
+- Added `release.repository.ts` for immutable, idempotent staging intents with unique run/digest indexes, status tracking, and TTL retention. A8 ML workflow tests now pass 55/55, full server tests pass 60/60, and the server build passes. Actual signer invocation and external publication remain intentionally unexecuted until deployment infrastructure supplies an approved signer identity, key custody, package source, and staging endpoint.
 
 1. Add separate server modules for training triggers, runs, evidence, reviews, releases, and audit events.
 2. Keep controllers, services, repositories, schemas, DTOs, queue adapters, and authorization middleware separated.
@@ -405,7 +406,7 @@ Exit criteria:
 
 ### Phase A8 - Connect approval to external signing and publication
 
-Status: **Planned**
+Status: **Preflight implemented; external signing/publication pending deployment infrastructure**
 
 1. Freeze the candidate and evidence digests when the admin approves it.
 2. Send only the approved immutable candidate to the isolated external signing job.

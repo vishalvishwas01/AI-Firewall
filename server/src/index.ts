@@ -41,6 +41,7 @@ import { mlWorkflowRouter } from "./modules/mlWorkflow/workflow.routes.js"
 import { ensureMlQueueIndexes } from "./modules/mlWorkflow/queue.repository.js"
 import { ensureReleaseEligibilityIndexes } from "./modules/mlWorkflow/release-eligibility.repository.js"
 import { ensureMlReviewDecisionIndexes } from "./modules/mlWorkflow/review.repository.js"
+import { ensureStagingIntentIndexes } from "./modules/mlWorkflow/release.repository.js"
 
 const app = express()
 if (env.trustProxyHops > 0) app.set("trust proxy", env.trustProxyHops)
@@ -126,6 +127,7 @@ await ensureMlAuditEventIndexes(db)
 await ensureMlQueueIndexes(db)
 await ensureReleaseEligibilityIndexes(db)
 await ensureMlReviewDecisionIndexes(db)
+await ensureStagingIntentIndexes(db)
 setServerLoggerDb(db)
 ready = true
 
