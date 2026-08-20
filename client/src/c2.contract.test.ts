@@ -8,6 +8,8 @@ import { parseOrganizationsResponse } from "./features/organizations/schemas"
 import { parseDetectionBenchmark } from "./features/trust/schemas"
 import { trustArchitectureCopy, trustControlCopy } from "./features/trust/copy"
 import { faqItems, privacyPoints, workflowSteps } from "./data/siteContent"
+import { getMlRunEligibility, getMlRuns } from "./features/mlWorkflow/api"
+import { canSubmitReview, isValidManualRunInput } from "./features/mlWorkflow/uiGuards"
 
 const jsonResponse = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } })
 
@@ -35,6 +37,32 @@ test("unauthorized organization access uses the safe permission error", async ()
 test("empty report and organization datasets are valid explicit states", () => {
   assert.deepEqual(parseLogsResponse({ logs: [] }), { logs: [] })
   assert.deepEqual(parseOrganizationsResponse({ organizations: [] }), { organizations: [] })
+})
+
+test("ML workflow DTOs accept content-free runs and eligibility summaries", async () => {
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async (input) => {
+    const path = new URL(String(input)).pathname
+    if (path.endsWith("/eligibility")) return jsonResponse({ eligibility: { status: "shadow-only", releaseEligible: false, policyId: "a4-evaluation-gates-v1", candidateDigest: "a".repeat(64), evidenceDigest: "b".repeat(64), evaluatedAt: "2026-08-20T00:00:00.000Z", passedGateCount: 5, gateCount: 12 } })
+    return jsonResponse({ runs: [{ runId: "run-001", triggerId: "trigger-001", inputDigest: "c".repeat(64), runProfileId: "profile-logistic-v1", state: "awaiting_review", recordVersion: 4, createdAt: "2026-08-20T00:00:00.000Z", startedAt: null, finishedAt: null, expiresAt: "2026-08-27T00:00:00.000Z", runnerVersion: "hallguard-a3-runner-v1", evidenceDigest: "b".repeat(64), candidateDigest: "a".repeat(64), failureCode: null }] })
+  }
+  try { const runs = await getMlRuns(); const eligibility = await getMlRunEligibility("run-001"); assert.deepEqual(runs.runs[0].state, "awaiting_review"); assert.deepEqual(eligibility.eligibility?.gateCount, 12) } finally { globalThis.fetch = originalFetch }
+})
+
+test("ML workflow response validation rejects raw content and malformed digests", async () => {
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async () => jsonResponse({ runs: [{ runId: "run-001", triggerId: "trigger-001", inputDigest: "not-a-digest", runProfileId: "profile-logistic-v1", state: "queued", recordVersion: 1, createdAt: "2026-08-20T00:00:00.000Z", startedAt: null, finishedAt: null, expiresAt: "2026-08-27T00:00:00.000Z", runnerVersion: "runner", evidenceDigest: null, candidateDigest: null, failureCode: null, prompt: "must never render" }] })
+  try { await assert.rejects(getMlRuns(), (error: unknown) => error instanceof TransportError && error.code === "invalid_response" && !error.message.includes("prompt")) } finally { globalThis.fetch = originalFetch }
+})
+
+test("ML UI guards allow only safe manual inputs and reviewable runs", () => {
+  assert.deepEqual(isValidManualRunInput("manual-001", "a".repeat(64)), true)
+  assert.deepEqual(isValidManualRunInput("manual-001", "A".repeat(64)), false)
+  assert.deepEqual(isValidManualRunInput("bad id", "a".repeat(64)), false)
+  const reviewable = { state: "awaiting_review" as const, candidateDigest: "a".repeat(64), evidenceDigest: "b".repeat(64) } as any
+  assert.deepEqual(canSubmitReview(reviewable), true)
+  assert.deepEqual(canSubmitReview({ ...reviewable, state: "training" }), false)
+  assert.deepEqual(canSubmitReview(null), false)
 })
 
 test("public trust copy describes layered local detection and telemetry boundaries", () => {
