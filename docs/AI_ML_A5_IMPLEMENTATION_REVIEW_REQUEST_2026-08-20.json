@@ -1,0 +1,71 @@
+{
+  "recordVersion": 1,
+  "gate": "A5-implementation-review",
+  "status": "awaiting-approvals",
+  "recordedAt": "2026-08-20",
+  "repository": "vishalvishwas01/AI-Firewall",
+  "baselineCommit": "0542c96d4d9bb246af61ac8eceae6d230d75966a",
+  "providerConfiguration": {
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-lightning:free",
+    "approvedBaseUrl": "https://openrouter.ai/api/v1",
+    "keyEnvironmentVariable": "OPENROUTER_API_KEY",
+    "maximumTokensPerRun": 2048,
+    "maximumCostUsdPerRun": 0,
+    "realProviderCallsAllowed": false
+  },
+  "implementationEvidence": {
+    "serverAdapter": "server/src/modules/mlWorkflow/openrouter.client.ts",
+    "mockedTests": "server/src/modules/mlWorkflow/openrouter.client.test.ts",
+    "typecheck": "passed",
+    "focusedTests": { "passed": 6, "failed": 0 },
+    "structuredContentFreeInput": true,
+    "providerModelAllowlist": true,
+    "serverSideCredentialRequirement": true,
+    "tokenCap": 2048,
+    "disabledByDefault": true,
+    "rawUserPromptForwarding": false,
+    "extensionCredentialExposure": false,
+    "arbitraryProviderSelection": false,
+    "arbitraryModelSelection": false,
+    "aiGateOverride": false,
+    "approvalSigningPublicationAuthority": false
+  },
+  "activation": {
+    "aiMlEnabled": false,
+    "providerConfigApproved": true,
+    "implementationReviewApproved": false,
+    "realProviderCallsAllowed": false
+  },
+  "reviews": {
+    "privacy": {
+      "status": "approved",
+      "decision": "approved",
+      "scope": [
+        "constrained server adapter",
+        "structured content-free inputs",
+        "exact provider/model/base-URL enforcement",
+        "server-only credential handling",
+        "2048-token maximum per run",
+        "zero-cost maximum per run",
+        "mocked tests passing 6/6",
+        "no approval, signing, publication, or gate-override authority"
+      ],
+      "conditions": [
+        "No OpenRouter API key is exposed to the extension or browser client.",
+        "No raw user prompts, secrets, credentials, or customer content are sent to the provider.",
+        "Real provider calls remain disabled until all three reviewer approvals are recorded."
+      ]
+    },
+    "security": { "status": "pending" },
+    "maintainer": { "status": "pending" }
+  },
+  "gateDecision": {
+    "privacyApproved": true,
+    "securityApproved": false,
+    "maintainerApproved": false,
+    "allRequiredApprovalsRecorded": false,
+    "implementationReviewComplete": false,
+    "realProviderActivationAllowed": false
+  }
+}
