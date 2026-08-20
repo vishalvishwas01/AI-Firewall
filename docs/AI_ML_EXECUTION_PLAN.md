@@ -349,6 +349,7 @@ Implementation update — 2026-08-20:
 - Added client contract tests for ML run and eligibility DTOs, including valid content-free payloads and fail-closed rejection of malformed digests and raw-content fields. Client typecheck passes and the contract suite now passes 11/11.
 - Added pure UI guards for manual-run input and review eligibility, with regression coverage for invalid casing, malformed IDs/digests, missing digests, and non-reviewable states. Client typecheck passes and the contract suite now passes 12/12.
 - Wired the shared UI guards into the live review handler and completed production builds. Client build, client typecheck, client contract tests (12/12), and server build all pass. A7 remains limited to content-free DTOs and manual admin actions; no automatic trigger or provider activation was introduced.
+- Started A8 with `release.service.ts` staging preflight. It accepts only an approved run, exact candidate/evidence digests, release-eligible evidence, and a positive package sequence, then returns a content-free `staging-pending-signature` intent. No signer, private key, publication call, or external provider is invoked. Preflight tests pass 2/2 and the server build passes.
 
 1. Add separate server modules for training triggers, runs, evidence, reviews, releases, and audit events.
 2. Keep controllers, services, repositories, schemas, DTOs, queue adapters, and authorization middleware separated.
