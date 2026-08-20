@@ -8,6 +8,7 @@ import { createTrainingRun, findTrainingRunByTrigger, findTrainingRuns } from ".
 import type { ManualTrainingTriggerRequest } from "./trigger.schemas.js"
 import { submitManualTrainingTrigger } from "./trigger.service.js"
 import type { AiWorkflowConfig } from "./workflow.policy.js"
+import { withMlTransaction } from "./transaction.js"
 
 const runIdFor = (requestedBy: ObjectId, triggerId: string) => `run-${createHash("sha256").update(`${requestedBy.toHexString()}:${triggerId}`).digest("hex").slice(0, 32)}`
 
@@ -24,16 +25,19 @@ export const requestManualTrainingRun = async (db: Db, requestedBy: ObjectId, re
   const existing = await findTrainingRunByTrigger(db, trigger.triggerId)
   if (existing) return { trigger, run: existing }
   const runId = runIdFor(requestedBy, trigger.triggerId)
-  const run = await createTrainingRun(db, {
-    runId, triggerId: trigger.triggerId, inputDigest: trigger.inputDigest, runProfileId: "profile-logistic-v1",
-    state: "queued", startedAt: null, finishedAt: null, runnerVersion: "hallguard-a3-runner-v1",
-    evidenceDigest: null, candidateDigest: null, failureCode: null, createdAt: now
+  const run = await withMlTransaction(db, async (session) => {
+    const created = await createTrainingRun(db, {
+      runId, triggerId: trigger.triggerId, inputDigest: trigger.inputDigest, runProfileId: "profile-logistic-v1",
+      state: "queued", startedAt: null, finishedAt: null, runnerVersion: "hallguard-a3-runner-v1",
+      evidenceDigest: null, candidateDigest: null, failureCode: null, createdAt: now
+    }, session)
+    await enqueueMlRun(db, runId, now, session)
+    await appendMlAuditEvent(db, {
+      eventId: `audit-${runId}-created`, eventType: "run-created", actorUserId: requestedBy.toHexString(), runId,
+      candidateDigest: null, evidenceDigest: null, recordVersion: 1,
+      metadata: { triggerId: trigger.triggerId, reasonCode: trigger.reasonCode, runProfileId: trigger.runProfileId }
+    }, now, session)
+    return created
   })
-  await enqueueMlRun(db, runId, now)
-  await appendMlAuditEvent(db, {
-    eventId: `audit-${runId}-created`, eventType: "run-created", actorUserId: requestedBy.toHexString(), runId,
-    candidateDigest: null, evidenceDigest: null, recordVersion: 1,
-    metadata: { triggerId: trigger.triggerId, reasonCode: trigger.reasonCode, runProfileId: trigger.runProfileId }
-  }, now)
   return { trigger, run }
 }

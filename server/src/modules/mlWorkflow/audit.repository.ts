@@ -1,4 +1,4 @@
-import type { Collection, Db, ObjectId } from "mongodb"
+import type { ClientSession, Collection, Db, ObjectId } from "mongodb"
 
 export type MlAuditEventType = "trigger-recorded" | "run-created" | "run-transitioned" | "evidence-recorded" | "review-denied" | "review-approved"
 
@@ -42,9 +42,9 @@ export const ensureMlAuditEventIndexes = async (db: Db) => {
   await collection.createIndex({ retentionUntil: 1 }, { expireAfterSeconds: 0 })
 }
 
-export const appendMlAuditEvent = async (db: Db, input: Omit<MlAuditEventDocument, "_id" | "createdAt" | "retentionUntil">, now = new Date()) => {
+export const appendMlAuditEvent = async (db: Db, input: Omit<MlAuditEventDocument, "_id" | "createdAt" | "retentionUntil">, now = new Date(), session?: ClientSession) => {
   const document: MlAuditEventDocument = { ...input, createdAt: now, retentionUntil: new Date(now.getTime() + 730 * 24 * 60 * 60 * 1000) }
   validateMlAuditEvent(document)
-  await mlAuditEventsCollection(db).insertOne(document)
+  await mlAuditEventsCollection(db).insertOne(document, { session })
   return document
 }

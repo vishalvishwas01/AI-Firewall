@@ -1,4 +1,4 @@
-import type { Collection, Db, ObjectId } from "mongodb"
+import type { ClientSession, Collection, Db, ObjectId } from "mongodb"
 
 import type { TrainingFailureCode, TrainingRunState } from "./workflow.types.js"
 
@@ -35,12 +35,12 @@ export const ensureTrainingRunIndexes = async (db: Db) => {
   await collection.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
 }
 
-export const createTrainingRun = async (db: Db, input: CreateTrainingRunInput): Promise<TrainingRunDocument> => {
+export const createTrainingRun = async (db: Db, input: CreateTrainingRunInput, session?: ClientSession): Promise<TrainingRunDocument> => {
   const createdAt = input.createdAt ?? new Date()
   const expiresAt = input.expiresAt ?? new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000)
   const collection = trainingRunsCollection(db)
   const run: TrainingRunDocument = { ...input, createdAt, expiresAt, recordVersion: 1 }
-  await collection.insertOne(run)
+  await collection.insertOne(run, { session })
   return run
 }
 
@@ -56,11 +56,12 @@ export const transitionTrainingRun = async (
   runId: string,
   expectedRecordVersion: number,
   state: TrainingRunState,
-  patch: Partial<Pick<TrainingRunDocument, "startedAt" | "finishedAt" | "evidenceDigest" | "candidateDigest" | "failureCode">> = {}
+  patch: Partial<Pick<TrainingRunDocument, "startedAt" | "finishedAt" | "evidenceDigest" | "candidateDigest" | "failureCode">> = {},
+  session?: ClientSession
 ): Promise<boolean> => {
   const result = await trainingRunsCollection(db).updateOne(
     { runId, recordVersion: expectedRecordVersion },
-    { $set: { state, ...patch, recordVersion: expectedRecordVersion + 1 } }
+    { $set: { state, ...patch, recordVersion: expectedRecordVersion + 1 } }, { session }
   )
   return result.matchedCount === 1
 }

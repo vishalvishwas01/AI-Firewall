@@ -87,3 +87,5 @@ export const recordReleaseEligibility = async (db: Db, input: ReleaseEligibility
 export const findReleaseEligibleRecord = (db: Db, runId: string, candidateDigest: string, evidenceDigest: string) => releaseEligibilityCollection(db).findOne({
   runId, candidateDigest, evidenceDigest, releaseEligible: true, status: "release-eligible"
 })
+
+export const findReleaseEligibilityForRun = (db: Db, runId: string) => releaseEligibilityCollection(db).findOne({ runId }, { sort: { validatedAt: -1 } })

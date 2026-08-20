@@ -5,7 +5,7 @@ import type { MlQueueJobDocument } from "./queue.repository.js"
 import type { TrainingRunDocument } from "./run.repository.js"
 import { processNextMlRun } from "./worker.coordinator.js"
 
-const makeDb = (initialState: TrainingRunDocument["state"] = "queued") => {
+const makeDb = (initialState: TrainingRunDocument["state"] = "queued", attempts = 0) => {
   const run = {
     runId: "run-001", triggerId: "trigger-001", inputDigest: "c".repeat(64), runProfileId: "profile-logistic-v1",
     state: initialState, recordVersion: initialState === "queued" ? 1 : 3, createdAt: new Date(), startedAt: null,
@@ -13,7 +13,7 @@ const makeDb = (initialState: TrainingRunDocument["state"] = "queued") => {
     evidenceDigest: null, candidateDigest: null, failureCode: null
   } satisfies TrainingRunDocument
   const queue = {
-    jobId: "job-run-001", runId: run.runId, status: "queued", attempts: 0, maxAttempts: 3,
+    jobId: "job-run-001", runId: run.runId, status: "queued", attempts, maxAttempts: 3,
     availableAt: new Date("2026-08-20T00:00:00Z"), leaseExpiresAt: null, leasedBy: null, failureCode: null,
     createdAt: new Date("2026-08-20T00:00:00Z"), updatedAt: new Date("2026-08-20T00:00:00Z"), expiresAt: new Date("2099-01-01T00:00:00Z")
   } satisfies MlQueueJobDocument
@@ -69,4 +69,13 @@ test("retry resumes from training without replaying transition audits", async ()
   assert.equal(result.status, "retry")
   assert.equal(context.run.state, "training")
   assert.equal(context.audits.length, 0)
+})
+
+test("final runner failure atomically dead-letters the queue and fails the run", async () => {
+  const context = makeDb("training", 3)
+  const result = await processNextMlRun(context.db as never, "worker-001", async () => { throw new Error("runner unavailable") }, { timeoutMs: 1000 })
+  assert.equal(result.status, "dead-letter")
+  assert.equal(context.queue.status, "dead-letter")
+  assert.equal(context.run.state, "failed")
+  assert.equal(context.audits.at(-1)?.metadata && (context.audits.at(-1)?.metadata as Record<string, unknown>).toState, "failed")
 })

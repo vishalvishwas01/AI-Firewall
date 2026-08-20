@@ -11,6 +11,7 @@ import { parseAiWorkflowConfig } from "./workflow.policy.js"
 import { parseAdminReviewRequest } from "./review.schemas.js"
 import { submitAdminReview } from "./review.service.js"
 import { toTrainingRunDto } from "./workflow.service.js"
+import { findReleaseEligibilityForRun } from "./release-eligibility.repository.js"
 
 const routeParam = (value: unknown) => Array.isArray(value) ? value[0] : value
 const limit = (value: unknown) => {
@@ -34,6 +35,14 @@ export const getMlRun = async (req: AuthenticatedRequest, res: Response, next: N
     const run = await findTrainingRun(await getDb(), String(routeParam(req.params.runId)))
     if (!run) throw new NotFoundError("ML training run not found")
     sendJson(res, ["run"], { run: toTrainingRunDto(run) })
+  } catch (error) { next(error) }
+}
+
+export const getMlRunEligibility = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const runId = String(routeParam(req.params.runId))
+    const record = await findReleaseEligibilityForRun(await getDb(), runId)
+    sendJson(res, ["eligibility"], { eligibility: record ? { status: record.status, releaseEligible: record.releaseEligible, policyId: record.policyId, candidateDigest: record.candidateDigest, evidenceDigest: record.evidenceDigest, evaluatedAt: record.validatedAt.toISOString(), passedGateCount: Object.values(record.gateResults).filter((status) => status === "passed").length, gateCount: Object.keys(record.gateResults).length } : null })
   } catch (error) { next(error) }
 }
 

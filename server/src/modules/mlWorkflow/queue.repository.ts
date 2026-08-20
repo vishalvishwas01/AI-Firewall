@@ -1,4 +1,4 @@
-import type { Collection, Db, ObjectId } from "mongodb"
+import type { ClientSession, Collection, Db, ObjectId } from "mongodb"
 
 export type MlQueueStatus = "queued" | "leased" | "completed" | "dead-letter"
 
@@ -30,14 +30,14 @@ export const ensureMlQueueIndexes = async (db: Db) => {
   await collection.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
 }
 
-export const enqueueMlRun = async (db: Db, runId: string, now = new Date()): Promise<MlQueueJobDocument> => {
+export const enqueueMlRun = async (db: Db, runId: string, now = new Date(), session?: ClientSession): Promise<MlQueueJobDocument> => {
   const collection = mlQueueCollection(db)
   await collection.updateOne(
     { runId },
     { $setOnInsert: { jobId: `job-${runId}`, runId, status: "queued", attempts: 0, maxAttempts: 3, availableAt: now, leaseExpiresAt: null, leasedBy: null, failureCode: null, createdAt: now, updatedAt: now, expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) } },
-    { upsert: true }
+    { upsert: true, session }
   )
-  const job = await collection.findOne({ runId })
+  const job = await collection.findOne({ runId }, { session })
   if (!job) throw new Error("ML queue job could not be loaded")
   return job
 }
@@ -57,20 +57,20 @@ export const leaseNextMlRun = async (db: Db, leasedBy: string, now = new Date(),
   )
 }
 
-export const completeMlQueueJob = async (db: Db, jobId: string, leasedBy: string, now = new Date()) => {
+export const completeMlQueueJob = async (db: Db, jobId: string, leasedBy: string, now = new Date(), session?: ClientSession) => {
   const result = await mlQueueCollection(db).updateOne(
     { jobId, status: "leased", leasedBy, leaseExpiresAt: { $gt: now } },
-    { $set: { status: "completed", leasedBy: null, leaseExpiresAt: null, failureCode: null, updatedAt: now } }
+    { $set: { status: "completed", leasedBy: null, leaseExpiresAt: null, failureCode: null, updatedAt: now } }, { session }
   )
   return result.matchedCount === 1
 }
 
-export const failMlQueueJob = async (db: Db, job: MlQueueJobDocument, leasedBy: string, failureCode: MlQueueJobDocument["failureCode"], now = new Date()) => {
+export const failMlQueueJob = async (db: Db, job: MlQueueJobDocument, leasedBy: string, failureCode: MlQueueJobDocument["failureCode"], now = new Date(), session?: ClientSession) => {
   if (failureCode === null) throw new Error("ML queue failure code is required")
   const deadLetter = job.attempts >= job.maxAttempts
   const result = await mlQueueCollection(db).updateOne(
     { jobId: job.jobId, status: "leased", leasedBy },
-    { $set: { status: deadLetter ? "dead-letter" : "queued", availableAt: new Date(now.getTime() + Math.min(60 * 2 ** job.attempts, 900) * 1000), leasedBy: null, leaseExpiresAt: null, failureCode, updatedAt: now } }
+    { $set: { status: deadLetter ? "dead-letter" : "queued", availableAt: new Date(now.getTime() + Math.min(60 * 2 ** job.attempts, 900) * 1000), leasedBy: null, leaseExpiresAt: null, failureCode, updatedAt: now } }, { session }
   )
   return { updated: result.matchedCount === 1, deadLetter }
 }

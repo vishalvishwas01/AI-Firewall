@@ -20,7 +20,8 @@ test("approval succeeds only with a separately validated digest-bound eligibilit
   const calls: unknown[][] = []
   const eligibility = { runId: run.runId, candidateDigest: run.candidateDigest, evidenceDigest: run.evidenceDigest, releaseEligible: true, status: "release-eligible" }
   const db = { collection: (name: string) => ({
-    findOne: async () => name === "ml_training_runs" ? run : eligibility,
+    findOne: async () => name === "ml_training_runs" ? run : (name === "ml_release_eligibility" ? eligibility : null),
+    insertOne: async () => undefined,
     updateOne: async (...args: unknown[]) => { calls.push(args); return { matchedCount: 1 } }
   }) } as unknown
   const result = await submitAdminReview(db as never, auth, { ...input, decision: "approve" })
@@ -30,7 +31,7 @@ test("approval succeeds only with a separately validated digest-bound eligibilit
 
 test("denial binds digests and uses optimistic concurrency", async () => {
   const calls: unknown[][] = []
-  const db = { collection: () => ({ findOne: async () => run, updateOne: async (...args: unknown[]) => { calls.push(args); return { matchedCount: 1 } } }) } as unknown
+  const db = { collection: (name: string) => ({ findOne: async () => name === "ml_training_runs" ? run : null, insertOne: async () => undefined, updateOne: async (...args: unknown[]) => { calls.push(args); return { matchedCount: 1 } } }) } as unknown
   const result = await submitAdminReview(db as never, auth, input)
   assert.deepEqual(result, { status: "denied" })
   assert.deepEqual(calls[0]?.[0], { runId: run.runId, recordVersion: 1 })

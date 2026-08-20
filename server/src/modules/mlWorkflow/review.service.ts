@@ -3,6 +3,9 @@ import type { Db } from "mongodb"
 import { AuthorizationError, ConflictError, NotFoundError, ValidationError } from "../../shared/errors.js"
 import { findTrainingRun, transitionTrainingRun } from "./run.repository.js"
 import { findReleaseEligibleRecord } from "./release-eligibility.repository.js"
+import { recordMlReviewDecision } from "./review.repository.js"
+import { appendMlAuditEvent } from "./audit.repository.js"
+import { withMlTransaction } from "./transaction.js"
 
 export type AdminReviewInput = {
   runId: string
@@ -37,7 +40,22 @@ export const submitAdminReview = async (db: Db, auth: AuthorizationContext, inpu
     if (!eligibility) throw new ConflictError("Approval requires a separately validated release-eligible evidence record")
   }
   const nextState = input.decision === "approve" ? "approved" : "denied"
-  const transitioned = await transitionTrainingRun(db, input.runId, input.expectedRecordVersion, nextState, { finishedAt: new Date() })
-  if (!transitioned) throw new ConflictError("Training run changed before review was recorded")
+  await withMlTransaction(db, async (session) => {
+    const decision = await recordMlReviewDecision(db, {
+      runId: input.runId, candidateDigest: input.candidateDigest, evidenceDigest: input.evidenceDigest,
+      decision: input.decision, comment: input.comment, reviewerUserId: input.reviewerUserId,
+      expectedRecordVersion: input.expectedRecordVersion, resultingRecordVersion: input.expectedRecordVersion + 1
+    }, new Date(), session)
+    const transitioned = await transitionTrainingRun(db, input.runId, input.expectedRecordVersion, nextState, { finishedAt: new Date() }, session)
+    if (!transitioned) throw new ConflictError("Training run changed before review was recorded")
+    await appendMlAuditEvent(db, {
+      eventId: `audit-${decision.decisionId}`,
+      eventType: input.decision === "approve" ? "review-approved" : "review-denied",
+      actorUserId: input.reviewerUserId, runId: input.runId,
+      candidateDigest: input.candidateDigest, evidenceDigest: input.evidenceDigest,
+      recordVersion: decision.resultingRecordVersion,
+      metadata: { decision: input.decision, decisionId: decision.decisionId }
+    }, new Date(), session)
+  })
   return { status: nextState }
 }

@@ -10,7 +10,7 @@ export const getMongoClient = () => {
 
 export const getDb = async () => {
   const client = await getMongoClient()
-  return client.db(env.mongodbDbName)
+  return Object.assign(client.db(env.mongodbDbName), { client })
 }
 
 export const closeMongoClient = async () => {
