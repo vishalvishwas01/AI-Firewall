@@ -16,6 +16,7 @@ import { prepareStagingRelease } from "./release.service.js"
 import { executeLocalStagingRelease } from "./local.release.js"
 import { env } from "../../config/env.js"
 import { getMlMetricAlerts, getMlMetricSummary } from "./metrics.js"
+import { getMlKillSwitch, setMlKillSwitch } from "./killSwitch.js"
 
 const routeParam = (value: unknown) => Array.isArray(value) ? value[0] : value
 const limit = (value: unknown) => {
@@ -39,6 +40,8 @@ export const getMlMetrics = async (_req: AuthenticatedRequest, res: Response, ne
     sendJson(res, ["metrics", "alerts"], { metrics: getMlMetricSummary(), alerts: getMlMetricAlerts() })
   } catch (error) { next(error) }
 }
+export const getMlControl = async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => { try { sendJson(res, ["killSwitchEnabled"], { killSwitchEnabled: await getMlKillSwitch(await getDb()) }) } catch (error) { next(error) } }
+export const setMlControl = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => { try { const body = req.body as Record<string, unknown>; if (typeof body?.killSwitchEnabled !== "boolean") throw new ValidationError("Invalid ML kill switch value"); sendJson(res, ["killSwitchEnabled"], { killSwitchEnabled: await setMlKillSwitch(await getDb(), body.killSwitchEnabled) }) } catch (error) { next(error) } }
 
 export const getMlRun = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
@@ -74,6 +77,7 @@ export const prepareMlRunStaging = async (req: AuthenticatedRequest, res: Respon
 
 export const createMlRun = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
+    if (await getMlKillSwitch(await getDb())) throw new ValidationError("ML workflow kill switch is enabled")
     if (!req.user) throw new AuthenticationError()
     const result = await requestManualTrainingRun(await getDb(), req.user.id, parseManualTrainingTriggerRequest(req.body), parseAiWorkflowConfig())
     sendJson(res.status(result.run ? 202 : 200), ["trigger", "run"], {

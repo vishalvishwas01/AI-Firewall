@@ -49,7 +49,10 @@ export const parseResponse = async <T>(response: Response, schema?: ResponseSche
 
 export const apiRequest = async <T>(path: string, options: RequestInit = {}, schema?: ResponseSchema<T>): Promise<T> => {
   try {
-    const response = await fetch(`${apiBaseUrl}${path}`, { ...options, credentials: "include", headers: { "Content-Type": "application/json", ...options.headers } })
+    const active = document.activeElement as HTMLElement | null
+    const pageName = window.location.pathname
+    const buttonName = active?.getAttribute("aria-label") || active?.getAttribute("title") || active?.textContent?.trim().slice(0, 120) || "api-request"
+    const response = await fetch(`${apiBaseUrl}${path}`, { ...options, credentials: "include", headers: { "Content-Type": "application/json", "X-UI-Page": pageName, "X-UI-Button": buttonName, ...options.headers } })
     return parseResponse(response, schema)
   } catch (error) {
     if (error instanceof TransportError) throw error

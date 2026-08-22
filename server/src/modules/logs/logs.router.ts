@@ -17,6 +17,8 @@ import { generateLogsPdf } from "./report.service.js"
 import { syncedLogsCollection } from "../../models/syncedLog.js"
 import { ValidationError } from "../../shared/errors.js"
 import { requireVerifiedIdentity } from "../../middleware/verifiedIdentity.js"
+import { reportPdfRateLimiter } from "../../shared/operational.js"
+import { consumeReportPdf } from "../../models/reportPdfUsage.js"
 
 const router = Router()
 
@@ -47,6 +49,10 @@ const buildLogQuery = (req: AuthenticatedRequest, includeLimit: boolean) => {
 
 router.use(requireAuth)
 router.use(requireVerifiedIdentity)
+
+router.get("/pdf-quota", requireAccountExperience, requireFeature("reports"), validateNoQuery, async (req: AuthenticatedRequest, res, next) => {
+  try { if (!req.user) return next(new ValidationError("Authenticated user missing")); const now = new Date(); const day = now.toISOString().slice(0, 10); const usage = await (await getDb()).collection<{ count: number }>("report_pdf_usage").findOne({ userId: req.user.id, day }); const resetAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)); sendJson(res, ["remaining", "resetAt"], { remaining: Math.max(0, 3 - (usage?.count ?? 0)), resetAt: resetAt.toISOString() }) } catch (error) { next(error) }
+})
 
 router.get("/summary", requireAccountExperience, requireFeature("reports"), async (req: AuthenticatedRequest, res, next) => {
   try {
@@ -84,9 +90,12 @@ router.get("/export", requireAccountExperience, requireFeature("reports"), valid
   }
 })
 
-router.get("/pdf", requireAccountExperience, requireFeature("reports"), async (req: AuthenticatedRequest, res, next) => {
+router.get("/pdf", reportPdfRateLimiter, requireAccountExperience, requireFeature("reports"), async (req: AuthenticatedRequest, res, next) => {
   try {
     if (!req.user) return next(new ValidationError("Authenticated user missing"))
+    const quota = await consumeReportPdf(await getDb(), req.user.id)
+    res.setHeader("X-RateLimit-Limit", "3"); res.setHeader("X-RateLimit-Remaining", String(quota.remaining)); res.setHeader("X-RateLimit-Reset", quota.resetAt.toISOString())
+    if (!quota.allowed) { res.setHeader("Retry-After", String(Math.ceil((quota.resetAt.getTime() - Date.now()) / 1000))); res.status(429).json({ error: "Daily PDF download limit reached", code: "rate_limited" }); return }
     const { query } = buildLogQuery(req, false)
     const logs = await findLogs(await getDb(), query)
     if (logs.length === 0) {

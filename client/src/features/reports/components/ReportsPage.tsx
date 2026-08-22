@@ -3,7 +3,7 @@ import { ChevronDown, Download, Eye, RefreshCw, ShieldAlert } from "lucide-react
 import { SiteHeader } from "../../../components/SiteHeader"
 import type { SessionUser } from "../../auth/types"
 import { authRedirectKey } from "../../auth/extensionBridge"
-import { deleteReportLogs, downloadLogsPdf, getLogSummary, getLogs } from "../api"
+import { deleteReportLogs, downloadLogsPdf, getLogSummary, getLogs, getPdfQuota } from "../api"
 import type { ReportLog, ReportSummary } from "../types"
 import { downloadBlob } from "../download"
 import { ReportsEmptyState, ReportsErrorState, ReportsLoadingState } from "./ReportStates"
@@ -55,8 +55,17 @@ export function ReportsPage({
   const [selectAllMatching, setSelectAllMatching] = useState(false);
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [deletingLogs, setDeletingLogs] = useState(false);
+  const [pdfRemaining, setPdfRemaining] = useState("3");
+  const [pdfResetSeconds, setPdfResetSeconds] = useState("86400");
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const selectedSite = sites.find((site) => site.hostname === selectedHostname);
+  useEffect(() => {
+    if (!user) return
+    void getPdfQuota().then((quota) => {
+      setPdfRemaining(String(quota.remaining))
+      setPdfResetSeconds(String(Math.max(0, Math.floor((new Date(quota.resetAt).getTime() - Date.now()) / 1000))))
+    }).catch(() => undefined)
+  }, [user])
   const reportFilters = { tool: selectedTool || undefined, hostname: selectedHostname || undefined, from: from || undefined, to: to || undefined };
   const selectedCount = selectAllMatching ? summary?.totalLogs ?? logs.length : selectedLogIds.size;
   const defaultSiteOrder = ["chatgpt.com", "claude.ai", "gemini.google.com"];
@@ -261,12 +270,23 @@ export function ReportsPage({
     await sendSitesToExtension(nextSites);
   };
 
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.key.toLowerCase() === "p") {
+        event.preventDefault()
+      }
+    }
+    window.addEventListener("keydown", keydown)
+    return () => { window.removeEventListener("keydown", keydown) }
+  }, [])
+
   const downloadPdf = async () => {
     if (!user || loading || logs.length === 0 || generatingPdf) return;
     setGeneratingPdf(true);
     setError("");
     try {
-      const { blob, filename } = await downloadLogsPdf(reportFilters);
+      const { blob, filename, remaining, resetSeconds } = await downloadLogsPdf(reportFilters);
+      setPdfRemaining(remaining); setPdfResetSeconds(resetSeconds);
       downloadBlob(filename, blob);
     } catch (reportError) {
       setError(reportError instanceof Error ? reportError.message : "Failed to generate PDF");
@@ -280,7 +300,8 @@ export function ReportsPage({
     setRefreshingLogs(true);
     setError("");
     try {
-      const [logsResponse, summaryResponse] = await Promise.all([getLogs(reportFilters), getLogSummary(reportFilters)]);
+      const [logsResponse, summaryResponse, quota] = await Promise.all([getLogs(reportFilters), getLogSummary(reportFilters), getPdfQuota()]);
+      setPdfRemaining(String(quota.remaining)); setPdfResetSeconds(String(Math.max(0, Math.floor((Date.parse(quota.resetAt) - Date.now()) / 1000))));
       setLogs(logsResponse.logs);
       setSummary(summaryResponse.summary);
       setSelectedLogIds(new Set());
@@ -327,7 +348,7 @@ export function ReportsPage({
   };
 
   return (
-    <section className="min-h-[calc(100vh-4rem)] bg-[#f5f3ee] px-4 py-8 text-[#33312b] sm:px-7 sm:py-10 lg:px-10">
+    <section onContextMenu={(event) => event.preventDefault()} onCopy={(event) => event.preventDefault()} onCut={(event) => event.preventDefault()} onDragStart={(event) => event.preventDefault()} className="report-protected-page min-h-[calc(100vh-4rem)] select-none bg-[#f5f3ee] px-4 py-8 text-[#33312b] sm:px-7 sm:py-10 lg:px-10">
       <div className="mx-auto max-w-[1500px]">
         <div className="flex flex-col gap-6 border-b border-[#d6d0c6] pb-7">
           <div>
@@ -340,7 +361,7 @@ export function ReportsPage({
             <p className="mt-3 max-w-3xl text-base leading-7 text-[#65645e]">
               Review redacted activity synced for {user?.email ?? "your account"}. Each record separates the signal, the evidence, and the action taken so the problem is easy to understand.
             </p>
-            <div className="mt-4 flex flex-wrap gap-3"><button type="button" disabled={!user || refreshingLogs} onClick={() => void refreshLogs()} className="button-secondary disabled:cursor-not-allowed disabled:opacity-60"><RefreshCw className={`h-4 w-4 ${refreshingLogs ? "animate-spin" : ""}`} aria-hidden="true" />{refreshingLogs ? "Checking logs…" : "Refresh logs"}</button><button type="button" disabled={!user || loading || logs.length === 0 || generatingPdf} onClick={() => void downloadPdf()} className="button-secondary disabled:cursor-not-allowed disabled:opacity-60"><Download className="h-4 w-4" aria-hidden="true" />{generatingPdf ? <><span>Generating PDF</span><span className="inline-flex items-end gap-1" aria-hidden="true"><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]"/><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]"/><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current"/></span></> : "Download PDF"}</button></div>
+            <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" disabled={!user || refreshingLogs} onClick={() => void refreshLogs()} className="button-secondary disabled:cursor-not-allowed disabled:opacity-60"><RefreshCw className={`h-4 w-4 ${refreshingLogs ? "animate-spin" : ""}`} aria-hidden="true" />{refreshingLogs ? "Checking logs…" : "Refresh logs"}</button><button type="button" disabled={!user || loading || logs.length === 0 || generatingPdf || pdfRemaining === "0"} onClick={() => void downloadPdf()} className="button-secondary disabled:cursor-not-allowed disabled:opacity-60"><Download className="h-4 w-4" aria-hidden="true" />{generatingPdf ? "Generating PDF…" : "Download PDF"}</button><span className="text-xs text-[#65645e]">{pdfRemaining} PDF downloads remaining · renews in {Math.ceil(Number(pdfResetSeconds) / 3600)}h</span></div>
           </div>
 
           <div>

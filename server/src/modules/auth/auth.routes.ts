@@ -4,11 +4,11 @@ import { confirmEmailVerification, confirmPasswordResetOtp, emailVerificationSta
 import { validateNoBody, validateNoQuery } from "../../shared/validation.js"
 import { requireAuthEntryAvailable } from "../featureFlags/featureFlags.middleware.js"
 import { requireAuth } from "../../middleware/auth.js"
-import { verificationAttemptRateLimiter, verificationSendRateLimiter } from "../../shared/operational.js"
+import { loginRateLimiter, verificationAttemptRateLimiter, verificationSendRateLimiter } from "../../shared/operational.js"
 
 const router = Router()
 router.post("/signup", requireAuthEntryAvailable, signup)
-router.post("/login", login)
+router.post("/login", loginRateLimiter, login)
 router.post("/logout", validateNoBody, logout)
 router.get("/session", session)
 router.patch("/profile", requireAuth, validateNoQuery, updateProfile)

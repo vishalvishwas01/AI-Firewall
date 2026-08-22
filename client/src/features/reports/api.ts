@@ -19,6 +19,7 @@ export const getLogSummary = (filters: ReportFilters = {}) => {
   const query = filterQuery(filters)
   return apiRequest<{ summary: ReportSummary }>(`/logs/summary${query ? `?${query}` : ""}`, {}, parseSummaryResponse)
 }
+export const getPdfQuota = () => apiRequest<{ remaining: number; resetAt: string }>("/logs/pdf-quota", {}, (value) => { const input = object(value, ["remaining", "resetAt"]); return { remaining: nonNegativeInteger(input.remaining), resetAt: String(input.resetAt) } })
 export const exportAccountLogs = () => apiRequest<AccountLogExport>("/logs/export", {}, parseAccountLogExport)
 
 export const downloadLogsPdf = async (filters: ReportFilters) => {
@@ -28,7 +29,15 @@ export const downloadLogsPdf = async (filters: ReportFilters) => {
     if (!response.ok) await parseResponse(response)
     const disposition = response.headers.get("content-disposition") ?? ""
     const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? `hallguard-report-${new Date().toISOString().slice(0, 10)}.pdf`
-    return { blob: await response.blob(), filename }
+    const remainingHeader = response.headers.get("x-ratelimit-remaining")
+    const resetHeader = response.headers.get("x-ratelimit-reset")
+    const quota = remainingHeader === null ? await getPdfQuota() : undefined
+    const resetSeconds = resetHeader
+      ? String(Math.max(0, Math.floor((Date.parse(resetHeader) - Date.now()) / 1000)))
+      : quota
+        ? String(Math.max(0, Math.floor((Date.parse(quota.resetAt) - Date.now()) / 1000)))
+        : "86400"
+    return { blob: await response.blob(), filename, remaining: remainingHeader ?? String(quota?.remaining ?? 0), resetSeconds }
   } catch (error) {
     if (error instanceof TransportError) throw error
     throw new TransportError("network_error")

@@ -76,6 +76,8 @@ export const authRateLimiter = createRateLimiter({
   key: (req) => `auth:${req.ip ?? "unknown"}:${req.method}:${req.path}`,
   skip: (req) => env.disableManualSignupRateLimiting && req.method === "POST" && req.path === "/signup"
 })
+export const loginRateLimiter = createRateLimiter({ windowMs: 15 * 60_000, max: 20, name: "login", key: (req) => `login:${req.ip ?? "unknown"}` })
 export const verificationSendRateLimiter = createRateLimiter({ windowMs: 15 * 60_000, max: 30, name: "verification email", key: (req) => `verification-send:${req.ip ?? "unknown"}` })
 export const verificationAttemptRateLimiter = createRateLimiter({ windowMs: 15 * 60_000, max: 100, name: "verification attempt", key: (req) => `verification-attempt:${req.ip ?? "unknown"}` })
 export const globalRateLimiter = createRateLimiter({ windowMs: 60_000, max: 300, name: "request" })
+export const reportPdfRateLimiter = createRateLimiter({ windowMs: 24 * 60 * 60_000, max: 3, name: "report PDF", key: (req) => `report-pdf:${req.ip ?? "unknown"}:${(req as Request & { user?: { id?: { toHexString?: () => string } } }).user?.id?.toHexString?.() ?? "anonymous"}` })

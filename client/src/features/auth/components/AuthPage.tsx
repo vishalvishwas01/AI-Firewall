@@ -574,7 +574,7 @@ export function AuthPage({
                             ? "Create account"
                             : "Login"}
                     </button>
-                    {!inviteToken && (!isEnterprise || !isSignup) ? (
+                    {!isAdminAuthentication && !inviteToken && (!isEnterprise || !isSignup) ? (
                       <button
                         type="button"
                         disabled={googleSubmitting}
@@ -589,16 +589,16 @@ export function AuthPage({
                     ) : null}
                   </div>
                   <p className="auth-footer pt-1 text-center text-base text-[#4a463f]">
-                    {isSignup ? "Already have an account?" : "Need an account?"}{" "}
-                    <a
+                    {!isAdminAuthentication ? <>{isSignup ? "Already have an account?" : "Need an account?"}{" "}</> : null}
+                    {!isAdminAuthentication ? <a
                       className="font-semibold text-[#33312b] underline-offset-4 hover:underline"
                       href={alternatePath}
                       onClick={handleAlternateNavigation}
                     >
                       {isSignup ? "Login" : "Sign up"}
-                    </a>
+                    </a> : null}
                   </p>
-                  {!isSignup ? <p className="text-center text-sm"><a href="/forgot-password" className="font-semibold text-[#087f78] underline-offset-4 hover:underline">Forgot password?</a></p> : null}
+                  {!isSignup && !isAdminAuthentication ? <p className="text-center text-sm"><a href="/forgot-password" className="font-semibold text-[#087f78] underline-offset-4 hover:underline">Forgot password?</a></p> : null}
                 </form>
                 </>}
               </>

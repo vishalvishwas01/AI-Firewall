@@ -31,6 +31,8 @@ import { ensureVerificationCampaignIndexes } from "./models/verificationCampaign
 import { ensurePasswordResetIndexes } from "./models/passwordReset.js"
 import { ensureLoginActivityIndexes } from "./models/loginActivity.js"
 import { ensureServerLogIndexes } from "./models/serverLog.js"
+import { ensureReportPdfUsageIndexes } from "./models/reportPdfUsage.js"
+import { ensureMlControlIndexes } from "./modules/mlWorkflow/killSwitch.js"
 import { supportRouter } from "./modules/support/support.routes.js"
 import { logServerEvent, setServerLoggerDb } from "./shared/serverLogger.js"
 import { apiMetricsMiddleware, setApiMetricsDb, startApiMetricsFlusher, flushApiMetrics } from "./shared/apiMetrics.js"
@@ -48,10 +50,24 @@ import { ensureStagingIntentIndexes } from "./modules/mlWorkflow/release.reposit
 const app = express()
 if (env.trustProxyHops > 0) app.set("trust proxy", env.trustProxyHops)
 
-const allowedOrigins = [
+const configuredOrigins = [
   env.clientOrigin,
   env.extensionOrigin,
 ].filter(Boolean)
+
+// Vite is commonly opened as either localhost or 127.0.0.1 during local
+// development. Treat those loopback aliases as the same development client,
+// while keeping production CORS explicitly allow-listed.
+const allowedOrigins = env.nodeEnv === "production"
+  ? configuredOrigins
+  : [...new Set([
+    ...configuredOrigins,
+    ...configuredOrigins.flatMap((origin) => [
+      origin,
+      origin.replace("://localhost", "://127.0.0.1"),
+      origin.replace("://127.0.0.1", "://localhost")
+    ])
+  ])]
 
 // Configuration details are available through the admin Server logs screen;
 // they are intentionally not written to stdout in production.
@@ -64,6 +80,7 @@ app.use(globalRateLimiter)
 app.use(
   cors({
     credentials: true,
+    exposedHeaders: ["Content-Disposition", "X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "Retry-After"],
     origin(origin, callback) {
       if (!origin) return callback(null, true)
       if (allowedOrigins.includes(origin)) return callback(null, true)
@@ -123,6 +140,8 @@ await ensureVerificationCampaignIndexes(db)
 await ensurePasswordResetIndexes(db)
 await ensureLoginActivityIndexes(db)
 await ensureServerLogIndexes(db)
+await ensureReportPdfUsageIndexes(db)
+await ensureMlControlIndexes(db)
 await ensureApiMetricIndexes(db)
 await ensureTrainingTriggerIndexes(db)
 await ensureTrainingRunIndexes(db)

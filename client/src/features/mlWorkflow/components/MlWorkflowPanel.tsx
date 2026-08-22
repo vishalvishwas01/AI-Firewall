@@ -1,6 +1,6 @@
 import { BrainCircuit, RefreshCw } from "lucide-react"
 import { useEffect, useState, type FormEvent } from "react"
-import { createMlRun, getMlRunEligibility, getMlRuns, reviewMlRun } from "../api"
+import { createMlRun, getMlControl, getMlRunEligibility, getMlRuns, reviewMlRun, setMlControl } from "../api"
 import type { ReleaseEligibilityStatus, TrainingRunSummary } from "../types"
 import { canSubmitReview, isValidManualRunInput } from "../uiGuards"
 
@@ -17,7 +17,8 @@ export function MlWorkflowPanel() {
   const [creating, setCreating] = useState(false)
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
-  const load = async () => { setLoading(true); setStatus(null); try { setRuns((await getMlRuns()).runs) } catch { setStatus("Unable to load ML workflow runs. Refresh and try again.") } finally { setLoading(false) } }
+  const [killSwitch, setKillSwitch] = useState(false)
+  const load = async () => { setLoading(true); setStatus(null); try { const [runs, control] = await Promise.all([getMlRuns(), getMlControl()]); setRuns(runs.runs); setKillSwitch(control.killSwitchEnabled) } catch { setStatus("Unable to load ML workflow state. Refresh and try again.") } finally { setLoading(false) } }
   useEffect(() => { void load() }, [])
   const createRun = async (event: FormEvent) => { event.preventDefault(); if (!/^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$/.test(triggerId) || !/^[a-f0-9]{64}$/.test(inputDigest)) { setStatus("Enter a valid trigger ID and 64-character lowercase SHA-256 digest."); return } setCreating(true); setStatus(null); try { const result = await createMlRun(triggerId, inputDigest); setStatus(result.run ? "Training run queued." : `No run created: ${result.trigger.reasonCode}.`); setTriggerId(""); setInputDigest(""); await load() } catch { setStatus("The training run request could not be submitted.") } finally { setCreating(false) } }
   const selectRun = async (run: TrainingRunSummary) => { setSelected(run); setEligibility(null); try { setEligibility((await getMlRunEligibility(run.runId)).eligibility) } catch { setStatus("Unable to load release eligibility status.") } }

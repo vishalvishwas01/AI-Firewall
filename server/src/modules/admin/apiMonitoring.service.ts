@@ -11,7 +11,7 @@ export const getApiMonitoring = async (db: Db, filters: ApiMonitoringFilters) =>
   ]).toArray()
   const byApi = await apiMetricsCollection(db).aggregate([
     { $match: match },
-    { $group: { _id: { route: "$route", method: "$method" }, count: { $sum: "$count" } } },
+    { $group: { _id: { route: "$route", method: "$method", pageName: "$pageName", buttonName: "$buttonName" }, count: { $sum: "$count" } } },
     { $sort: { count: -1 } },
     { $limit: 500 }
   ]).toArray()
@@ -23,7 +23,7 @@ export const getApiMonitoring = async (db: Db, filters: ApiMonitoringFilters) =>
   ]).toArray()
   return {
     total: Number(summary?.total ?? 0),
-    byApi: byApi.map((item) => ({ method: String(item._id.method), route: String(item._id.route), count: Number(item.count) })),
+    byApi: byApi.map((item) => ({ method: String(item._id.method), route: String(item._id.route), pageName: String(item._id.pageName ?? "unknown"), buttonName: String(item._id.buttonName ?? "unknown"), count: Number(item.count) })),
     timeline: timeline.map((item) => ({ bucketStart: new Date(item._id).toISOString(), count: Number(item.count) }))
   }
 }
